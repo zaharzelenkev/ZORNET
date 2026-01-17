@@ -1,5 +1,4 @@
 import streamlit as st
-import torch
 import sqlite3
 import datetime
 import os
@@ -8,7 +7,6 @@ import requests
 import feedparser
 from groq import Groq
 from PIL import Image
-from transformers import BlipProcessor, BlipForConditionalGeneration
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
@@ -274,17 +272,35 @@ def get_parking_info():
     ]
     return parkings
 
+# ===============================
+# VISION AI (SAFE FOR STREAMLIT)
+# ===============================
 
-# --- МОДЕЛИ ---
-@st.cache_resource
-def load_vision_model():
-    processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-    model = BlipForConditionalGeneration.from_pretrained(
-        "Salesforce/blip-image-captioning-base",
-        use_safetensors=True
-    )
-    return processor, model
+vision_available = False
+vision_processor = None
+vision_model = None
 
+if torch is not None:
+    try:
+        from transformers import BlipProcessor, BlipForConditionalGeneration
+
+        @st.cache_resource
+        def load_vision_model():
+            processor = BlipProcessor.from_pretrained(
+                "Salesforce/blip-image-captioning-base"
+            )
+            model = BlipForConditionalGeneration.from_pretrained(
+                "Salesforce/blip-image-captioning-base",
+                use_safetensors=True
+            )
+            model.to("cpu")
+            return processor, model
+
+        vision_processor, vision_model = load_vision_model()
+        vision_available = True
+
+    except Exception:
+        vision_available = False
 
 vision_processor, vision_model = load_vision_model()
 client = Groq(api_key=GROQ_API_KEY)
@@ -1771,6 +1787,11 @@ elif st.session_state.page == "Камера":
 
     img_to_process = uploaded_image or camera_image
 
+    if not vision_available:
+        st.warning("📷 Камера временно недоступна на сервере")
+    else:
+    # тут твой существующий код обработки изображения
+    
     if img_to_process:
         image = Image.open(img_to_process)
         st.image(image, caption="Ваше изображение", use_column_width=True)
