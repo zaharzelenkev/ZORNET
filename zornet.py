@@ -1789,13 +1789,7 @@ elif st.session_state.page == "Камера":
 
     if not vision_available:
         st.warning("📷 Камера временно недоступна на сервере")
-    else:
-    # тут твой существующий код обработки изображения
-    
-    if img_to_process:
-        image = Image.open(img_to_process)
-        st.image(image, caption="Ваше изображение", use_column_width=True)
-
+        
         # Обработка изображения с помощью BLIP
         with st.spinner("Анализирую изображение..."):
             inputs = vision_processor(image, return_tensors="pt")
