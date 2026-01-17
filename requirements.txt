@@ -1,0 +1,12 @@
+streamlit
+pillow
+requests
+feedparser
+pytz
+transformers
+google-auth
+google-auth-oauthlib
+google-api-python-client
+duckduckgo-search
+streamlit-folium
+folium
