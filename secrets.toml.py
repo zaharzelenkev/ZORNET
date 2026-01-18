@@ -1,0 +1,1 @@
+HF_API_KEY = "h_XzFyShNnTByfEsHPIehaA£hMtECtGWLjMk"  # <--- ВСТАВЬ СВОЙ НОВЫЙ ТОКЕН
