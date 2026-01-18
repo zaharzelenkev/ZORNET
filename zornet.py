@@ -860,8 +860,63 @@ elif st.session_state.page == "Транспорт":
                 st.write(f"➡️ {train['to']}")
             with col4:
                 st.write(f"🕒 {train['time']}")
+# ... (весь предыдущий код до страницы Диска остается без изменений) ...
 
-# ================= СТРАНИЦА ДИСКА =================
+# ================= СТРАНИЦА ТРАНСПОРТА =================
+elif st.session_state.page == "Транспорт":
+    st.markdown('<div class="gold-title">🚌 ТРАНСПОРТ</div>', unsafe_allow_html=True)
+    
+    tab1, tab2, tab3, tab4 = st.tabs(["🚇 Метро", "🚌 Автобусы/Трамваи", "🚕 Такси", "🚂 Железная дорога"])
+    
+    with tab1:
+        st.subheader("Минское метро")
+        for station in get_minsk_metro():
+            col1, col2, col3 = st.columns([3, 1, 1])
+            with col1:
+                st.write(f"**{station['name']}**")
+            with col2:
+                st.write(f"Линия {station['line']}")
+            with col3:
+                st.success(f"🚇 {station['next']}")
+    
+    with tab2:
+        st.subheader("Автобусы и трамваи")
+        for route in get_bus_trams():
+            col1, col2, col3, col4 = st.columns([1, 2, 2, 1])
+            with col1:
+                st.write(f"**{route['number']}**")
+            with col2:
+                st.write(f"{route['type']}")
+            with col3:
+                st.write(f"{route['from']} → {route['to']}")
+            with col4:
+                st.info(f"⏱️ {route['next']}")
+    
+    with tab3:
+        st.subheader("Сравнение цен такси")
+        for service in get_taxi_prices():
+            col1, col2, col3 = st.columns([2, 1, 1])
+            with col1:
+                st.write(f"**{service['name']}**")
+            with col2:
+                st.write(f"💵 {service['price']}")
+            with col3:
+                st.write(f"🕒 {service['wait']}")
+    
+    with tab4:
+        st.subheader("Белорусская железная дорога")
+        for train in get_belarusian_railway():
+            col1, col2, col3, col4 = st.columns([1, 2, 2, 2])
+            with col1:
+                st.write(f"**{train['number']}**")
+            with col2:
+                st.write(f"📍 {train['from']}")
+            with col3:
+                st.write(f"➡️ {train['to']}")
+            with col4:
+                st.write(f"🕒 {train['time']}")
+
+# ================= ФУНКЦИЯ ДЛЯ ДИСКА =================
 def get_icon(file_path):
     ext = file_path.suffix.lower()
     if file_path.is_dir(): return "📁"
@@ -872,6 +927,7 @@ def get_icon(file_path):
     if ext in [".mp4", ".avi"]: return "🎬"
     return "📦"
 
+# ================= СТРАНИЦА ДИСКА =================
 elif st.session_state.page == "Диск":
     st.markdown('<div class="gold-title">💾 ZORNET DISK</div>', unsafe_allow_html=True)
     
