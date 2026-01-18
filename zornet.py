@@ -269,6 +269,24 @@ def get_weather_by_city(city_name):
         st.error(f"Ошибка: {e}")
         return None
 
+# ================= ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ДИСКА =================
+def get_icon(file_path):
+    """Возвращает иконку для файла"""
+    ext = file_path.suffix.lower()
+    if file_path.is_dir(): 
+        return "📁"
+    if ext in [".jpg", ".jpeg", ".png", ".gif"]: 
+        return "🖼️"
+    if ext == ".pdf": 
+        return "📄"
+    if ext in [".doc", ".docx"]: 
+        return "📝"
+    if ext in [".mp3", ".wav"]: 
+        return "🎵"
+    if ext in [".mp4", ".avi", ".mov"]: 
+        return "🎬"
+    return "📦"
+    
 # ================= НАСТРОЙКИ AI =================
 HF_API_KEY = st.secrets.get("HF_API_KEY", "")
 CHAT_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"
@@ -916,17 +934,6 @@ elif st.session_state.page == "Транспорт":
             with col4:
                 st.write(f"🕒 {train['time']}")
 
-# ================= ФУНКЦИЯ ДЛЯ ДИСКА =================
-def get_icon(file_path):
-    ext = file_path.suffix.lower()
-    if file_path.is_dir(): return "📁"
-    if ext in [".jpg", ".jpeg", ".png", ".gif"]: return "🖼️"
-    if ext == ".pdf": return "📄"
-    if ext in [".doc", ".docx"]: return "📝"
-    if ext in [".mp3", ".wav"]: return "🎵"
-    if ext in [".mp4", ".avi"]: return "🎬"
-    return "📦"
-
 # ================= СТРАНИЦА ДИСКА =================
 elif st.session_state.page == "Диск":
     st.markdown('<div class="gold-title">💾 ZORNET DISK</div>', unsafe_allow_html=True)
@@ -958,7 +965,7 @@ elif st.session_state.page == "Диск":
         for item in sorted(items, key=lambda x: (x.is_file(), x.name.lower())):
             col1, col2, col3 = st.columns([4, 2, 1])
             with col1:
-                icon = get_icon(item)
+                icon = get_icon(item)  # Используем функцию из начала файла
                 st.write(f"{icon} {item.name}")
             with col2:
                 st.write(f"Размер: {item.stat().st_size / 1024:.2f} KB")
