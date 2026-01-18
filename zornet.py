@@ -206,7 +206,7 @@ def get_wind_direction(degrees):
 
 def get_weather_by_coords(lat, lon):
     """Получает погоду по координатам через OpenWeatherMap API"""
-    API_KEY = "f2b2b0b5b5b5b5b5b5b5b5b5b5b5b5b5"  # Демо-ключ, замени на свой!
+    API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"  # Демо-ключ, замени на свой!
     
     try:
         url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
