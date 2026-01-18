@@ -10,3 +10,5 @@ duckduckgo-search
 streamlit-folium
 folium
 huggingface_hub>=0.19.0
+transformers>=4.35.0
+torch>=2.0.0
