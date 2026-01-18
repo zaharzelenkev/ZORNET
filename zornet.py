@@ -532,99 +532,114 @@ elif st.session_state.page == "Транспорт":
 elif st.session_state.page == "Диск":
     st.markdown('<div class="gold-title">💾 ДИСК</div>', unsafe_allow_html=True)
     
-    # ИНИЦИАЛИЗАЦИЯ БД
-    init_disk_db()
-    
-    # ЗАГРУЗКА ФАЙЛОВ
-    uploaded_files = st.file_uploader(
-        "Загрузите файлы",
-        accept_multiple_files=True,
-        help="Выберите файлы для загрузки в облако"
-    )
-    
+    # --- Папки и файлы на диске ---
+    ROOT_DIR = Path("zornet_files")
+    ROOT_DIR.mkdir(exist_ok=True)
+
+    if "current_dir" not in st.session_state:
+        st.session_state.current_dir = ROOT_DIR
+
+    current_dir = st.session_state.current_dir
+
+    # --- Breadcrumb ---
+    def render_breadcrumb(path):
+        parts = list(path.relative_to(ROOT_DIR).parts)
+        breadcrumb_html = ["<a href='#' onclick='window.location.reload()'>Главная</a>"]
+        p = ROOT_DIR
+        for part in parts:
+            p = p / part
+            breadcrumb_html.append(f"<a href='#' onclick='window.location.reload()'>{part}</a>")
+        st.markdown(" / ".join(breadcrumb_html), unsafe_allow_html=True)
+
+    render_breadcrumb(current_dir)
+
+    # --- Навигация вверх ---
+    if current_dir != ROOT_DIR:
+        if st.button("🔙 Назад"):
+            st.session_state.current_dir = current_dir.parent
+            st.experimental_rerun()
+
+    # --- Создание новой папки ---
+    st.subheader("Создать папку")
+    new_folder = st.text_input("Название папки")
+    if st.button("Создать папку"):
+        if new_folder:
+            folder_path = current_dir / new_folder
+            folder_path.mkdir(exist_ok=True)
+            st.success(f"Папка '{new_folder}' создана")
+            st.experimental_rerun()
+
+    # --- Загрузка файлов drag & drop ---
+    st.subheader("Загрузить файлы (Drag & Drop поддерживается)")
+    uploaded_files = st.file_uploader("Выберите файлы", type=None, accept_multiple_files=True)
     if uploaded_files:
         for uploaded_file in uploaded_files:
-            # Сохраняем временно
-            with open(f"temp_{uploaded_file.name}", "wb") as f:
+            file_path = current_dir / uploaded_file.name
+            with open(file_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
-            
-            # Сохраняем в БД
-            save_file_to_db(uploaded_file.name, uploaded_file.size)
-        
+            save_file_to_db(uploaded_file.name, uploaded_file.size)  # Сохраняем в БД
         st.success(f"✅ Загружено {len(uploaded_files)} файлов")
-        st.rerun()
-    
-    # СПИСОК ФАЙЛОВ
-    st.subheader("📁 Ваши файлы")
-    
-    files = get_disk_files()
-    if files:
-        for name, size, uploaded_at in files:
-            col1, col2, col3 = st.columns([3, 1, 1])
-            with col1:
-                st.write(f"**{name}**")
-            with col2:
-                st.write(f"{size:,} байт")
-            with col3:
-                st.write(uploaded_at[:10])
-    else:
-        st.info("У вас пока нет файлов в облаке")
+        st.experimental_rerun()
 
-# ================= СТРАНИЦА ПРОФИЛЯ =================
-elif st.session_state.page == "Профиль":
-    st.markdown('<div class="gold-title">👤 ПРОФИЛЬ</div>', unsafe_allow_html=True)
-    
-    # ИНИЦИАЛИЗАЦИЯ БД
-    init_db()
-    user_count = get_user_count()
-    
-    # ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ
-    col1, col2 = st.columns([1, 2])
-    
-    with col1:
-        st.markdown("""
-        <div style="text-align: center;">
-            <div style="
-                width: 120px; 
-                height: 120px; 
-                border-radius: 50%; 
-                background: linear-gradient(135deg, #DAA520, #B8860B);
-                display: flex; 
-                align-items: center; 
-                justify-content: center; 
-                margin: 0 auto 20px;
-                color: white;
-                font-size: 48px;
-                font-weight: bold;
-            ">
-                Z
-            </div>
-            <h3>ZORNET User</h3>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.subheader("📊 Статистика")
-        
-        stat_cols = st.columns(3)
-        with stat_cols[0]:
-            st.metric("Пользователей", user_count)
-        with stat_cols[1]:
-            st.metric("AI запросов", "∞")
-        with stat_cols[2]:
-            st.metric("Поисков", "∞")
-        
-        st.markdown("---")
-        
-        # НАСТРОЙКИ
-        st.subheader("⚙️ Настройки")
-        
-        with st.form("profile_form"):
-            username = st.text_input("Имя пользователя", "ZornetUser")
-            email = st.text_input("Email", "user@zornet.app")
-            
-            if st.form_submit_button("💾 Сохранить изменения"):
-                st.success("Настройки сохранены!")
+    # --- Иконки ---
+    def get_icon(file_path):
+        ext = file_path.suffix.lower()
+        if file_path.is_dir(): return "📁"
+        if ext in [".jpg", ".jpeg", ".png", ".gif"]: return "🖼️"
+        if ext == ".pdf": return "📄"
+        if ext in [".doc", ".docx"]: return "📝"
+        if ext in [".mp3", ".wav"]: return "🎵"
+        if ext in [".mp4", ".avi"]: return "🎬"
+        return "📦"
+
+    # --- Список файлов и папок ---
+    st.subheader(f"Содержимое папки: {current_dir.name}")
+    items = list(current_dir.iterdir())
+    if items:
+        for item in sorted(items, key=lambda x: (x.is_file(), x.name.lower())):
+            col1, col2, col3, col4 = st.columns([4,2,2,2])
+            with col1:
+                icon = get_icon(item)
+                if item.is_dir():
+                    if st.button(f"{icon} {item.name}"):
+                        st.session_state.current_dir = item
+                        st.experimental_rerun()
+                else:
+                    st.markdown(f"<div class='file-item'>{icon} {item.name}</div>", unsafe_allow_html=True)
+                    # Превью изображений
+                    if item.suffix.lower() in [".jpg", ".jpeg", ".png", ".gif"]:
+                        image = Image.open(item)
+                        st.image(image, width=150, caption=item.name)
+                    # Превью PDF
+                    if item.suffix.lower() == ".pdf":
+                        st.write(f"📄 PDF файл: {item.name}")
+                    # Превью видео
+                    if item.suffix.lower() in [".mp4", ".avi"]:
+                        st.video(str(item))
+            with col2:
+                if item.is_file():
+                    st.download_button("Скачать", data=open(item, "rb").read(), file_name=item.name)
+            with col3:
+                # Переименование
+                new_name = st.text_input(f"Переименовать {item.name}", key=f"rename_{item}")
+                if st.button(f"Переименовать {item.name}", key=f"btn_rename_{item}"):
+                    new_path = item.parent / new_name
+                    item.rename(new_path)
+                    st.experimental_rerun()
+            with col4:
+                if st.button(f"Удалить {item.name}", key=f"del_{item}"):
+                    if item.is_dir():
+                        for child in item.iterdir():
+                            if child.is_file():
+                                child.unlink()
+                            else:
+                                os.rmdir(child)
+                        os.rmdir(item)
+                    else:
+                        item.unlink()
+                    st.experimental_rerun()
+    else:
+        st.info("Папка пуста.")
 
 # ================= ИНИЦИАЛИЗАЦИЯ =================
 if __name__ == "__main__":
