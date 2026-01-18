@@ -909,8 +909,6 @@ if st.session_state.page == "Главная":
             st.session_state.page = "ZORNET AI"
             st.rerun()
 
-        )
-
     with col3:
         # ВРЕМЯ И ДАТА
         current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
