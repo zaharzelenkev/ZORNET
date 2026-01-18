@@ -359,11 +359,11 @@ if st.session_state.page == "Главная":
     
     st.markdown("---")
     
-    # --- Поисковая строка ---
-    search_query = st.text_input(
+# --- Поисковая строка под виджетами ---
+search_query = st.text_input(
     "",
     placeholder="Поиск в интернете...",
-    key=f"main_search_{st.session_state.page}",  # <-- новый уникальный ключ
+    key=f"main_search_{st.session_state.page}",  # уникальный ключ
     label_visibility="collapsed"
 )
 
