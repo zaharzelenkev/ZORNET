@@ -894,13 +894,6 @@ if st.session_state.page == "Главная":
             st.session_state.page = "ZORNET AI"
             st.rerun()
 
-    with col2:
-        # ПОИСКОВАЯ СТРОКА
-        search_query = st.text_input(
-            "",
-            placeholder="🔍 Поиск в интернете...",
-            key="main_search",
-            label_visibility="collapsed"
         )
 
     with col3:
