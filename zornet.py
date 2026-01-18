@@ -1155,7 +1155,7 @@ elif st.session_state.page == "ZORNET AI":
             </div>
             """, unsafe_allow_html=True)
 
-    # Поле ввода
+# Поле ввода
     if prompt := st.chat_input("Спросите ZORNET AI...", key="ai_chat_input"):
         # Добавляем сообщение пользователя с профессиональным стилем
         st.markdown(f"""
@@ -1168,11 +1168,10 @@ elif st.session_state.page == "ZORNET AI":
 
         st.session_state.ai_messages.append({"role": "user", "content": prompt})
 
-        # Получаем ответ от HF AI
+# Получаем ответ от HF AI
 with st.spinner("ZORNET думает..."):
     prompt = st.session_state.user_input  # или откуда берёшь сообщение пользователя
     response = ask_hf_ai(prompt, st.session_state.ai_messages)
-    # Сохраняем сообщение пользователя и ответ AI в историю
     st.session_state.ai_messages.append({"role": "user", "content": prompt})
     st.session_state.ai_messages.append({"role": "assistant", "content": response})
 
@@ -1207,7 +1206,6 @@ with st.spinner("ZORNET думает..."):
 
 # =================================================
 # СТРАНИЦА НОВОСТЕЙ
-# =================================================
 elif st.session_state.page == "Новости":
     st.markdown('<h1 style="color:#DAA520;">📰 Новости БелТА</h1>', unsafe_allow_html=True)
     news = get_belta_news()
