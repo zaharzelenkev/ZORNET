@@ -335,17 +335,40 @@ def get_belta_news():
             {"title": "Экономические новости", "link": "#", "summary": "Развитие экономики страны"},
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
-
-# ================= ГЛАВНАЯ СТРАНИЦА =================
 if st.session_state.page == "Главная":
-    
-    # --- Заголовок ZORNET сверху ---
+    # ВЕРХНЯЯ ПАНЕЛЬ
+    col1, col2, col3 = st.columns([1, 3, 1])
+
+    with col1:
+        # Кнопка ZORNET AI
+        if st.button("🤖 ZORNET AI", key="zornet_ai_btn", use_container_width=True):
+            st.session_state.page = "ZORNET AI"
+            st.rerun()
+
+    with col2:
+        # Поисковая строка
+        search_query = st.text_input(
+            "",
+            placeholder="🔍 Поиск в интернете...",
+            key="main_search",
+            label_visibility="collapsed"
+        )
+
+    with col3:
+        # Время и дата
+        current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
+        st.markdown(f"""
+        <div class="time-widget">
+            <div>{current_time.strftime('%H:%M')}</div>
+            <div style="font-size: 12px; font-weight: 500; opacity: 0.9;">{current_time.strftime('%d.%m.%Y')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ЗАГОЛОВОК
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
-    
-    # --- 4 виджета сразу под заголовком ---
-    current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
+
+    # ВИДЖЕТЫ
     col1, col2, col3, col4 = st.columns(4)
-    
     with col1:
         st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", use_container_width=True)
     with col2:
@@ -356,18 +379,10 @@ if st.session_state.page == "Главная":
         if st.button("🚌 ТРАНСПОРТ", use_container_width=True):
             st.session_state.page = "Транспорт"
             st.rerun()
-    
-    st.markdown("---")
-    
-# --- Поисковая строка под виджетами ---
-search_query = st.text_input(
-    "",
-    placeholder="Поиск в интернете...",
-    key=f"main_search_{st.session_state.page}",  # уникальный ключ
-    label_visibility="collapsed"
-)
 
-    # --- Результаты поиска ---
+    st.markdown("---")
+
+    # --- РЕЗУЛЬТАТЫ ПОИСКА ---
     if search_query:
         st.markdown(f"### 🔍 Результаты поиска: **{search_query}**")
         with st.spinner("Ищу информацию..."):
