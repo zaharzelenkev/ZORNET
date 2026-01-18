@@ -11,6 +11,7 @@ from pathlib import Path
 import mimetypes
 from duckduckgo_search import DDGS
 from huggingface_hub import InferenceClient
+import streamlit.components.v1 as components
 
 # ================= НАСТРОЙКИ =================
 st.set_page_config(
@@ -586,12 +587,11 @@ elif st.session_state.page == "Новости":
                 <p style="color:#1a1a1a; margin-top:10px;">{item.summary[:200]}...</p>
             </div>
             """, unsafe_allow_html=True)
-
 # ================= СТРАНИЦА ПОГОДЫ =================
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
     
-    # ПРОВЕРЯЕМ КООРДИНАТЫ ИЗ URL ПРЯМО ЗДЕСЬ
+    # Проверяем координаты из URL
     query_params = st.query_params
     
     if 'lat' in query_params and 'lon' in query_params:
@@ -599,7 +599,7 @@ elif st.session_state.page == "Погода":
             lat = float(query_params['lat'][0])
             lon = float(query_params['lon'][0])
             
-            # Очищаем параметры сразу
+            # Очищаем параметры
             st.query_params.clear()
             
             # Получаем погоду
@@ -611,10 +611,10 @@ elif st.session_state.page == "Погода":
                     st.session_state.user_city = weather_data["current"]["city"]
                     st.rerun()
                 else:
-                    st.error("Не удалось получить погоду по координатам")
+                    st.error("Не удалось получить погоду")
                     
-        except Exception as e:
-            st.error(f"Ошибка обработки координат: {e}")
+        except:
+            st.error("Ошибка обработки координат")
     
     # Вкладки
     tab1, tab2 = st.tabs(["📍 По местоположению", "🏙️ По городу"])
@@ -622,13 +622,12 @@ elif st.session_state.page == "Погода":
     with tab1:
         st.subheader("Погода по вашему местоположению")
         
-        # Объяснение
+        # Инструкция
         st.markdown("""
-        ### 🎯 Как это работает:
+        ### 🎯 Как получить погоду:
         1. **Нажмите кнопку ниже** 
-        2. **Появится системное окно** браузера
-        3. **Разрешите доступ** к местоположению
-        4. **Погода загрузится автоматически**
+        2. **Разрешите доступ** к местоположению в системном окне браузера
+        3. **Погода загрузится автоматически**
         """)
         
         # JavaScript для геолокации
@@ -665,7 +664,7 @@ elif st.session_state.page == "Погода":
                         document.getElementById('status').innerHTML = 
                             '<span style="color: green;">✓ Местоположение получено! Загружаю погоду...</span>';
                         
-                        // Перенаправляем с координатами в URL
+                        // Отправляем координаты через URL
                         const lat = position.coords.latitude;
                         const lon = position.coords.longitude;
                         const url = window.location.href.split('?')[0] + '?lat=' + lat + '&lon=' + lon;
@@ -673,7 +672,7 @@ elif st.session_state.page == "Погода":
                     },
                     // Ошибка
                     function(error) {
-                        let errorMsg = "";
+                        let errorMsg = "Ошибка: ";
                         if (error.code === 1) {
                             errorMsg = "❌ Вы отказали в доступе";
                         } else if (error.code === 2) {
@@ -685,12 +684,6 @@ elif st.session_state.page == "Погода":
                         }
                         document.getElementById('status').innerHTML = 
                             '<span style="color: red;">' + errorMsg + '</span>';
-                    },
-                    // Опции
-                    {
-                        enableHighAccuracy: true,
-                        timeout: 10000,
-                        maximumAge: 0
                     }
                 );
             } else {
@@ -701,47 +694,36 @@ elif st.session_state.page == "Погода":
         </script>
         """
         
-        # Отображаем компонент
-        components.html(geo_html, height=150)
+        # Отображаем компонент (ИСПРАВЛЕННАЯ СТРОКА)
+        st.components.v1.html(geo_html, height=150)
         
-        # Инструкция
         st.info("""
-        **Что произойдет после нажатия:**
-        - На компьютере: появится значок 📍 в адресной строке
-        - На телефоне: системный запрос "Разрешить доступ к местоположению"
+        **После нажатия кнопки:**
+        - Появится системное окно браузера
         - Нажмите **"Разрешить"** или **"Allow"**
+        - Если окно не появилось, проверьте настройки браузера
         """)
         
-        # Тестовые координаты для отладки
-        with st.expander("🔧 Тестовые координаты (если геолокация не работает)"):
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("📍 Минск (53.9, 27.5667)", key="test_minsk"):
-                    weather_data = get_weather_by_coords(53.9, 27.5667)
-                    if weather_data:
-                        st.session_state.weather_data = weather_data
-                        st.session_state.user_city = "Минск"
-                        st.rerun()
-            
-            with col2:
-                if st.button("📍 Москва (55.7558, 37.6173)", key="test_moscow"):
-                    weather_data = get_weather_by_coords(55.7558, 37.6173)
-                    if weather_data:
-                        st.session_state.weather_data = weather_data
-                        st.session_state.user_city = "Москва"
-                        st.rerun()
+        # Тестовые координаты
+        with st.expander("🔧 Тестовые координаты"):
+            if st.button("📍 Использовать Минск (53.9, 27.5667)", key="use_minsk"):
+                weather_data = get_weather_by_coords(53.9, 27.5667)
+                if weather_data:
+                    st.session_state.weather_data = weather_data
+                    st.session_state.user_city = "Минск"
+                    st.rerun()
     
     with tab2:
         st.subheader("Поиск погоды по городу")
         
-        # Твой существующий код для поиска по городу
+        # Поиск города
         city_input = st.text_input(
             "Введите название города",
-            placeholder="Например: Минск, Москва...",
-            key="city_search"
+            placeholder="Минск, Москва, Лондон...",
+            key="city_input_field"
         )
         
-        if st.button("🔍 Найти погоду", type="primary", key="search_weather"):
+        if st.button("🔍 Найти погоду", type="primary", key="find_weather"):
             if city_input:
                 with st.spinner(f"Ищу погоду для {city_input}..."):
                     weather_data = get_weather_by_city(city_input)
@@ -755,14 +737,14 @@ elif st.session_state.page == "Погода":
             else:
                 st.warning("Введите название города")
         
-        # Быстрые города
+        # Быстрый выбор
         st.markdown("### 🏙️ Быстрый выбор")
-        cities = ["Минск", "Гомель", "Витебск", "Могилёв", "Брест", "Гродно", "Москва", "Киев"]
-        cols = st.columns(4)
+        cities = ["Минск", "Гомель", "Витебск", "Могилёв", "Брест", "Гродно"]
+        cols = st.columns(3)
         
         for idx, city in enumerate(cities):
-            with cols[idx % 4]:
-                if st.button(city, key=f"quick_{city}", use_container_width=True):
+            with cols[idx % 3]:
+                if st.button(city, key=f"city_btn_{city}", use_container_width=True):
                     with st.spinner(f"Загружаю {city}..."):
                         weather_data = get_weather_by_city(city)
                         if weather_data:
@@ -775,19 +757,19 @@ elif st.session_state.page == "Погода":
         current = st.session_state.weather_data["current"]
         
         st.markdown("---")
-        st.markdown(f"## 🌤️ Погода в {current['city']}, {current['country']}")
+        st.markdown(f"## 🌤️ Погода в {current['city']}")
         
-        # Основная информация
-        col1, col2, col3 = st.columns([2, 1, 2])
+        # Основной виджет
+        col_temp, col_icon, col_info = st.columns([2, 1, 2])
         
-        with col1:
+        with col_temp:
             st.markdown(f"""
             <div style="text-align: center;">
                 <div style="font-size: 4rem; font-weight: 800; color: #1a1a1a;">
                     {current['temp']}°C
                 </div>
                 <div style="font-size: 1.5rem; color: #666; margin-top: 10px;">
-                    {get_weather_icon(current['icon'])} {current['description']}
+                    {current['description']}
                 </div>
                 <div style="font-size: 1rem; color: #888; margin-top: 5px;">
                     💁 Ощущается как {current['feels_like']}°C
@@ -795,40 +777,59 @@ elif st.session_state.page == "Погода":
             </div>
             """, unsafe_allow_html=True)
         
-        with col2:
+        with col_icon:
             st.markdown(f"""
-            <div style="text-align: center; padding-top: 10px;">
+            <div style="text-align: center; padding-top: 15px;">
                 <div style="font-size: 5rem;">
                     {get_weather_icon(current['icon'])}
                 </div>
             </div>
             """, unsafe_allow_html=True)
         
-        with col3:
+        with col_info:
             # Детали
-            st.markdown("""
-            <div style="background: #f8f9fa; border-radius: 10px; padding: 15px;">
-            """, unsafe_allow_html=True)
-            
             details = [
                 ("💧 Влажность", f"{current['humidity']}%"),
                 ("💨 Ветер", f"{current['wind_speed']} м/с"),
+                ("🧭 Направление", get_wind_direction(current['wind_deg'])),
                 ("📊 Давление", f"{current['pressure']} гПа"),
                 ("👁️ Видимость", f"{current['visibility']} км"),
+                ("☁️ Облачность", f"{current['clouds']}%"),
                 ("🌅 Восход", current['sunrise']),
                 ("🌇 Закат", current['sunset'])
             ]
             
-            for name, value in details:
-                st.markdown(f"""
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span style="color: #666;">{name}</span>
-                    <span style="font-weight: bold;">{value}</span>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            st.markdown("</div>", unsafe_allow_html=True)
-            
+            for i in range(0, len(details), 2):
+                col1, col2 = st.columns(2)
+                with col1:
+                    name, value = details[i]
+                    st.markdown(f"""
+                    <div style="
+                        background: #f8f9fa;
+                        padding: 10px;
+                        border-radius: 8px;
+                        margin-bottom: 10px;
+                    ">
+                        <div style="font-size: 0.9rem; color: #666;">{name}</div>
+                        <div style="font-size: 1.2rem; font-weight: bold;">{value}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                if i + 1 < len(details):
+                    with col2:
+                        name, value = details[i + 1]
+                        st.markdown(f"""
+                        <div style="
+                            background: #f8f9fa;
+                            padding: 10px;
+                            border-radius: 8px;
+                            margin-bottom: 10px;
+                        ">
+                            <div style="font-size: 0.9rem; color: #666;">{name}</div>
+                            <div style="font-size: 1.2rem; font-weight: bold;">{value}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
 # ================= СТРАНИЦА ТРАНСПОРТА =================
 elif st.session_state.page == "Транспорт":
     st.markdown('<div class="gold-title">🚌 ТРАНСПОРТ</div>', unsafe_allow_html=True)
