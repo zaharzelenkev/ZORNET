@@ -1124,9 +1124,6 @@ if st.session_state.page == "Главная":
                 </div>
                 """, unsafe_allow_html=True)
 
-# =================================================
-# СТРАНИЦА ZORNET AI (С СТИЛЕМ ПО ФОТО)
-# =================================================
 elif st.session_state.page == "ZORNET AI":
     st.markdown('<div class="gold-title">🤖 ZORNET AI</div>', unsafe_allow_html=True)
 
@@ -1155,7 +1152,7 @@ elif st.session_state.page == "ZORNET AI":
             </div>
             """, unsafe_allow_html=True)
 
-# Поле ввода
+    # Поле ввода
     if prompt := st.chat_input("Спросите ZORNET AI...", key="ai_chat_input"):
         # Добавляем сообщение пользователя с профессиональным стилем
         st.markdown(f"""
@@ -1167,13 +1164,13 @@ elif st.session_state.page == "ZORNET AI":
         """, unsafe_allow_html=True)
 
         st.session_state.ai_messages.append({"role": "user", "content": prompt})
-
-# Получаем ответ от HF AI
-with st.spinner("ZORNET думает..."):
-    prompt = st.session_state.user_input  # или откуда берёшь сообщение пользователя
-    response = ask_hf_ai(prompt, st.session_state.ai_messages)
-    st.session_state.ai_messages.append({"role": "user", "content": prompt})
-    st.session_state.ai_messages.append({"role": "assistant", "content": response})
+        
+        # Получаем ответ от HF AI
+        with st.spinner("ZORNET думает..."):
+            response = ask_hf_ai(prompt, st.session_state.ai_messages[-10:])  # Берём последние 10 сообщений
+            st.session_state.ai_messages.append({"role": "assistant", "content": response})
+        
+        st.rerun()
 
     # Боковая панель с примерами вопросов
     with st.sidebar:
