@@ -21,13 +21,13 @@ import random
 from huggingface_hub import InferenceClient
 
 # ================= ИСПРАВЛЕНИЯ =================
-# 1. Убрал ключ из кода - только из secrets
 if "HF_API_KEY" not in st.secrets:
     st.error("❌ Добавь HF_API_KEY в Streamlit Secrets!")
     st.info("Вставь свой HF API ключ в Streamlit Cloud Secrets")
     st.stop()
 
-HF_API_KEY = st.secrets["h_XzFyShNnTByfEsHPIehaA£hMtECtGWLjMk"]
+# Твой API ключ - вставь свой реальный ключ сюда:
+HF_API_KEY = "h_XzFyShNnTByfEsHPIehaA£hMtECtGWLjMk"  # <--- ВСТАВЬ СВОЙ КЛЮЧ ЗДЕСЬ!
 client = InferenceClient(HF_API_KEY)
 
 # 2. Убрал неработающий vision блок
