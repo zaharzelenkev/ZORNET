@@ -6,37 +6,12 @@ import pytz
 import requests
 import feedparser
 from PIL import Image
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
-import json
-from google_auth_oauthlib.flow import Flow
 from pathlib import Path
 import mimetypes
-import time
 from duckduckgo_search import DDGS
-from streamlit_folium import st_folium
-import folium
-import random
 from huggingface_hub import InferenceClient
 
-# ================= ИСПРАВЛЕНИЯ =================
-if "HF_API_KEY" not in st.secrets:
-    st.error("❌ Добавь HF_API_KEY в Streamlit Secrets!")
-    st.info("Вставь свой HF API ключ в Streamlit Cloud Secrets")
-    st.stop()
-
-# Твой API ключ - вставь свой реальный ключ сюда:
-HF_API_KEY = "h_XzFyShNnTByfEsHPIehaA£hMtECtGWLjMk"  # <--- ВСТАВЬ СВОЙ КЛЮЧ ЗДЕСЬ!
-client = InferenceClient(HF_API_KEY)
-
-# 2. Убрал неработающий vision блок
-vision_available = False  # Отключаем vision модель
-
-if "ai_messages" not in st.session_state:
-    st.session_state.ai_messages = []
-
-# ================= НАСТРОЙКИ СТРАНИЦЫ =================
+# ================= НАСТРОЙКИ =================
 st.set_page_config(
     page_title="ZORNET",
     page_icon="🇧🇾",
@@ -44,37 +19,144 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ================= ВСЕ ОСТАЛЬНЫЕ ФУНКЦИИ ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ =================
-# (Оставляю все функции как были, только исправлю ask_hf_ai)
+# ================= API КЛЮЧ =================
+# ВСТАВЬ СВОЙ КЛЮЧ СЮДА:
+HF_API_KEY = "h_XzFyShNnTByfEsHPIehaA£hMtECtGWLjMk"
+client = InferenceClient(HF_API_KEY)
 
-def ask_hf_ai(prompt, history=[]):
-    """ИСПРАВЛЕННАЯ функция AI"""
+# ================= СЕССИЯ =================
+if "page" not in st.session_state:
+    st.session_state.page = "Главная"
+if "ai_messages" not in st.session_state:
+    st.session_state.ai_messages = []
+
+# ================= CSS СТИЛИ =================
+st.markdown("""
+<style>
+    /* ОБЩИЙ СТИЛЬ */
+    .stApp { background-color: #ffffff; }
+    
+    /* СКРЫВАЕМ ЛИШНЕЕ */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    /* ГЛАВНЫЙ ЗАГОЛОВОК */
+    .gold-title {
+        font-family: 'Helvetica Neue', sans-serif;
+        font-size: 4rem;
+        font-weight: 800;
+        text-align: center;
+        background: linear-gradient(to bottom, #DAA520, #B8860B);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        margin: 10px 0 30px 0;
+    }
+    
+    /* КНОПКИ ГЛАВНОЙ */
+    div.stButton > button {
+        background: #f8f9fa !important;
+        border: 1px solid #dee2e6 !important;
+        color: #1a1a1a !important;
+        padding: 20px !important; 
+        border-radius: 12px !important;
+        font-weight: bold !important;
+        width: 100% !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
+    }
+    
+    /* ЗОЛОТАЯ КНОПКА AI */
+    .gold-btn {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+        border: none !important;
+        color: white !important;
+        border-radius: 12px !important;
+        padding: 14px 28px !important;
+        font-weight: 600 !important;
+        font-size: 16px !important;
+        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3) !important;
+    }
+    
+    /* ВРЕМЯ В ЗОЛОТОЙ РАМКЕ */
+    .time-widget {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+        border-radius: 12px;
+        padding: 12px 15px;
+        text-align: center;
+        color: white;
+        font-weight: 600;
+        font-size: 16px;
+        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
+    }
+    
+    /* РЕЗУЛЬТАТЫ ПОИСКА */
+    .search-result {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        border-left: 4px solid #DAA520;
+    }
+    
+    /* ЧАТ AI */
+    .user-message {
+        background: #f0f0f0;
+        padding: 12px 18px;
+        border-radius: 18px;
+        max-width: 70%;
+        margin-left: auto;
+        margin-bottom: 15px;
+    }
+    
+    .ai-message {
+        background: #f9f9f9;
+        padding: 12px 18px;
+        border-radius: 18px;
+        max-width: 70%;
+        margin-right: auto;
+        margin-bottom: 15px;
+        border-left: 4px solid #DAA520;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ================= САЙДБАР =================
+with st.sidebar:
+    st.markdown("<h3 style='color:#DAA520;'>🇧🇾 ZORNET</h3>", unsafe_allow_html=True)
+    
+    pages = [
+        ("🏠", "ГЛАВНАЯ", "Главная"),
+        ("🤖", "ZORNET AI", "ZORNET AI"),
+        ("📰", "НОВОСТИ", "Новости"),
+        ("💾", "ДИСК", "Диск"),
+        ("🚌", "ТРАНСПОРТ", "Транспорт"),
+        ("👤", "ПРОФИЛЬ", "Профиль"),
+    ]
+    
+    for icon, text, page in pages:
+        if st.button(f"{icon} {text}", key=f"nav_{page}", use_container_width=True):
+            st.session_state.page = page
+            st.rerun()
+
+# ================= ФУНКЦИИ AI =================
+def ask_hf_ai(prompt):
+    """Общение с AI"""
     try:
-        # Простой prompt без сложного форматирования
-        full_prompt = f"""
-        Ты ZORNET AI, помощник. Отвечай кратко и по делу.
-        
-        Вопрос: {prompt}
-        
-        Ответ:
-        """
-        
         response = client.text_generation(
             model="mistralai/Mistral-7B-Instruct-v0.1",
-            prompt=full_prompt,
+            prompt=f"Ты ZORNET AI, полезный помощник. Отвечай кратко и по делу.\n\nВопрос: {prompt}\n\nОтвет:",
             max_new_tokens=300,
-            temperature=0.7,
-            do_sample=True
+            temperature=0.7
         )
-        
-        # Преобразуем в строку
         return str(response).strip()
     except Exception as e:
-        return f"Извините, произошла ошибка: {str(e)}"
+        return f"Ошибка: {str(e)}"
 
-# ================= ИСПРАВЛЕННЫЙ ПОИСК =================
-def search_zornet(query, num_results=8):
-    """Поиск БЕЗ предложений"""
+# ================= ФУНКЦИИ ПОИСКА =================
+def search_zornet(query, num_results=5):
+    """Поиск в интернете"""
     results = []
     try:
         with DDGS() as ddgs:
@@ -82,182 +164,111 @@ def search_zornet(query, num_results=8):
                 results.append({
                     "title": r.get("title", "Без названия"),
                     "url": r.get("href", "#"),
-                    "snippet": r.get("body", "Описание отсутствует")[:180] + "...",
-                    "source": r.get("href", "").split("/")[2] if "/" in r.get("href", "") else ""
+                    "snippet": r.get("body", "Нет описания")[:180] + "...",
                 })
     except Exception as e:
-        st.error(f"Ошибка поиска: {e}")
+        st.error(f"Ошибка поиска")
     return results
 
-# УДАЛИ ЭТУ ФУНКЦИЮ - она показывает предложения поиска:
-# def get_search_suggestions(query):
-#     """УДАЛИТЬ - не нужна"""
-#     return []
-
-# ================= ВСЕ ОСТАЛЬНЫЕ ФУНКЦИИ ОСТАЮТСЯ =================
-# Дальше идет ТВОЙ ПОЛНЫЙ КОД без изменений:
-# - Все транспортные функции
-# - Все функции диска  
-# - Все функции профиля
-# - Все CSS стили
-# - Вся логика страниц
-
-# ================= ТОЛЬКО ИСПРАВЛЕНИЯ В ГЛАВНОЙ СТРАНИЦЕ =================
-
-# В разделе ПОИСКОВЫЕ РЕЗУЛЬТАТЫ на главной странице:
-# УБРАТЬ этот блок с предложениями:
-"""
-# Подсказки для поиска
-suggestions = get_search_suggestions(search_query)
-if suggestions:
-    st.markdown("**✨ Похожие запросы:**")
-    cols = st.columns(len(suggestions))
-    for idx, suggestion in enumerate(suggestions):
-        with cols[idx]:
-            if st.button(suggestion, key=f"sugg_{idx}", use_container_width=True):
-                st.session_state.search_query = suggestion
-                st.rerun()
-"""
-
-# Вместо него просто показывать результаты поиска без предложений
-
-# ================= В СТРАНИЦЕ AI =================
-# В функции ask_hf_ai УБРАТЬ сложное форматирование истории
-# Оставить простой вызов как выше
-
-# ================= ДОБАВИТЬ В requirements.txt =================
-"""
-streamlit>=1.28.0
-huggingface_hub>=0.19.0
-duckduckgo-search>=4.1.0
-Pillow>=10.0.0
-pytz>=2023.3
-feedparser>=6.0.10
-requests>=2.31.0
-google-api-python-client>=2.100.0
-google-auth-oauthlib>=1.0.0
-google-auth-httplib2>=0.1.0
-folium>=0.14.0
-streamlit-folium>=0.15.0
-sqlite3
-"""
-
-# ================= КНОПКА МЕНЮ =================
-# Добавить в самое начало после импортов:
-menu_col1, menu_col2 = st.columns([6, 1])
-with menu_col2:
-    if st.button("☰ Меню", type="secondary"):
-        st.session_state.show_sidebar = not st.session_state.get('show_sidebar', True)
-        st.rerun()
-
-# И боковая панель должна быть всегда:
-with st.sidebar:
-    st.markdown("<h3 style='color:#DAA520;'>🇧🇾 ZORNET</h3>", unsafe_allow_html=True)
-    
-    nav_items = [
-        ("🏠", "ГЛАВНАЯ", "Главная"),
-        ("🤖", "ZORNET AI", "ZORNET AI"),
-        ("📰", "НОВОСТИ", "Новости"),
-        ("💾", "ДИСК", "Диск"),
-        ("🚌", "ТРАНСПОРТ", "Транспорт"),
-        ("👤", "ПРОФИЛЬ", "Профиль"),
-        ("📷", "КАМЕРА", "Камера"),
-    ]
-    
-    for icon, text, page in nav_items:
-        if st.button(f"{icon} {text}", key=f"nav_{page}", use_container_width=True):
-            st.session_state.page = page
-            if page != "Главная":
-                st.session_state.messages = []
-            st.rerun()
-
-# =================================================
-# ФУНКЦИИ ПОИСКА
-# =================================================
-
-def search_zornet(query, num_results=10, region="by-ru", safesearch="moderate"):
-    """Реальный поиск в интернете через DuckDuckGo"""
-    results = []
-    try:
-        with DDGS() as ddgs:
-            # Поиск сайтов с указанием региона и настроек безопасности
-            search_gen = ddgs.text(
-                query,
-                max_results=num_results,
-                region=region,
-                safesearch=safesearch
-            )
-
-            for r in search_gen:
-                # Форматируем результат
-                result = {
-                    "title": r.get("title", "Без названия"),
-                    "url": r.get("href", "#"),
-                    "snippet": r.get("body", "Описание отсутствует"),
-                    "source": r.get("href", "").split("/")[2] if "/" in r.get("href", "") else ""
-                }
-                results.append(result)
-
-    except Exception as e:
-        st.error(f"Ошибка поиска: {e}")
-        # Запасные результаты на случай ошибки
-        results = get_fallback_results(query)
-
-    return results
-
-
-def get_fallback_results(query):
-    """Запасные результаты на случай если поиск не работает"""
-    fallbacks = [
-        {
-            "title": f"Результаты по запросу: {query}",
-            "url": "https://www.google.com/search",
-            "snippet": "Поиск в интернете временно недоступен. Попробуйте позже.",
-            "source": "Zornet Search"
-        },
-        {
-            "title": "Белорусские новости онлайн",
-            "url": "https://www.belta.by",
-            "snippet": "Последние новости Беларуси и мира на официальном сайте БелТА.",
-            "source": "belta.by"
-        },
-        {
-            "title": "Карты и навигация",
-            "url": "https://maps.google.com",
-            "snippet": "Построение маршрутов, карты городов Беларуси.",
-            "source": "google.com"
-        }
-    ]
-    return fallbacks
-
-
-def get_search_suggestions(query):
-    """Получает подсказки для поиска"""
-    suggestions = []
-    try:
-        with DDGS() as ddgs:
-            suggestions_gen = ddgs.suggestions(query)
-            suggestions = [s for s in suggestions_gen]
-    except:
-        suggestions = [f"{query} в Беларуси", f"{query} 2024", f"{query} минск"]
-
-    return suggestions[:5]
-
-
-def get_popular_searches():
-    """Популярные поисковые запросы"""
+# ================= ТРАНСПОРТНЫЕ ФУНКЦИИ =================
+def get_minsk_metro():
     return [
-        "Новости Беларуси сегодня",
-        "Курс доллара в Беларуси",
-        "Погода в Минске",
-        "Расписание электричек",
-        "Карта метро Минска",
-        "Такси Минск цены",
-        "Обмен валюты",
-        "Гостиницы в Минске",
-        "Афиша мероприятий",
-        "Работа в Минске"
+        {"name": "Малиновка", "line": "1", "next": "3 мин"},
+        {"name": "Петровщина", "line": "1", "next": "5 мин"},
+        {"name": "Площадь Ленина", "line": "1", "next": "2 мин"},
+        {"name": "Институт Культуры", "line": "1", "next": "4 мин"},
+        {"name": "Молодёжная", "line": "2", "next": "6 мин"},
     ]
+
+def get_bus_trams():
+    return [
+        {"number": "100", "type": "автобус", "from": "Ст.м. Каменная Горка", "to": "Аэропорт", "next": "7 мин"},
+        {"number": "1", "type": "трамвай", "from": "Тракторный завод", "to": "Серебрянка", "next": "5 мин"},
+        {"number": "3с", "type": "троллейбус", "from": "ДС Веснянка", "to": "ДС Серова", "next": "3 мин"},
+        {"number": "40", "type": "автобус", "from": "Ст.м. Уручье", "to": "Дражня", "next": "10 мин"},
+    ]
+
+def get_taxi_prices():
+    return [
+        {"name": "Яндекс Такси", "price": "8-12 руб", "wait": "5-7 мин"},
+        {"name": "Uber", "price": "9-13 руб", "wait": "4-6 мин"},
+        {"name": "Такси Близко", "price": "7-10 руб", "wait": "8-10 мин"},
+        {"name": "Такси Город", "price": "6-9 руб", "wait": "10-15 мин"},
+    ]
+
+def get_belarusian_railway():
+    return [
+        {"number": "001Б", "from": "Минск", "to": "Брест", "time": "18:00 - 21:30"},
+        {"number": "735Б", "from": "Минск", "to": "Гомель", "time": "07:30 - 11:15"},
+        {"number": "603Б", "from": "Минск", "to": "Витебск", "time": "14:20 - 18:45"},
+    ]
+
+# ================= БАЗА ДАННЫХ =================
+def init_db():
+    conn = sqlite3.connect("zornet.db")
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY,
+            username TEXT UNIQUE,
+            email TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def get_user_count():
+    conn = sqlite3.connect("zornet.db")
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM users")
+    count = c.fetchone()[0]
+    conn.close()
+    return count
+
+# ================= ДИСК ФУНКЦИИ =================
+def init_disk_db():
+    conn = sqlite3.connect("zornet_disk.db")
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            size INTEGER,
+            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def get_disk_files():
+    conn = sqlite3.connect("zornet_disk.db")
+    c = conn.cursor()
+    c.execute("SELECT name, size, uploaded_at FROM files ORDER BY uploaded_at DESC LIMIT 10")
+    files = c.fetchall()
+    conn.close()
+    return files
+
+def save_file_to_db(filename, size):
+    conn = sqlite3.connect("zornet_disk.db")
+    c = conn.cursor()
+    c.execute("INSERT INTO files (name, size) VALUES (?, ?)", (filename, size))
+    conn.commit()
+    conn.close()
+
+# ================= НОВОСТИ =================
+def get_belta_news():
+    try:
+        headers = {"User-Agent": "ZORNET/1.0"}
+        response = requests.get("https://www.belta.by/rss", headers=headers, timeout=10)
+        feed = feedparser.parse(response.content)
+        return feed.entries[:5]
+    except:
+        return [
+            {"title": "Новости Беларуси", "link": "#", "summary": "Следите за обновлениями"},
+            {"title": "Экономические новости", "link": "#", "summary": "Развитие экономики страны"},
+            {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
+        ]
 
 # ================= ГЛАВНАЯ СТРАНИЦА =================
 if st.session_state.page == "Главная":
@@ -266,12 +277,27 @@ if st.session_state.page == "Главная":
 
     with col1:
         # КНОПКА AI
-        if st.button("🤖 **ZORNET AI**", key="zornet_ai_btn", use_container_width=True):
+        st.markdown("""
+        <style>
+        div[data-testid="stButton"] > button[kind="secondary"] {
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+            border: none !important;
+            color: white !important;
+            border-radius: 12px !important;
+            padding: 14px 28px !important;
+            font-weight: 600 !important;
+            font-size: 16px !important;
+            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3) !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        if st.button("🤖 **ZORNET AI**", key="zornet_ai_btn", type="secondary", use_container_width=True):
             st.session_state.page = "ZORNET AI"
             st.rerun()
 
     with col2:
-        # ПОИСК
+        # ПОИСКОВАЯ СТРОКА
         search_query = st.text_input(
             "",
             placeholder="🔍 Поиск в интернете...",
@@ -280,35 +306,34 @@ if st.session_state.page == "Главная":
         )
 
     with col3:
-        # ВРЕМЯ В КРАСИВОЙ РАМКЕ
+        # ВРЕМЯ И ДАТА
         current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
         st.markdown(f"""
-        <div style="
-            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-            border-radius: 12px;
-            padding: 12px 15px;
-            text-align: center;
-            color: white;
-            font-weight: 600;
-            font-size: 16px;
-            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
-        ">
+        <div class="time-widget">
             <div>{current_time.strftime('%H:%M')}</div>
             <div style="font-size: 12px; font-weight: 500; opacity: 0.9;">{current_time.strftime('%d.%m.%Y')}</div>
         </div>
         """, unsafe_allow_html=True)
 
+    # ЗАГОЛОВОК
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
 
     # ВИДЖЕТЫ
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", use_container_width=True)
-    with c2:
-        st.button("⛅ -5°C\nМинск", use_container_width=True)
-    with c3:
-        st.button("💵 3.20\nBYN/USD", use_container_width=True)
-    with c4:
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        if st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", use_container_width=True):
+            pass
+    
+    with col2:
+        if st.button("⛅ -5°C\nМинск", use_container_width=True):
+            pass
+    
+    with col3:
+        if st.button("💵 3.20\nBYN/USD", use_container_width=True):
+            pass
+    
+    with col4:
         if st.button("🚌 ТРАНСПОРТ\n", use_container_width=True):
             st.session_state.page = "Транспорт"
             st.rerun()
@@ -319,26 +344,22 @@ if st.session_state.page == "Главная":
     if search_query:
         st.markdown(f"### 🔍 Результаты поиска: **{search_query}**")
         
-        # НЕТ ПОДСКАЗОК ПОИСКА!
-        
         with st.spinner("Ищу информацию..."):
             results = search_zornet(search_query, num_results=5)
             
             if results:
                 for idx, result in enumerate(results):
                     st.markdown(f"""
-                    <div style="
-                        background: #f8f9fa;
-                        padding: 15px;
-                        border-radius: 10px;
-                        margin-bottom: 10px;
-                        border-left: 4px solid #DAA520;
-                    ">
+                    <div class="search-result">
                         <div style="font-weight: 600; color: #1a1a1a; font-size: 16px;">
                             {idx + 1}. {result['title']}
                         </div>
-                        <div style="color: #1a73e8; font-size: 13px; margin: 5px 0;">{result['url'][:80]}...</div>
-                        <div style="color: #555; font-size: 14px;">{result['snippet']}</div>
+                        <div style="color: #1a73e8; font-size: 13px; margin: 5px 0;">
+                            {result['url'][:60]}...
+                        </div>
+                        <div style="color: #555; font-size: 14px;">
+                            {result['snippet']}
+                        </div>
                         <div style="margin-top: 10px;">
                             <a href="{result['url']}" target="_blank" 
                                style="padding: 6px 12px; background: #DAA520; color: white; 
@@ -348,62 +369,73 @@ if st.session_state.page == "Главная":
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
+            else:
+                st.info("По вашему запросу ничего не найдено.")
 
 # ================= СТРАНИЦА AI =================
 elif st.session_state.page == "ZORNET AI":
     st.markdown('<div class="gold-title">🤖 ZORNET AI</div>', unsafe_allow_html=True)
     
+    # ИНИЦИАЛИЗАЦИЯ ЧАТА
     if "ai_messages" not in st.session_state:
         st.session_state.ai_messages = [
             {"role": "assistant", "content": "Привет! Я ZORNET AI. Чем могу помочь?"}
         ]
     
-    # ИСТОРИЯ
+    # ИСТОРИЯ СООБЩЕНИЙ
     for message in st.session_state.ai_messages:
         if message["role"] == "user":
-            st.markdown(f"""
-            <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;">
-                <div style="background: #f0f0f0; padding: 12px 18px; border-radius: 18px; max-width: 70%;">
-                    {message["content"]}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f'<div class="user-message">{message["content"]}</div>', unsafe_allow_html=True)
         else:
-            st.markdown(f"""
-            <div style="display: flex; justify-content: flex-start; margin-bottom: 15px;">
-                <div style="background: #f9f9f9; padding: 12px 18px; border-radius: 18px; max-width: 70%; 
-                         border-left: 4px solid #DAA520;">
-                    {message["content"]}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f'<div class="ai-message">{message["content"]}</div>', unsafe_allow_html=True)
     
-    # ВВОД
+    # ПОЛЕ ВВОДА
     if prompt := st.chat_input("Спросите ZORNET AI..."):
+        # ДОБАВЛЯЕМ СООБЩЕНИЕ ПОЛЬЗОВАТЕЛЯ
         st.session_state.ai_messages.append({"role": "user", "content": prompt})
         
+        # ПОЛУЧАЕМ ОТВЕТ
         with st.spinner("ZORNET думает..."):
             response = ask_hf_ai(prompt)
             st.session_state.ai_messages.append({"role": "assistant", "content": response})
         
         st.rerun()
+    
+    # БОКОВАЯ ПАНЕЛЬ С ПРИМЕРАМИ
+    with st.sidebar:
+        st.markdown("### 💡 Примеры вопросов")
         
-# =================================================
-# СТРАНИЦА НОВОСТЕЙ
-elif st.session_state.page == "Новости":
-    st.markdown('<h1 style="color:#DAA520;">📰 Новости БелТА</h1>', unsafe_allow_html=True)
-    
-    # ВРЕМЕННО: заглушка для функции get_belta_news
-    def get_belta_news():
-        return [
-            type('News', (), {'title': 'Тестовая новость 1', 'link': '#', 'published': '2024-01-01', 'summary': 'Тестовое описание'})()
+        examples = [
+            "Напиши план развития для IT-стартапа",
+            "Объясни квантовую физику просто",
+            "Помоги написать деловое письмо",
+            "Какие технологии AI самые перспективные?",
+            "Напиши простой сайт на HTML",
+            "Объясни разницу Python и JavaScript",
+            "Помоги составить резюме",
+            "Какие книги по саморазвитию посоветуешь?"
         ]
+        
+        for example in examples:
+            if st.button(example, key=f"ex_{example[:10]}", use_container_width=True):
+                st.session_state.ai_messages.append({"role": "user", "content": example})
+                st.rerun()
+        
+        # ОЧИСТКА ИСТОРИИ
+        if st.button("🧹 Очистить историю", use_container_width=True):
+            st.session_state.ai_messages = [
+                {"role": "assistant", "content": "Привет! Я ZORNET AI. Чем могу помочь?"}
+            ]
+            st.rerun()
+
+# ================= СТРАНИЦА НОВОСТЕЙ =================
+elif st.session_state.page == "Новости":
+    st.markdown('<div class="gold-title">📰 НОВОСТИ</div>', unsafe_allow_html=True)
     
-    news = get_belta_news()
-    if not news:
-        st.info("Новости временно недоступны.")
-    else:
-        for entry in news:
+    with st.spinner("Загружаю новости..."):
+        news = get_belta_news()
+        
+        for item in news:
             st.markdown(f"""
             <div style="
                 background: #f8f9fa;
@@ -412,39 +444,34 @@ elif st.session_state.page == "Новости":
                 margin-bottom: 15px;
                 border-radius: 8px;
             ">
-                <a href="{entry.link}" target="_blank" style="color:#DAA520; font-size:1.2rem; font-weight:bold; text-decoration:none;">{entry.title}</a><br>
-                <small style="color:#666;">{getattr(entry, 'published', '')[:16]}</small>
-                <p style="color:#1a1a1a; margin-top:10px;">{getattr(entry, 'summary', '')[:300]}...</p>
+                <a href="{item.link}" target="_blank" 
+                   style="color:#DAA520; font-size:1.2rem; font-weight:bold; text-decoration:none;">
+                    {item.title}
+                </a>
+                <p style="color:#1a1a1a; margin-top:10px;">{item.summary[:200]}...</p>
             </div>
             """, unsafe_allow_html=True)
 
-# =================================================
-# СТРАНИЦА ТРАНСПОРТА
+# ================= СТРАНИЦА ТРАНСПОРТА =================
 elif st.session_state.page == "Транспорт":
     st.markdown('<div class="gold-title">🚌 ТРАНСПОРТ</div>', unsafe_allow_html=True)
-
-    # Транспортные табы
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-        "🚇 Метро", "🚌 Автобусы/Трамваи", "🚕 Такси",
-        "🚂 Железная дорога", "✈️ Аэропорты", "🚗 Пробки", "🛣️ Маршруты"
-    ])
-
+    
+    tab1, tab2, tab3, tab4 = st.tabs(["🚇 Метро", "🚌 Автобусы/Трамваи", "🚕 Такси", "🚂 Железная дорога"])
+    
     with tab1:
         st.subheader("Минское метро")
-        stations = get_minsk_metro()
-        for station in stations:
+        for station in get_minsk_metro():
             col1, col2, col3 = st.columns([3, 1, 1])
             with col1:
                 st.write(f"**{station['name']}**")
             with col2:
                 st.write(f"Линия {station['line']}")
             with col3:
-                st.success(f"🚇 {station['next_train']}")
-
+                st.success(f"🚇 {station['next']}")
+    
     with tab2:
         st.subheader("Автобусы и трамваи")
-        routes = get_bus_trams()
-        for route in routes:
+        for route in get_bus_trams():
             col1, col2, col3, col4 = st.columns([1, 2, 2, 1])
             with col1:
                 st.write(f"**{route['number']}**")
@@ -454,11 +481,10 @@ elif st.session_state.page == "Транспорт":
                 st.write(f"{route['from']} → {route['to']}")
             with col4:
                 st.info(f"⏱️ {route['next']}")
-
+    
     with tab3:
         st.subheader("Сравнение цен такси")
-        services = get_taxi_prices()
-        for service in services:
+        for service in get_taxi_prices():
             col1, col2, col3 = st.columns([2, 1, 1])
             with col1:
                 st.write(f"**{service['name']}**")
@@ -466,11 +492,10 @@ elif st.session_state.page == "Транспорт":
                 st.write(f"💵 {service['price']}")
             with col3:
                 st.write(f"🕒 {service['wait']}")
-
+    
     with tab4:
         st.subheader("Белорусская железная дорога")
-        trains = get_belarusian_railway()
-        for train in trains:
+        for train in get_belarusian_railway():
             col1, col2, col3, col4 = st.columns([1, 2, 2, 2])
             with col1:
                 st.write(f"**{train['number']}**")
@@ -479,530 +504,108 @@ elif st.session_state.page == "Транспорт":
             with col3:
                 st.write(f"➡️ {train['to']}")
             with col4:
-                st.write(f"🕒 {train['departure']} - {train['arrival']}")
+                st.write(f"🕒 {train['time']}")
 
-    with tab5:
-        st.subheader("Аэропорты Беларуси")
-        airports = get_airport_info()
-        for airport in airports:
-            col1, col2, col3 = st.columns([2, 1, 1])
-            with col1:
-                st.write(f"**{airport['name']}**")
-            with col2:
-                st.write(f"✈️ {airport['flights']}")
-            with col3:
-                st.success(f"✅ {airport['delays']}")
-
-    with tab6:
-        st.subheader("Пробки в городах")
-        cities = get_traffic_jams()
-        for city in cities:
-            col1, col2, col3 = st.columns([1, 1, 2])
-            with col1:
-                st.write(f"**{city['city']}**")
-            with col2:
-                # Цветной индикатор пробок
-                level = int(city['level'][0])
-                if level <= 2:
-                    color = "🟢"
-                elif level <= 4:
-                    color = "🟡"
-                else:
-                    color = "🔴"
-                st.write(f"{color} {city['level']}")
-            with col3:
-                st.write(city['description'])
-
-    with tab7:
-        st.subheader("Построение маршрутов")
-        col1, col2 = st.columns(2)
-        with col1:
-            start = st.text_input("Откуда", "Площадь Независимости")
-        with col2:
-            end = st.text_input("Куда", "Национальный аэропорт")
-
-        if st.button("Построить маршрут"):
-            routes = calculate_route(start, end)
-            for route in routes:
-                col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
-                with col1:
-                    st.write(f"**{route['type']}**")
-                with col2:
-                    st.write(f"🕒 {route['time']}")
-                with col3:
-                    st.write(f"📏 {route['distance']}")
-                with col4:
-                    st.write(f"💵 {route['price']}")
-
-# =================================================
-# СТРАНИЦА ДИСКА
-# =================================================
+# ================= СТРАНИЦА ДИСКА =================
 elif st.session_state.page == "Диск":
-    # Инициализация диска
-    if 'disk_initialized' not in st.session_state:
-        st.session_state.disk_initialized = True
-        st.session_state.current_folder = 0
-        st.session_state.folder_stack = [("Корневая папка", 0)]
-        st.session_state.selected_items = set()
-        st.session_state.view_mode = 'grid'
-        init_disk_db()
+    st.markdown('<div class="gold-title">💾 ДИСК</div>', unsafe_allow_html=True)
+    
+    # ИНИЦИАЛИЗАЦИЯ БД
+    init_disk_db()
+    
+    # ЗАГРУЗКА ФАЙЛОВ
+    uploaded_files = st.file_uploader(
+        "Загрузите файлы",
+        accept_multiple_files=True,
+        help="Выберите файлы для загрузки в облако"
+    )
+    
+    if uploaded_files:
+        for uploaded_file in uploaded_files:
+            # Сохраняем временно
+            with open(f"temp_{uploaded_file.name}", "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            
+            # Сохраняем в БД
+            save_file_to_db(uploaded_file.name, uploaded_file.size)
+        
+        st.success(f"✅ Загружено {len(uploaded_files)} файлов")
+        st.rerun()
+    
+    # СПИСОК ФАЙЛОВ
+    st.subheader("📁 Ваши файлы")
+    
+    files = get_disk_files()
+    if files:
+        for name, size, uploaded_at in files:
+            col1, col2, col3 = st.columns([3, 1, 1])
+            with col1:
+                st.write(f"**{name}**")
+            with col2:
+                st.write(f"{size:,} байт")
+            with col3:
+                st.write(uploaded_at[:10])
+    else:
+        st.info("У вас пока нет файлов в облаке")
 
-    st.markdown('<div class="gold-title">💾 ZORNET DISK</div>', unsafe_allow_html=True)
-
-    # Навигация по папкам
-    if len(st.session_state.folder_stack) > 1:
-        nav_items = st.session_state.folder_stack
-        nav_html = '<div style="margin-bottom: 20px;">'
-        for i, (name, folder_id) in enumerate(nav_items):
-            nav_html += f'<span style="color: #666; font-size: 14px;">📁 {name}</span>'
-            if i < len(nav_items) - 1:
-                nav_html += '<span style="color: #ccc; font-size: 12px; margin: 0 5px;">›</span>'
-        nav_html += '</div>'
-        st.markdown(nav_html, unsafe_allow_html=True)
-
-    # Панель действий
-    cols = st.columns([1, 1, 1, 2, 1])
-
-    with cols[0]:
-        if st.button("📁 New Folder", key="new_folder_btn", use_container_width=True):
-            with st.popover("Create New Folder", use_container_width=True):
-                folder_name = st.text_input("Folder name:", "New Folder", key="folder_input")
-                if st.button("Create", key="create_folder"):
-                    if folder_name:
-                        create_folder(folder_name, st.session_state.current_folder)
-                        st.rerun()
-
-    with cols[1]:
-        uploaded_files = st.file_uploader(
-            "Upload files",
-            accept_multiple_files=True,
-            key="main_uploader",
-            label_visibility="collapsed"
-        )
-        if uploaded_files:
-            progress_bar = st.progress(0)
-            for i, uploaded_file in enumerate(uploaded_files):
-                save_uploaded_file(uploaded_file, st.session_state.current_folder)
-                progress_bar.progress((i + 1) / len(uploaded_files))
-            st.rerun()
-
-    with cols[2]:
-        view_mode = st.selectbox(
-            "View:",
-            ["Grid View", "List View"],
-            index=0 if st.session_state.view_mode == 'grid' else 1,
-            label_visibility="collapsed"
-        )
-        st.session_state.view_mode = 'grid' if view_mode == "Grid View" else 'list'
-
-    with cols[3]:
-        search_query = st.text_input(
-            "",
-            placeholder="Search files and folders...",
-            label_visibility="collapsed"
-        )
-
-    with cols[4]:
-        if st.session_state.selected_items:
-            if st.button(f"🗑️ Delete ({len(st.session_state.selected_items)})",
-                         use_container_width=True, type="secondary"):
-                for item_id in list(st.session_state.selected_items):
-                    delete_file(item_id)
-                st.session_state.selected_items = set()
-                st.rerun()
-
-    # Статистика использования диска
-    used_space, total_space, usage_percent = get_disk_usage()
-
-    st.markdown(f"""
-    <div style="background: #f8f9fa; border-radius: 10px; padding: 20px; margin: 20px 0;">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-            <div>
-                <div style="font-weight: 600; color: #1a1a1a;">Storage Overview</div>
-                <div style="font-size: 14px; color: #666;">{human_readable_size(used_space)} of {human_readable_size(total_space)} used</div>
-            </div>
-            <div style="text-align: right;">
-                <div style="font-size: 24px; font-weight: 700; color: #DAA520;">{usage_percent:.0f}%</div>
-            </div>
-        </div>
-        <div style="background: rgba(212, 175, 55, 0.1); height: 6px; border-radius: 3px; overflow: hidden; margin: 10px 0;">
-            <div style="background: linear-gradient(90deg, #DAA520, #F4D03F); height: 100%; width: {usage_percent}%; border-radius: 3px;"></div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Файлы и папки
-    files = get_files_in_folder(st.session_state.current_folder)
-
-    # Фильтрация по поиску
-    if search_query:
-        files = [f for f in files if search_query.lower() in f[1].lower()]
-
-    if not files:
+# ================= СТРАНИЦА ПРОФИЛЯ =================
+elif st.session_state.page == "Профиль":
+    st.markdown('<div class="gold-title">👤 ПРОФИЛЬ</div>', unsafe_allow_html=True)
+    
+    # ИНИЦИАЛИЗАЦИЯ БД
+    init_db()
+    user_count = get_user_count()
+    
+    # ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
         st.markdown("""
-        <div style="text-align: center; padding: 60px 20px; color: #666;">
-            <div style="font-size: 48px; margin-bottom: 20px; opacity: 0.3;">📁</div>
-            <h3>No files found</h3>
-            <p>""" + (
-            "Try a different search term" if search_query else "Upload files or create a new folder to get started") + """</p>
+        <div style="text-align: center;">
+            <div style="
+                width: 120px; 
+                height: 120px; 
+                border-radius: 50%; 
+                background: linear-gradient(135deg, #DAA520, #B8860B);
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                margin: 0 auto 20px;
+                color: white;
+                font-size: 48px;
+                font-weight: bold;
+            ">
+                Z
+            </div>
+            <h3>ZORNET User</h3>
         </div>
         """, unsafe_allow_html=True)
-    else:
-        if st.session_state.view_mode == 'grid':
-            # Сетка
-            cols = st.columns(4)
-            for idx, file in enumerate(files):
-                file_id, name, path, size, file_type, created_at, is_folder = file
-                col_idx = idx % 4
-
-                with cols[col_idx]:
-                    # Определяем иконку
-                    if is_folder:
-                        icon = "📁"
-                        bg_color = "rgba(212, 175, 55, 0.1)"
-                    else:
-                        icon_map = {
-                            'pdf': '📄', 'doc': '📝', 'docx': '📝',
-                            'xls': '📊', 'xlsx': '📊',
-                            'jpg': '🖼️', 'jpeg': '🖼️', 'png': '🖼️',
-                            'mp3': '🎵', 'wav': '🎵',
-                            'mp4': '🎬', 'avi': '🎬', 'mov': '🎬',
-                            'zip': '📦', 'rar': '📦',
-                            'txt': '📃', 'py': '🐍'
-                        }
-                        icon = icon_map.get(file_type.lower() if file_type else '', '📄')
-                        bg_color = "rgba(212, 175, 55, 0.08)"
-
-                    # Форматирование
-                    created_str = datetime.datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S").strftime("%b %d")
-                    size_str = human_readable_size(size) if size else ""
-
-                    # Карточка
-                    st.markdown(f"""
-                    <div style="background: white; border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; 
-                                padding: 20px; text-align: center; margin-bottom: 15px; cursor: pointer;
-                                transition: all 0.2s;"
-                         onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';"
-                         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';">
-                        <div style="width: 50px; height: 50px; border-radius: 10px; background: {bg_color}; 
-                                    display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;
-                                    color: #DAA520; font-size: 24px;">
-                            {icon}
-                        </div>
-                        <div style="font-weight: 500; color: #1a1a1a; font-size: 14px; margin-bottom: 5px; 
-                                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{name}">
-                            {name}
-                        </div>
-                        <div style="font-size: 12px; color: #888;">
-                            {size_str} • {created_str}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    # Кнопки действий
-                    if is_folder:
-                        if st.button("📂 Open", key=f"open_{file_id}", use_container_width=True):
-                            st.session_state.folder_stack.append((name, file_id))
-                            st.session_state.current_folder = file_id
-                            st.rerun()
-                    else:
-                        if os.path.exists(path):
-                            with open(path, "rb") as f:
-                                st.download_button(
-                                    "📥 Download",
-                                    data=f.read(),
-                                    file_name=name,
-                                    key=f"dl_{file_id}",
-                                    use_container_width=True
-                                )
-        else:
-            # Таблица
-            st.markdown("""
-            <style>
-            .file-table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-            .file-table th {
-                background: rgba(212, 175, 55, 0.05);
-                padding: 12px;
-                text-align: left;
-                font-weight: 600;
-                color: #666;
-                border-bottom: 1px solid rgba(0,0,0,0.1);
-            }
-            .file-table td {
-                padding: 12px;
-                border-bottom: 1px solid rgba(0,0,0,0.05);
-            }
-            .file-table tr:hover {
-                background: rgba(212, 175, 55, 0.02);
-            }
-            </style>
-            """, unsafe_allow_html=True)
-
-            st.markdown("""
-            <table class="file-table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Type</th>
-                        <th>Size</th>
-                        <th>Modified</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-            """, unsafe_allow_html=True)
-
-            for file in files:
-                file_id, name, path, size, file_type, created_at, is_folder = file
-
-                # Иконка и тип
-                icon = "📁" if is_folder else "📄"
-                type_text = "Folder" if is_folder else (file_type.upper() if file_type else "File")
-
-                # Форматирование
-                size_str = human_readable_size(size) if size else "—"
-                modified_str = datetime.datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S").strftime("%d %b %Y")
-
-                # Строка таблицы
-                st.markdown(f"""
-                <tr>
-                    <td style="display: flex; align-items: center; gap: 10px;">
-                        <span style="font-size: 18px;">{icon}</span>
-                        <span style="font-weight: 500;">{name}</span>
-                    </td>
-                    <td>{type_text}</td>
-                    <td>{size_str}</td>
-                    <td>{modified_str}</td>
-                    <td>
-                """, unsafe_allow_html=True)
-
-                # Кнопки действий
-                col1, col2 = st.columns(2)
-                with col1:
-                    if is_folder:
-                        if st.button("Open", key=f"t_open_{file_id}"):
-                            st.session_state.folder_stack.append((name, file_id))
-                            st.session_state.current_folder = file_id
-                            st.rerun()
-                    else:
-                        if os.path.exists(path):
-                            with open(path, "rb") as f:
-                                st.download_button("Download", data=f.read(), file_name=name, key=f"t_dl_{file_id}")
-                with col2:
-                    if st.button("Delete", key=f"t_del_{file_id}", type="secondary"):
-                        delete_file(file_id)
-                        st.rerun()
-
-                st.markdown('</td></tr>', unsafe_allow_html=True)
-
-            st.markdown('</tbody></table>', unsafe_allow_html=True)
-
-# =================================================
-# СТРАНИЦА ПРОФИЛЯ
-# =================================================
-elif st.session_state.page == "Профиль":
-    col_l, col_c, col_r = st.columns([1, 4, 1])
-
-    with col_c:
-        # Проверяем авторизацию
-        if "google_creds" not in st.session_state:
-            # ЭКРАН ВХОДА
-            st.markdown('<div style="text-align: center; margin-bottom: 30px;">', unsafe_allow_html=True)
-            st.markdown(
-                '<div style="font-size: 36px; font-weight: 800; background: linear-gradient(to bottom, #DAA520, #B8860B); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 2px;">ZORNET</div>',
-                unsafe_allow_html=True)
-            st.markdown('<div style="color: #666; font-size: 16px; margin-top: 5px;">Зорнет ИИ</div>',
-                        unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-
-            # Карточка
-            st.markdown(
-                '<div style="background: white; border-radius: 20px; padding: 40px; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">',
-                unsafe_allow_html=True)
-
-            # Переключатель
-            if "auth_mode" not in st.session_state:
-                st.session_state.auth_mode = "login"
-
-            toggle_cols = st.columns(2)
-
-            # Кнопка Вход
-            if toggle_cols[0].button("Войти", key="tab_login", use_container_width=True,
-                                     type="primary" if st.session_state.auth_mode == "login" else "secondary"):
-                st.session_state.auth_mode = "login"
-                st.rerun()
-
-            # Кнопка Регистрация
-            if toggle_cols[1].button("Регистрация", key="tab_reg", use_container_width=True,
-                                     type="primary" if st.session_state.auth_mode == "register" else "secondary"):
-                st.session_state.auth_mode = "register"
-                st.rerun()
-
-            # Поля ввода
-            email = st.text_input("Email", key="auth_email")
-            password = st.text_input("Пароль", type="password", key="auth_pass")
-
-            if st.session_state.auth_mode == "register":
-                confirm = st.text_input("Повторите пароль", type="password")
-
-            st.write("")
-
-            # ЗОЛОТАЯ КНОПКА
-            btn_label = "Войти" if st.session_state.auth_mode == "login" else "Зарегистрироваться"
-            if st.button(btn_label, use_container_width=True, type="primary"):
-                st.success("Успешный вход!" if st.session_state.auth_mode == "login" else "Регистрация успешна!")
-
-            # GOOGLE AUTH
-            try:
-                flow = Flow.from_client_secrets_file(
-                    "client_secret.json",
-                    scopes=SCOPES,
-                    redirect_uri=REDIRECT_URI
-                )
-                auth_url, _ = flow.authorization_url(
-                    access_type="offline",
-                    include_granted_scopes="true",
-                    prompt="select_account"
-                )
-                st.markdown(f"""
-                <div style="text-align: center; margin-top: 20px;">
-                    <a href="{auth_url}" target="_self" style="display: inline-flex; align-items: center; justify-content: center; 
-                           width: 100%; padding: 12px; background: white; border: 1px solid #ddd; border-radius: 10px; 
-                           text-decoration: none; color: #555; font-weight: 500; transition: all 0.2s;">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" 
-                             width="16" style="margin-right: 8px;">
-                        Войти через Google
-                    </a>
-                </div>
-                """, unsafe_allow_html=True)
-            except Exception as e:
-                st.error("Ошибка конфигурации Google.")
-
-            st.markdown('</div>', unsafe_allow_html=True)
-
-        else:
-            # АВТОРИЗОВАННЫЙ ПРОФИЛЬ
-            # Данные пользователя
-            user_info = {
-                "name": "Пользователь",
-                "email": "user@example.com",
-                "date": datetime.datetime.now().strftime("%d/%m/%Y"),
-                "letter": "U"
-            }
-
-            try:
-                creds = st.session_state.google_creds
-                if hasattr(creds, 'id_token') and creds.id_token:
-                    import jwt
-
-                    decoded = jwt.decode(creds.id_token, options={"verify_signature": False})
-                    user_info["email"] = decoded.get('email', user_info["email"])
-                    user_info["name"] = decoded.get('name', user_info["name"])
-                    user_info["letter"] = user_info["name"][0].upper()
-            except:
-                pass
-
-            st.markdown('<div style="text-align: center; margin-bottom: 30px;">', unsafe_allow_html=True)
-            st.markdown(
-                '<div style="font-size: 36px; font-weight: 800; background: linear-gradient(to bottom, #DAA520, #B8860B); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 2px;">ZORNET</div>',
-                unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-
-            # Карточка профиля
-            st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #DAA520, #B8860B); border-radius: 16px; 
-                        padding: 30px; max-width: 350px; margin: 0 auto; text-align: center; 
-                        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);">
-                <div style="width: 90px; height: 90px; border-radius: 50%; background-color: white; 
-                            color: #B8860B; font-size: 40px; font-weight: bold; display: flex; 
-                            justify-content: center; align-items: center; margin: 0 auto 20px;">
-                    {user_info['letter']}
-                </div>
-                <div style="color: white; margin-bottom: 20px;">
-                    <h2 style="color: white; margin-bottom: 10px;">{user_info['name']}</h2>
-                    <a href="mailto:{user_info['email']}" style="color: white; text-decoration: none; 
-                       font-size: 14px;">{user_info['email']}</a>
-                    <p style="margin-top: 10px;">{user_info['date']}</p>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            st.write("")
-
-            col1, col2, col3 = st.columns([1, 4, 1])
-            with col2:
-                if st.button("Редактировать профиль", use_container_width=True, type="primary"):
-                    st.info("В разработке")
-
-                st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-
-                if st.button("Выйти", type="secondary", use_container_width=True):
-                    del st.session_state.google_creds
-                    st.rerun()
-
-# =================================================
-# СТРАНИЦА КАМЕРЫ
-# =================================================
-elif st.session_state.page == "Камера":
-    st.title("📷 Камера")
-
-    # Кнопка для загрузки изображения
-    uploaded_image = st.file_uploader("Выберите изображение", type=['jpg', 'jpeg', 'png'])
-
-    # Или использовать камеру
-    camera_image = st.camera_input("Снять фото")
-
-    img_to_process = uploaded_image or camera_image
-
-    if not vision_available:
-        st.warning("📷 Камера временно недоступна на сервере")
+    
+    with col2:
+        st.subheader("📊 Статистика")
         
-        # Обработка изображения с помощью BLIP
-        with st.spinner("Анализирую изображение..."):
-            inputs = vision_processor(image, return_tensors="pt")
-            out = vision_model.generate(**inputs, max_length=50)
-            description = vision_processor.decode(out[0], skip_special_tokens=True)
+        stat_cols = st.columns(3)
+        with stat_cols[0]:
+            st.metric("Пользователей", user_count)
+        with stat_cols[1]:
+            st.metric("AI запросов", "∞")
+        with stat_cols[2]:
+            st.metric("Поисков", "∞")
+        
+        st.markdown("---")
+        
+        # НАСТРОЙКИ
+        st.subheader("⚙️ Настройки")
+        
+        with st.form("profile_form"):
+            username = st.text_input("Имя пользователя", "ZornetUser")
+            email = st.text_input("Email", "user@zornet.app")
+            
+            if st.form_submit_button("💾 Сохранить изменения"):
+                st.success("Настройки сохранены!")
 
-        st.subheader("📝 Описание изображения:")
-        st.write(description)
-
-        # Сохранение изображения
-        if st.button("💾 Сохранить в Диск"):
-            # Сохраняем временно
-            temp_path = "temp_image.jpg"
-            image.save(temp_path)
-
-            # Создаем файловый объект
-            from io import BytesIO
-
-            img_byte_arr = BytesIO()
-            image.save(img_byte_arr, format='JPEG')
-            img_byte_arr.seek(0)
-
-
-            # Сохраняем в диск
-            class UploadedFile:
-                def __init__(self, name, data):
-                    self.name = name
-                    self.data = data
-
-                def getbuffer(self):
-                    return self.data.getvalue()
-
-                @property
-                def size(self):
-                    return len(self.data.getvalue())
-
-
-            uploaded_file = UploadedFile(
-                name=f"photo_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg",
-                data=img_byte_arr
-            )
-
-            if save_uploaded_file(uploaded_file):
-                st.success("Изображение сохранено в Диск!")
-                st.session_state.page = "Диск"
-                st.rerun
+# ================= ИНИЦИАЛИЗАЦИЯ =================
+if __name__ == "__main__":
+    # Инициализация всех баз данных
+    init_db()
+    init_disk_db()
