@@ -20,8 +20,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-handle_js_messages()
-
 # ================= СЕССИЯ =================
 if "page" not in st.session_state:
     st.session_state.page = "Главная"
@@ -31,6 +29,8 @@ if "weather_data" not in st.session_state:
     st.session_state.weather_data = None
 if "user_city" not in st.session_state:
     st.session_state.user_city = None
+
+handle_js_messages()
 
 # ================= CSS СТИЛИ =================
 st.markdown("""
