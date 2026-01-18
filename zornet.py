@@ -27,6 +27,29 @@ client = InferenceClient(HF_API_KEY)
 if "ai_messages" not in st.session_state:
     st.session_state.ai_messages = []
 
+# Кнопка меню в углу
+menu_col1, menu_col2 = st.columns([6, 1])
+with menu_col2:
+    if st.button("☰ Меню", type="secondary"):
+        st.session_state.show_sidebar = not st.session_state.get('show_sidebar', True)
+        st.rerun()
+
+# Боковая панель
+if st.session_state.get('show_sidebar', True):
+    with st.sidebar:
+        st.title("Меню Zornet")
+        # Твоё меню здесь...
+        page = st.radio("Разделы:", ["Главная", "Чат", "Настройки"])
+else:
+    # Скрываем sidebar через CSS
+    st.markdown("""
+    <style>
+    section[data-testid="stSidebar"] {
+        display: none;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
 def ask_hf_ai(prompt, history=[]):
     context = ""
     for msg in history[-5:]:
