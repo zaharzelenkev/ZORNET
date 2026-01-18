@@ -18,35 +18,33 @@ from duckduckgo_search import DDGS
 from streamlit_folium import st_folium
 import folium
 import random
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+from huggingface_hub import InferenceClient
 
-# Загружаем HF модель (работает локально или через API)
-hf_pipeline = pipeline("text-generation", model="mistralai/mistral-mini-7b-v0.1", device=-1)
+# HF_API_KEY — добавь в Streamlit Secrets
+HF_API_KEY = st.secrets["HF_API_KEY"]
+client = InferenceClient(HF_API_KEY)
+
+if "ai_messages" not in st.session_state:
+    st.session_state.ai_messages = []
 
 def ask_hf_ai(prompt, history=[]):
     context = ""
     for msg in history[-5:]:
-        role = msg["role"]
-        content = msg["content"]
+        role = msg.get("role", "user")
+        content = msg.get("content", "")
         if role == "user":
             context += f"Пользователь: {content}\n"
         else:
             context += f"Ассистент: {content}\n"
     context += f"Пользователь: {prompt}\nАссистент:"
-    output = hf_pipeline(context, max_new_tokens=200, do_sample=True, temperature=0.7)
-    response = output[0]["generated_text"][len(context):].strip()
-    return response
-    
-# Модель HF (Mistral-mini)
-@st.cache_resource
-def load_hf_model():
-    model_name = "mistralai/Mistral-mini-7B-v0.1"  # бесплатная, быстрая модель
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.float32)
-    pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, device=-1)  # CPU
-    return pipe
 
-hf_pipeline = load_hf_model()
+    response = client.text_generation(
+        model="mistralai/Mistral-mini-7B-v0.1",
+        inputs=context,
+        max_new_tokens=200,
+        temperature=0.7
+    )
+    return response.generated_text.strip()
 
 st.set_page_config(
     page_title="ZORNET",
@@ -322,9 +320,6 @@ if torch is not None:
 
     except Exception:
         vision_available = False
-
-vision_processor, vision_model = load_vision_model()
-client = Groq(api_key=GROQ_API_KEY)
 
 # --- GOOGLE OAUTH HANDLING ---
 query_params = st.query_params
@@ -1173,44 +1168,13 @@ elif st.session_state.page == "ZORNET AI":
 
         st.session_state.ai_messages.append({"role": "user", "content": prompt})
 
-        # Получаем ответ от AI
-        with st.spinner("ZORNET думает..."):
-            try:
-                # Создаем контекст из истории
-                messages_for_ai = [
-                    {"role": "system",
-                     "content": "Ты ZORNET AI - полезный и дружелюбный ассистент. Отвечай на русском языке."}
-                ]
-                messages_for_ai.extend(
-                    st.session_state.ai_messages[-5:])  # Берем последние 5 сообщений для контекста
-
-                response = ask_hf_ai(prompt, st.session_state.ai_messages)
-
-                # Отображаем ответ с профессиональным стилем
-                st.markdown(f"""
-                <div style="display: flex; align-items: flex-start; margin-bottom: 15px;">
-                    <div class="chat-message-assistant">
-                        {response}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                st.session_state.ai_messages.append({"role": "assistant", "content": response})
-
-            except Exception as e:
-                st.error(f"Ошибка: {e}")
-                error_msg = "Извините, произошла ошибка. Пожалуйста, попробуйте еще раз."
-                st.markdown(f"""
-                <div style="display: flex; align-items: flex-start; margin-bottom: 15px;">
-                    <div class="chat-message-assistant">
-                        {error_msg}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                st.session_state.ai_messages.append({
-                    "role": "assistant",
-                    "content": error_msg
-                })
+        # Получаем ответ от HF AI
+with st.spinner("ZORNET думает..."):
+    prompt = st.session_state.user_input  # или откуда берёшь сообщение пользователя
+    response = ask_hf_ai(prompt, st.session_state.ai_messages)
+    # Сохраняем сообщение пользователя и ответ AI в историю
+    st.session_state.ai_messages.append({"role": "user", "content": prompt})
+    st.session_state.ai_messages.append({"role": "assistant", "content": response})
 
     # Боковая панель с примерами вопросов
     with st.sidebar:
