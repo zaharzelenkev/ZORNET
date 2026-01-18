@@ -335,30 +335,55 @@ def get_belta_news():
             {"title": "Экономические новости", "link": "#", "summary": "Развитие экономики страны"},
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
+
 if st.session_state.page == "Главная":
     # ===================== ЗОЛОТАЯ НАДПИСЬ =====================
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
 
-    # ===================== 4 ВИДЖЕТА =====================
+    # ===================== 4 ЗОЛОТЫХ ВИДЖЕТА =====================
     current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
     col1, col2, col3, col4 = st.columns(4)
+
+    button_style = """
+        style="
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+        color: white;
+        font-weight: 600;
+        border-radius: 12px;
+        padding: 14px 28px;
+        width: 100%;
+        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
+        "
+    """
+
     with col1:
-        st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", use_container_width=True)
+        st.markdown(f'<button {button_style}>🕒 {current_time.strftime("%H:%M")}\nМинск</button>', unsafe_allow_html=True)
     with col2:
-        st.button("⛅ -5°C\nМинск", use_container_width=True)
+        st.markdown(f'<button {button_style}>⛅ -5°C\nМинск</button>', unsafe_allow_html=True)
     with col3:
-        st.button("💵 3.20\nBYN/USD", use_container_width=True)
+        st.markdown(f'<button {button_style}>💵 3.20\nBYN/USD</button>', unsafe_allow_html=True)
     with col4:
-        if st.button("🤖 ZORNET AI", use_container_width=True):
-            st.session_state.page = "ZORNET AI"
+        if st.button("🚌 ТРАНСПОРТ", key="transport_btn", use_container_width=True):
+            st.session_state.page = "Транспорт"
             st.rerun()
 
     st.markdown("---")  # разделитель
 
+    # ===================== ВКЛАДКИ =====================
+    # пример: вкладки могут быть скрытыми/разворачиваемыми
+    tab1, tab2, tab3 = st.tabs(["Метро", "Автобусы/Трамваи", "Такси"])
+    
+    with tab1:
+        st.write("Содержимое вкладки метро...")
+    with tab2:
+        st.write("Содержимое вкладки автобусы/трамваи...")
+    with tab3:
+        st.write("Содержимое вкладки такси...")
+
     # ===================== ПОИСКОВАЯ СТРОКА =====================
     search_query = st.text_input(
         "",
-        placeholder="🔍 Поиск в интернете...",
+        placeholder="Поиск в интернете...",
         key=f"main_search_{st.session_state.page}",
         label_visibility="collapsed"
     )
