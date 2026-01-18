@@ -1,4 +1,4 @@
-где все мои строки кода? блять вернул все мигом и исправь все что надо: import streamlit as st
+import streamlit as st
 import sqlite3
 import datetime
 import os
