@@ -308,8 +308,8 @@ except ImportError:
     # torch не установлен
     pass
 
-        @st.cache_resource
-        def load_vision_model():
+@st.cache_resource
+def load_vision_model():
             processor = BlipProcessor.from_pretrained(
                 "Salesforce/blip-image-captioning-base"
             )
