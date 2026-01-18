@@ -20,8 +20,8 @@ import folium
 import random
 from huggingface_hub import InferenceClient
 
-# HF_API_KEY — добавь в Streamlit Secrets
-HF_API_KEY = st.secrets["HF_API_KEY"]
+# Твой API ключ - ВСТАВЬ СЮДА СВОЙ ТОКЕН
+HF_API_KEY = "h_XzFyShNnTByfEsHPIehaA£hMtECtGWLjMk"  # <--- ВСТАВЬ СВОЙ ТОКЕН ЗДЕСЬ
 client = InferenceClient(HF_API_KEY)
 
 if "ai_messages" not in st.session_state:
@@ -39,7 +39,7 @@ def ask_hf_ai(prompt, history=[]):
     context += f"Пользователь: {prompt}\nАссистент:"
 
     response = client.text_generation(
-        model="mistralai/Mistral-mini-7B-v0.1",
+        model="mistralai/Mistral-7B-Instruct-v0.1",
         inputs=context,
         max_new_tokens=200,
         temperature=0.7
