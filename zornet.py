@@ -350,8 +350,8 @@ if st.session_state.page == "Главная":
     with col3:
         st.button("💵 3.20\nBYN/USD", use_container_width=True)
     with col4:
-        if st.button("🚌 ТРАНСПОРТ", use_container_width=True):
-            st.session_state.page = "Транспорт"
+        if st.button("🤖 ZORNET AI", use_container_width=True):
+            st.session_state.page = "ZORNET AI"
             st.rerun()
 
     st.markdown("---")  # разделитель
@@ -359,7 +359,7 @@ if st.session_state.page == "Главная":
     # ===================== ПОИСКОВАЯ СТРОКА =====================
     search_query = st.text_input(
         "",
-        placeholder="🔍 Поиск в интернете...",
+        placeholder="Поиск в интернете...",
         key=f"main_search_{st.session_state.page}",
         label_visibility="collapsed"
     )
