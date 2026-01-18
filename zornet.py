@@ -336,18 +336,19 @@ def get_belta_news():
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
 
+# ================= ГЛАВНАЯ СТРАНИЦА =================
 if st.session_state.page == "Главная":
     # ВЕРХНЯЯ ПАНЕЛЬ
     col1, col2, col3 = st.columns([1, 3, 1])
 
     with col1:
-        # Кнопка ZORNET AI
-        if st.button("🤖 ZORNET AI", key="zornet_ai_btn", use_container_width=True):
+        # КНОПКА AI
+        if st.button("🤖 **ZORNET AI**", key="zornet_ai_btn", use_container_width=True):
             st.session_state.page = "ZORNET AI"
             st.rerun()
 
     with col2:
-        # Поисковая строка
+        # ПОИСК
         search_query = st.text_input(
             "",
             placeholder="🔍 Поиск в интернете...",
@@ -356,51 +357,65 @@ if st.session_state.page == "Главная":
         )
 
     with col3:
-        # Время и дата
+        # ВРЕМЯ В КРАСИВОЙ РАМКЕ
         current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
         st.markdown(f"""
-        <div class="time-widget">
+        <div style="
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+            border-radius: 12px;
+            padding: 12px 15px;
+            text-align: center;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
+        ">
             <div>{current_time.strftime('%H:%M')}</div>
             <div style="font-size: 12px; font-weight: 500; opacity: 0.9;">{current_time.strftime('%d.%m.%Y')}</div>
         </div>
         """, unsafe_allow_html=True)
 
-    # ЗАГОЛОВОК
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
 
     # ВИДЖЕТЫ
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
         st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", use_container_width=True)
-    with col2:
+    with c2:
         st.button("⛅ -5°C\nМинск", use_container_width=True)
-    with col3:
+    with c3:
         st.button("💵 3.20\nBYN/USD", use_container_width=True)
-    with col4:
-        if st.button("🚌 ТРАНСПОРТ", use_container_width=True):
+    with c4:
+        if st.button("🚌 ТРАНСПОРТ\n", use_container_width=True):
             st.session_state.page = "Транспорт"
             st.rerun()
 
     st.markdown("---")
 
-    # --- РЕЗУЛЬТАТЫ ПОИСКА ---
+    # ПОИСКОВЫЕ РЕЗУЛЬТАТЫ
     if search_query:
         st.markdown(f"### 🔍 Результаты поиска: **{search_query}**")
+        
+        # НЕТ ПОДСКАЗОК ПОИСКА!
+        
         with st.spinner("Ищу информацию..."):
             results = search_zornet(search_query, num_results=5)
+            
             if results:
                 for idx, result in enumerate(results):
                     st.markdown(f"""
-                    <div class="search-result">
+                    <div style="
+                        background: #f8f9fa;
+                        padding: 15px;
+                        border-radius: 10px;
+                        margin-bottom: 10px;
+                        border-left: 4px solid #DAA520;
+                    ">
                         <div style="font-weight: 600; color: #1a1a1a; font-size: 16px;">
                             {idx + 1}. {result['title']}
                         </div>
-                        <div style="color: #1a73e8; font-size: 13px; margin: 5px 0;">
-                            {result['url'][:60]}...
-                        </div>
-                        <div style="color: #555; font-size: 14px;">
-                            {result['snippet']}
-                        </div>
+                        <div style="color: #1a73e8; font-size: 13px; margin: 5px 0;">{result['url'][:80]}...</div>
+                        <div style="color: #555; font-size: 14px;">{result['snippet']}</div>
                         <div style="margin-top: 10px;">
                             <a href="{result['url']}" target="_blank" 
                                style="padding: 6px 12px; background: #DAA520; color: white; 
@@ -410,8 +425,6 @@ if st.session_state.page == "Главная":
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
-            else:
-                st.info("По вашему запросу ничего не найдено.")
 
 # ================= СТРАНИЦА AI =================
 elif st.session_state.page == "ZORNET AI":
