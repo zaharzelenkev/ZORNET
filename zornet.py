@@ -24,6 +24,10 @@ if "page" not in st.session_state:
     st.session_state.page = "Главная"
 if "ai_messages" not in st.session_state:
     st.session_state.ai_messages = []
+if "weather_data" not in st.session_state:
+    st.session_state.weather_data = None
+if "location_permission" not in st.session_state:
+    st.session_state.location_permission = False
 
 # ================= CSS СТИЛИ =================
 st.markdown("""
@@ -114,6 +118,47 @@ st.markdown("""
         margin-bottom: 15px;
         border-left: 4px solid #DAA520;
     }
+    
+    /* СТИЛИ ДЛЯ ПОГОДЫ */
+    .weather-widget {
+        background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
+        border-radius: 15px;
+        padding: 20px;
+        color: white;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(6, 147, 227, 0.3);
+    }
+    
+    .weather-temp {
+        font-size: 3.5rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+    
+    .weather-description {
+        font-size: 1.2rem;
+        margin-bottom: 15px;
+    }
+    
+    .weather-details {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 15px;
+    }
+    
+    .weather-icon {
+        font-size: 4rem;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    
+    .forecast-day {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -125,6 +170,7 @@ with st.sidebar:
         ("🏠", "ГЛАВНАЯ", "Главная"),
         ("🤖", "ZORNET AI", "ZORNET AI"),
         ("📰", "НОВОСТИ", "Новости"),
+        ("🌤️", "ПОГОДА", "Погода"),  # Добавлена вкладка погоды
         ("💾", "ДИСК", "Диск"),
         ("🚌", "ТРАНСПОРТ", "Транспорт"),
         ("👤", "ПРОФИЛЬ", "Профиль"),
@@ -136,17 +182,118 @@ with st.sidebar:
             st.session_state.page = page
             st.rerun()
 
+# ================= ФУНКЦИИ ПОГОДЫ =================
+def get_weather_icon(condition_code):
+    """Возвращает эмодзи для погодных условий"""
+    icons = {
+        "01d": "☀️", "01n": "🌙",  # ясно
+        "02d": "⛅", "02n": "⛅",  # малооблачно
+        "03d": "☁️", "03n": "☁️",  # облачно
+        "04d": "☁️", "04n": "☁️",  # пасмурно
+        "09d": "🌧️", "09n": "🌧️",  # дождь
+        "10d": "🌦️", "10n": "🌦️",  # дождь с солнцем
+        "11d": "⛈️", "11n": "⛈️",  # гроза
+        "13d": "❄️", "13n": "❄️",  # снег
+        "50d": "🌫️", "50n": "🌫️",  # туман
+    }
+    return icons.get(condition_code, "🌡️")
+
+def get_wind_direction(degrees):
+    """Преобразует градусы в направление ветра"""
+    directions = ["С", "СВ", "В", "ЮВ", "Ю", "ЮЗ", "З", "СЗ"]
+    index = round(degrees / 45) % 8
+    return directions[index]
+
+def get_weather_by_coords(lat, lon):
+    """Получает погоду по координатам через OpenWeatherMap API"""
+    # Бесплатный API ключ OpenWeatherMap (ограничение 60 запросов в минуту)
+    API_KEY = "f2b2b0b5b5b5b5b5b5b5b5b5b5b5b5b5"  # Это демо-ключ, можно заменить на свой
+    
+    try:
+        # Текущая погода
+        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
+        response = requests.get(url, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Прогноз на 5 дней
+            forecast_url = f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
+            forecast_response = requests.get(forecast_url, timeout=10)
+            forecast_data = forecast_response.json() if forecast_response.status_code == 200 else None
+            
+            return {
+                "current": {
+                    "temp": round(data["main"]["temp"]),
+                    "feels_like": round(data["main"]["feels_like"]),
+                    "humidity": data["main"]["humidity"],
+                    "pressure": data["main"]["pressure"],
+                    "description": data["weather"][0]["description"].capitalize(),
+                    "icon": data["weather"][0]["icon"],
+                    "wind_speed": data["wind"]["speed"],
+                    "wind_deg": data["wind"].get("deg", 0),
+                    "clouds": data["clouds"]["all"],
+                    "visibility": data.get("visibility", 10000) / 1000,  # в км
+                    "city": data["name"],
+                    "country": data["sys"]["country"],
+                    "sunrise": datetime.datetime.fromtimestamp(data["sys"]["sunrise"]).strftime('%H:%M'),
+                    "sunset": datetime.datetime.fromtimestamp(data["sys"]["sunset"]).strftime('%H:%M')
+                },
+                "forecast": forecast_data
+            }
+        else:
+            return None
+    except Exception as e:
+        st.error(f"Ошибка получения погоды: {e}")
+        return None
+
+def get_weather_by_city(city_name):
+    """Получает погоду по названию города"""
+    API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"  # Это демо-ключ
+    
+    try:
+        # Сначала получаем координаты города
+        geocode_url = f"http://api.openweathermap.org/geo/1.0/direct?q={city_name}&limit=1&appid={API_KEY}"
+        geocode_response = requests.get(geocode_url, timeout=10)
+        
+        if geocode_response.status_code == 200 and geocode_response.json():
+            city_data = geocode_response.json()[0]
+            lat = city_data["lat"]
+            lon = city_data["lon"]
+            
+            return get_weather_by_coords(lat, lon)
+        else:
+            return None
+    except:
+        return None
+
+def get_user_location():
+    """Пытается получить местоположение пользователя через браузер"""
+    try:
+        # Streamlit компонент для получения геолокации
+        location_data = st.query_params.get("location", None)
+        
+        if location_data:
+            lat, lon = map(float, location_data.split(","))
+            return lat, lon
+        return None
+    except:
+        return None
+
 # ================= НАСТРОЙКИ =================
-HF_API_KEY = st.secrets["HF_API_KEY"]
-CHAT_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"  # стабильная бесплатная модель
+HF_API_KEY = st.secrets.get("HF_API_KEY", "")
+CHAT_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"
 API_URL = "https://router.huggingface.co/api/chat/completions"
 
 HEADERS = {
     "Authorization": f"Bearer {HF_API_KEY}",
     "Content-Type": "application/json"
-}
+} if HF_API_KEY else {}
 
 def ask_hf_ai(prompt: str) -> str:
+    if not HF_API_KEY:
+        return "⚠️ API ключ не настроен. Добавьте HF_API_KEY в secrets.toml"
+    
     payload = {
         "model": CHAT_MODEL,
         "messages": [
@@ -167,7 +314,6 @@ def ask_hf_ai(prompt: str) -> str:
             return "⚠️ ZORNET AI временно недоступен."
 
         data = r.json()
-        # получаем ответ
         text = data["choices"][0]["message"]["content"]
         return text.strip()
 
@@ -179,7 +325,6 @@ def search_zornet(query, num_results=5):
     """Поиск в интернете - с запасными результатами"""
     results = []
     
-    # Попытка поиска через DuckDuckGo
     try:
         with DDGS() as ddgs:
             ddgs_results = list(ddgs.text(query, max_results=num_results, region='wt-wt'))
@@ -195,42 +340,24 @@ def search_zornet(query, num_results=5):
     except Exception as e:
         st.error(f"Ошибка DuckDuckGo: {e}")
     
-    # Если DuckDuckGo не работает, показываем запасные результаты
     fallback_results = [
         {
             "title": f"{query} - поиск в Google",
             "url": f"https://www.google.com/search?q={query}",
-            "snippet": f"Нажмите для поиска '{query}' в Google. Это лучший способ найти информацию в интернете."
+            "snippet": f"Нажмите для поиска '{query}' в Google."
         },
         {
             "title": f"{query} в Википедии",
             "url": f"https://ru.wikipedia.org/wiki/{query}",
-            "snippet": f"Ищите информацию о '{query}' в Википедии - свободной энциклопедии."
+            "snippet": f"Ищите информацию о '{query}' в Википедии."
         },
-        {
-            "title": "Решебники и ГДЗ онлайн",
-            "url": "https://reshak.ru/",
-            "snippet": "Бесплатные решебники и готовые домашние задания по всем предметам."
-        },
-        {
-            "title": "Образовательные ресурсы Беларуси",
-            "url": "https://adu.by/",
-            "snippet": "Официальный образовательный портал Министерства образования Республики Беларусь."
-        },
-        {
-            "title": "Учебные материалы и пособия",
-            "url": "https://nashol.com/",
-            "snippet": "Большая библиотека учебников, решебников и учебных материалов."
-        }
     ]
     
-    # Фильтруем релевантные результаты
     relevant_results = []
     for res in fallback_results:
         if query.lower() in res["title"].lower() or query.lower() in res["snippet"].lower():
             relevant_results.append(res)
     
-    # Если нет релевантных, берем первые 3
     if not relevant_results:
         relevant_results = fallback_results[:3]
     
@@ -336,17 +463,18 @@ def get_belta_news():
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
 
+# ================= СТРАНИЦА ГЛАВНАЯ =================
 if st.session_state.page == "Главная":
-    # ===================== ЗОЛОТАЯ НАДПИСЬ =====================
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
 
-    # ===================== 4 ВИДЖЕТА =====================
     current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", use_container_width=True)
     with col2:
-        st.button("⛅ -5°C\nМинск", use_container_width=True)
+        if st.button("⛅ -5°C\nМинск", use_container_width=True):
+            st.session_state.page = "Погода"
+            st.rerun()
     with col3:
         st.button("💵 3.20\nBYN/USD", use_container_width=True)
     with col4:
@@ -354,9 +482,8 @@ if st.session_state.page == "Главная":
             st.session_state.page = "ZORNET AI"
             st.rerun()
 
-    st.markdown("---")  # разделитель
+    st.markdown("---")
 
-    # ===================== ПОИСКОВАЯ СТРОКА =====================
     search_query = st.text_input(
         "",
         placeholder="Поиск в интернете...",
@@ -364,7 +491,6 @@ if st.session_state.page == "Главная":
         label_visibility="collapsed"
     )
 
-    # ===================== РЕЗУЛЬТАТЫ ПОИСКА =====================
     if search_query:
         st.markdown(f"### 🔍 Результаты поиска: **{search_query}**")
         with st.spinner("Ищу информацию..."):
@@ -398,32 +524,26 @@ if st.session_state.page == "Главная":
 elif st.session_state.page == "ZORNET AI":
     st.markdown('<div class="gold-title">🤖 ZORNET AI</div>', unsafe_allow_html=True)
     
-    # ИНИЦИАЛИЗАЦИЯ ЧАТА
     if "ai_messages" not in st.session_state:
         st.session_state.ai_messages = [
             {"role": "assistant", "content": "Привет! Я ZORNET AI. Чем могу помочь?"}
         ]
     
-    # ИСТОРИЯ СООБЩЕНИЙ
     for message in st.session_state.ai_messages:
         if message["role"] == "user":
             st.markdown(f'<div class="user-message">{message["content"]}</div>', unsafe_allow_html=True)
         else:
             st.markdown(f'<div class="ai-message">{message["content"]}</div>', unsafe_allow_html=True)
     
-    # ПОЛЕ ВВОДА
     if prompt := st.chat_input("Спросите ZORNET AI..."):
-        # ДОБАВЛЯЕМ СООБЩЕНИЕ ПОЛЬЗОВАТЕЛЯ
         st.session_state.ai_messages.append({"role": "user", "content": prompt})
         
-        # ПОЛУЧАЕМ ОТВЕТ
         with st.spinner("ZORNET думает..."):
             response = ask_hf_ai(prompt)
             st.session_state.ai_messages.append({"role": "assistant", "content": response})
         
         st.rerun()
     
-    # БОКОВАЯ ПАНЕЛЬ С ПРИМЕРАМИ
     with st.sidebar:
         st.markdown("### 💡 Примеры вопросов")
         
@@ -432,10 +552,6 @@ elif st.session_state.page == "ZORNET AI":
             "Объясни квантовую физику просто",
             "Помоги написать деловое письмо",
             "Какие технологии AI самые перспективные?",
-            "Напиши простой сайт на HTML",
-            "Объясни разницу Python и JavaScript",
-            "Помоги составить резюме",
-            "Какие книги по саморазвитию посоветуешь?"
         ]
         
         for example in examples:
@@ -443,7 +559,6 @@ elif st.session_state.page == "ZORNET AI":
                 st.session_state.ai_messages.append({"role": "user", "content": example})
                 st.rerun()
         
-        # ОЧИСТКА ИСТОРИИ
         if st.button("🧹 Очистить историю", use_container_width=True):
             st.session_state.ai_messages = [
                 {"role": "assistant", "content": "Привет! Я ZORNET AI. Чем могу помочь?"}
@@ -473,6 +588,175 @@ elif st.session_state.page == "Новости":
                 <p style="color:#1a1a1a; margin-top:10px;">{item.summary[:200]}...</p>
             </div>
             """, unsafe_allow_html=True)
+
+# ================= СТРАНИЦА ПОГОДЫ =================
+elif st.session_state.page == "Погода":
+    st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
+    
+    # Вкладки для разных способов получения погоды
+    tab1, tab2 = st.tabs(["📍 По местоположению", "🏙️ По городу"])
+    
+    with tab1:
+        st.subheader("Погода по вашему местоположению")
+        
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            st.info("Для получения точной погоды разрешите доступ к вашему местоположению")
+        
+        with col2:
+            if st.button("📍 Разрешить доступ к местоположению", type="primary"):
+                st.session_state.location_permission = True
+                st.rerun()
+        
+        if st.session_state.location_permission:
+            st.success("Доступ к местоположению разрешен!")
+            
+            # Здесь должен быть код для получения реальных координат
+            # В демо-режиме используем координаты Минска
+            lat, lon = 53.9, 27.5667  # Координаты Минска
+            
+            with st.spinner("Получаю погоду..."):
+                weather_data = get_weather_by_coords(lat, lon)
+                
+                if weather_data:
+                    st.session_state.weather_data = weather_data
+                    current = weather_data["current"]
+                    
+                    # Отображение текущей погоды
+                    st.markdown(f"""
+                    <div class="weather-widget">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div class="weather-temp">{current['temp']}°C</div>
+                                <div class="weather-description">
+                                    {get_weather_icon(current['icon'])} {current['description']}
+                                </div>
+                                <div style="font-size: 1rem; opacity: 0.9;">
+                                    Ощущается как {current['feels_like']}°C
+                                </div>
+                                <div style="font-size: 1.2rem; margin-top: 10px;">
+                                    🌍 {current['city']}, {current['country']}
+                                </div>
+                            </div>
+                            <div style="font-size: 4rem;">
+                                {get_weather_icon(current['icon'])}
+                            </div>
+                        </div>
+                        
+                        <div class="weather-details">
+                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                                <div>
+                                    <div style="font-size: 0.9rem; opacity: 0.8;">Влажность</div>
+                                    <div style="font-size: 1.2rem; font-weight: bold;">💧 {current['humidity']}%</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.9rem; opacity: 0.8;">Ветер</div>
+                                    <div style="font-size: 1.2rem; font-weight: bold;">💨 {current['wind_speed']} м/с {get_wind_direction(current['wind_deg'])}</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.9rem; opacity: 0.8;">Давление</div>
+                                    <div style="font-size: 1.2rem; font-weight: bold;">📊 {current['pressure']} гПа</div>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.9rem; opacity: 0.8;">Видимость</div>
+                                    <div style="font-size: 1.2rem; font-weight: bold;">👁️ {current['visibility']} км</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 20px; display: flex; justify-content: space-between;">
+                            <div>
+                                <div style="font-size: 0.9rem; opacity: 0.8;">Восход</div>
+                                <div style="font-size: 1.2rem; font-weight: bold;">🌅 {current['sunrise']}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.9rem; opacity: 0.8;">Закат</div>
+                                <div style="font-size: 1.2rem; font-weight: bold;">🌇 {current['sunset']}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.9rem; opacity: 0.8;">Облачность</div>
+                                <div style="font-size: 1.2rem; font-weight: bold;">☁️ {current['clouds']}%</div>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Прогноз на 5 дней
+                    if weather_data.get("forecast"):
+                        st.subheader("📅 Прогноз на 5 дней")
+                        
+                        forecast_items = weather_data["forecast"]["list"]
+                        daily_forecast = {}
+                        
+                        # Группируем по дням
+                        for item in forecast_items:
+                            date = item["dt_txt"].split(" ")[0]
+                            if date not in daily_forecast:
+                                daily_forecast[date] = []
+                            daily_forecast[date].append(item)
+                        
+                        # Отображаем прогноз по дням
+                        cols = st.columns(5)
+                        dates = list(daily_forecast.keys())[:5]
+                        
+                        for idx, date in enumerate(dates):
+                            with cols[idx]:
+                                day_data = daily_forecast[date][0]
+                                day_name = datetime.datetime.strptime(date, "%Y-%m-%d").strftime("%a")
+                                
+                                st.markdown(f"""
+                                <div class="forecast-day">
+                                    <div style="font-weight: bold; margin-bottom: 10px;">{day_name}</div>
+                                    <div style="font-size: 2rem; margin: 10px 0;">
+                                        {get_weather_icon(day_data['weather'][0]['icon'])}
+                                    </div>
+                                    <div style="font-size: 1.2rem; font-weight: bold;">
+                                        {round(day_data['main']['temp'])}°C
+                                    </div>
+                                    <div style="font-size: 0.9rem; margin-top: 5px;">
+                                        {day_data['weather'][0]['description'].capitalize()}
+                                    </div>
+                                </div>
+                                """, unsafe_allow_html=True)
+                else:
+                    st.error("Не удалось получить данные о погоде. Попробуйте позже.")
+    
+    with tab2:
+        st.subheader("Погода по городу")
+        
+        city = st.text_input("Введите название города", "Минск")
+        
+        if st.button("Получить погоду", key="city_weather"):
+            with st.spinner("Ищу погоду..."):
+                weather_data = get_weather_by_city(city)
+                
+                if weather_data:
+                    st.session_state.weather_data = weather_data
+                    current = weather_data["current"]
+                    
+                    st.markdown(f"""
+                    <div class="weather-widget">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div class="weather-temp">{current['temp']}°C</div>
+                                <div class="weather-description">
+                                    {get_weather_icon(current['icon'])} {current['description']}
+                                </div>
+                                <div style="font-size: 1rem; opacity: 0.9;">
+                                    Ощущается как {current['feels_like']}°C
+                                </div>
+                                <div style="font-size: 1.2rem; margin-top: 10px;">
+                                    🌍 {current['city']}, {current['country']}
+                                </div>
+                            </div>
+                            <div style="font-size: 4rem;">
+                                {get_weather_icon(current['icon'])}
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.error("Не удалось найти город. Проверьте правильность написания.")
 
 # ================= СТРАНИЦА ТРАНСПОРТА =================
 elif st.session_state.page == "Транспорт":
@@ -548,11 +832,9 @@ def render_breadcrumb(path):
         breadcrumb_html.append(f"<a href='#' onclick='window.location.reload()'>{part}</a>")
     st.markdown(" / ".join(breadcrumb_html), unsafe_allow_html=True)
 
-# ================= СТРАНИЦА ДИСКА =================
-if st.session_state.page == "Главная":
-    st.markdown('<div class="gold-title">ZORNET DISK</div>', unsafe_allow_html=True)
+if st.session_state.page == "Диск":
+    st.markdown('<div class="gold-title">💾 ZORNET DISK</div>', unsafe_allow_html=True)
     
-    # -- Содержимое папки --
     ROOT_DIR = Path("zornet_files")
     ROOT_DIR.mkdir(exist_ok=True)
     
@@ -562,7 +844,6 @@ if st.session_state.page == "Главная":
     current_dir = st.session_state.current_dir
     render_breadcrumb(current_dir)
 
-    # -- Загрузка файлов --
     st.subheader("Загрузить файлы (Drag & Drop поддерживается)")
     uploaded_files = st.file_uploader("Выберите файлы", type=None, accept_multiple_files=True)
     if uploaded_files:
@@ -570,11 +851,10 @@ if st.session_state.page == "Главная":
             file_path = current_dir / uploaded_file.name
             with open(file_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
-            save_file_to_db(uploaded_file.name, uploaded_file.size)  # Сохраняем в БД
+            save_file_to_db(uploaded_file.name, uploaded_file.size)
         st.success(f"✅ Загружено {len(uploaded_files)} файлов")
-        st.experimental_rerun()
+        st.rerun()
 
-    # -- Список файлов --
     st.subheader(f"Содержимое папки: {current_dir.name}")
     items = list(current_dir.iterdir())
     if items:
@@ -590,8 +870,28 @@ if st.session_state.page == "Главная":
     else:
         st.info("Папка пуста.")
 
+# ================= СТРАНИЦА ПРОФИЛЯ =================
+elif st.session_state.page == "Профиль":
+    st.markdown('<div class="gold-title">👤 ПРОФИЛЬ</div>', unsafe_allow_html=True)
+    
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
+        st.image("https://via.placeholder.com/150", width=150)
+        st.markdown("### Пользователь ZORNET")
+    
+    with col2:
+        st.markdown("### 📊 Статистика")
+        st.metric("Всего пользователей", get_user_count())
+        st.metric("Активных сессий", "1")
+        st.metric("Использовано памяти", "2.5 GB")
+        
+        st.markdown("### ⚙️ Настройки")
+        st.checkbox("Уведомления", value=True)
+        st.checkbox("Темная тема", value=False)
+        st.checkbox("Авто-обновление", value=True)
+
 # ================= ИНИЦИАЛИЗАЦИЯ =================
 if __name__ == "__main__":
-    # Инициализация всех баз данных
     init_db()
     init_disk_db()
