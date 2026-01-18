@@ -1204,31 +1204,46 @@ with st.spinner("ZORNET думает..."):
             ]
             st.rerun()
 
+# ДОБАВЬ ЭТО ПЕРЕД КОДОМ НОВОСТЕЙ:
+if "page" not in st.session_state:
+    st.session_state.page = "Главная"
+
+# Потом уже elif
+elif st.session_state.page == "Новости":
+    # ... твой код новостей
+    
 # =================================================
 # СТРАНИЦА НОВОСТЕЙ
 elif st.session_state.page == "Новости":
     st.markdown('<h1 style="color:#DAA520;">📰 Новости БелТА</h1>', unsafe_allow_html=True)
+    
+    # ВРЕМЕННО: заглушка для функции get_belta_news
+    def get_belta_news():
+        return [
+            type('News', (), {'title': 'Тестовая новость 1', 'link': '#', 'published': '2024-01-01', 'summary': 'Тестовое описание'})()
+        ]
+    
     news = get_belta_news()
     if not news:
         st.info("Новости временно недоступны.")
-    for entry in news:
-        st.markdown(f"""
-        <div style="
-            background: #f8f9fa;
-            border-left: 4px solid #DAA520;
-            padding: 15px;
-            margin-bottom: 15px;
-            border-radius: 8px;
-        ">
-            <a href="{entry.link}" target="_blank" style="color:#DAA520; font-size:1.2rem; font-weight:bold; text-decoration:none;">{entry.title}</a><br>
-            <small style="color:#666;">{getattr(entry, 'published', '')[:16]}</small>
-            <p style="color:#1a1a1a; margin-top:10px;">{getattr(entry, 'summary', '')[:300]}...</p>
-        </div>
-        """, unsafe_allow_html=True)
+    else:
+        for entry in news:
+            st.markdown(f"""
+            <div style="
+                background: #f8f9fa;
+                border-left: 4px solid #DAA520;
+                padding: 15px;
+                margin-bottom: 15px;
+                border-radius: 8px;
+            ">
+                <a href="{entry.link}" target="_blank" style="color:#DAA520; font-size:1.2rem; font-weight:bold; text-decoration:none;">{entry.title}</a><br>
+                <small style="color:#666;">{getattr(entry, 'published', '')[:16]}</small>
+                <p style="color:#1a1a1a; margin-top:10px;">{getattr(entry, 'summary', '')[:300]}...</p>
+            </div>
+            """, unsafe_allow_html=True)
 
 # =================================================
 # СТРАНИЦА ТРАНСПОРТА
-# =================================================
 elif st.session_state.page == "Транспорт":
     st.markdown('<div class="gold-title">🚌 ТРАНСПОРТ</div>', unsafe_allow_html=True)
 
