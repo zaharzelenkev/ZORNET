@@ -308,23 +308,23 @@ except ImportError:
     # torch не установлен
     pass
 
-@st.cache_resource
-def load_vision_model():
-            processor = BlipProcessor.from_pretrained(
-                "Salesforce/blip-image-captioning-base"
-            )
-            model = BlipForConditionalGeneration.from_pretrained(
-                "Salesforce/blip-image-captioning-base",
-                use_safetensors=True
-            )
-            model.to("cpu")
-            return processor, model
-
-        vision_processor, vision_model = load_vision_model()
-        vision_available = True
-
-    except Exception:
-        vision_available = False
+    @st.cache_resource
+    def load_vision_model():
+        processor = BlipProcessor.from_pretrained(
+            "Salesforce/blip-image-captioning-base"
+        )
+        model = BlipForConditionalGeneration.from_pretrained(
+            "Salesforce/blip-image-captioning-base",
+            use_safetensors=True
+        )
+        model.to("cpu")
+        return processor, model
+    
+    vision_processor, vision_model = load_vision_model()
+    vision_available = True
+except Exception as e:
+    st.warning(f"Vision model не загружена: {e}")
+    vision_available = False
 
 # --- GOOGLE OAUTH HANDLING ---
 query_params = st.query_params
