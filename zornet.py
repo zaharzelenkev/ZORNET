@@ -135,46 +135,40 @@ with st.sidebar:
             st.session_state.page = page
             st.rerun()
 
-# ================= ФУНКЦИИ AI =================
-# ================= ФУНКЦИИ AI =================
+# ================= НАСТРОЙКИ =================
 HF_API_KEY = st.secrets["HF_API_KEY"]
+CHAT_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"  # стабильная бесплатная модель
+API_URL = "https://router.huggingface.co/api/chat/completions"
 
-HF_MODEL_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
-
-HF_HEADERS = {
+HEADERS = {
     "Authorization": f"Bearer {HF_API_KEY}",
     "Content-Type": "application/json"
 }
 
-SYSTEM_PROMPT = (
-    "Ты ZORNET AI — умный, быстрый и вежливый помощник "
-    "белорусского портала ZORNET. Ты должен быть помощником по абсолютно любым вопросом, осообенно по вопросом беларуси "
-    "Отвечай кратко, по делу, по-русски."
-)
-
 def ask_hf_ai(prompt: str) -> str:
     payload = {
-        "inputs": SYSTEM_PROMPT + "\n\nПользователь: " + prompt,
-        "parameters": {
-            "max_new_tokens": 400,
-            "temperature": 0.7,
-            "top_p": 0.9
-        }
+        "model": CHAT_MODEL,
+        "messages": [
+            {"role": "system", "content": "Ты ZORNET AI — умный помощник. Отвечай по‑русски кратко и понятно."},
+            {"role": "user", "content": prompt}
+        ],
+        "max_new_tokens": 300,
+        "temperature": 0.7
     }
 
     try:
-        r = requests.post(
-            HF_MODEL_URL,
-            headers=HF_HEADERS,
-            json=payload,
-            timeout=60
-        )
+        r = requests.post(API_URL, headers=HEADERS, json=payload, timeout=60)
+
+        if r.status_code == 503:
+            return "⏳ ZORNET AI загружается — попробуйте через несколько секунд."
 
         if r.status_code != 200:
-            return "⚠️ ZORNET AI временно недоступен. Попробуйте позже."
+            return "⚠️ ZORNET AI временно недоступен."
 
         data = r.json()
-        return data[0]["generated_text"].replace(SYSTEM_PROMPT, "").strip()
+        # получаем ответ
+        text = data["choices"][0]["message"]["content"]
+        return text.strip()
 
     except Exception:
         return "⚠️ Ошибка соединения с ZORNET AI."
