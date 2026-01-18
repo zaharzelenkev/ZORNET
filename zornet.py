@@ -344,46 +344,53 @@ if st.session_state.page == "Главная":
     current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
     col1, col2, col3, col4 = st.columns(4)
 
-    button_style = """
+    # Функция для золотой кнопки
+    def gold_button(label, key):
+        style = """
         style="
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-        color: white;
-        font-weight: 600;
-        border-radius: 12px;
-        padding: 14px 28px;
-        width: 100%;
-        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+            color: white;
+            font-weight: 600;
+            border-radius: 12px;
+            padding: 14px 28px;
+            width: 100%;
+            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
         "
-    """
+        """
+        return st.markdown(f'<button {style}>{label}</button>', unsafe_allow_html=True)
 
     with col1:
-        st.markdown(f'<button {button_style}>🕒 {current_time.strftime("%H:%M")}\nМинск</button>', unsafe_allow_html=True)
+        gold_button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", "time_btn")
     with col2:
-        st.markdown(f'<button {button_style}>⛅ -5°C\nМинск</button>', unsafe_allow_html=True)
+        gold_button("⛅ -5°C\nМинск", "weather_btn")
     with col3:
-        st.markdown(f'<button {button_style}>💵 3.20\nBYN/USD</button>', unsafe_allow_html=True)
+        gold_button("💵 3.20\nBYN/USD", "currency_btn")
     with col4:
-        if st.button("🚌 ТРАНСПОРТ", key="transport_btn", use_container_width=True):
-            st.session_state.page = "Транспорт"
+        # Кнопка ZORNET AI
+        if st.button("🤖 ZORNET AI", key="gold_ai_btn", use_container_width=True):
+            st.session_state.page = "ZORNET AI"
             st.rerun()
 
     st.markdown("---")  # разделитель
 
-    # ===================== ВКЛАДКИ =====================
-    # пример: вкладки могут быть скрытыми/разворачиваемыми
-    tab1, tab2, tab3 = st.tabs(["Метро", "Автобусы/Трамваи", "Такси"])
-    
+    # ===================== ВКЛАДКИ ПОД ВИДЖЕТАМИ =====================
+    tab1, tab2, tab3, tab4 = st.tabs(["🕒 Время", "⛅ Погода", "💵 Валюта", "🤖 ZORNET AI"])
+
     with tab1:
-        st.write("Содержимое вкладки метро...")
+        st.write(f"Текущее время в Минске: {current_time.strftime('%H:%M')}")
     with tab2:
-        st.write("Содержимое вкладки автобусы/трамваи...")
+        st.write("Температура: -5°C, облачно")
     with tab3:
-        st.write("Содержимое вкладки такси...")
+        st.write("Курс: 1 USD = 3.20 BYN")
+    with tab4:
+        st.write("Нажмите кнопку ZORNET AI сверху, чтобы перейти к чату с AI")
+
+    st.markdown("---")
 
     # ===================== ПОИСКОВАЯ СТРОКА =====================
     search_query = st.text_input(
         "",
-        placeholder="Поиск в интернете...",
+        placeholder="🔍 Поиск в интернете...",
         key=f"main_search_{st.session_state.page}",
         label_visibility="collapsed"
     )
