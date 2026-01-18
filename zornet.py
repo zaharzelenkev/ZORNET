@@ -358,9 +358,10 @@ if st.session_state.page == "Главная":
         </style>
         """, unsafe_allow_html=True)
         
-        if st.button("🤖 **ZORNET AI**", key="zornet_ai_btn", type="secondary", use_container_width=True):
-            st.session_state.page = "ZORNET AI"
-            st.rerun()
+        # Используем имя страницы для уникальности ключа
+if st.button("🤖 **ZORNET AI**", key=f"zornet_ai_btn_{st.session_state.page}", use_container_width=True):
+    st.session_state.page = "ZORNET AI"
+    st.rerun()
 
     with col2:
         # ПОИСКОВАЯ СТРОКА
