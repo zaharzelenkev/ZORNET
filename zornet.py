@@ -5,7 +5,6 @@ import os
 import pytz
 import requests
 import feedparser
-from groq import Groq
 from PIL import Image
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -19,6 +18,36 @@ from duckduckgo_search import DDGS
 from streamlit_folium import st_folium
 import folium
 import random
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+import torch
+
+# Загружаем HF модель (работает локально или через API)
+hf_pipeline = pipeline("text-generation", model="mistralai/mistral-mini-7b-v0.1", device=-1)
+
+def ask_hf_ai(prompt, history=[]):
+    context = ""
+    for msg in history[-5:]:
+        role = msg["role"]
+        content = msg["content"]
+        if role == "user":
+            context += f"Пользователь: {content}\n"
+        else:
+            context += f"Ассистент: {content}\n"
+    context += f"Пользователь: {prompt}\nАссистент:"
+    output = hf_pipeline(context, max_new_tokens=200, do_sample=True, temperature=0.7)
+    response = output[0]["generated_text"][len(context):].strip()
+    return response
+    
+# Модель HF (Mistral-mini)
+@st.cache_resource
+def load_hf_model():
+    model_name = "mistralai/Mistral-mini-7B-v0.1"  # бесплатная, быстрая модель
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype=torch.float32)
+    pipe = pipeline("text-generation", model=model, tokenizer=tokenizer, device=-1)  # CPU
+    return pipe
+
+hf_pipeline = load_hf_model()
 
 st.set_page_config(
     page_title="ZORNET",
@@ -26,13 +55,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-# --- КОНСТАНТЫ ---
-TOKEN_FILE = "token.json"
-SCOPES = ["https://www.googleapis.com/auth/drive.file"]
-REDIRECT_URI = "http://localhost:8513"
-GROQ_API_KEY = "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"
-MODEL = "llama-3.3-70b-versatile"
 
 # ----------------------------
 # Google OAuth Functions
@@ -1163,11 +1185,7 @@ elif st.session_state.page == "ZORNET AI":
                 messages_for_ai.extend(
                     st.session_state.ai_messages[-5:])  # Берем последние 5 сообщений для контекста
 
-                response = client.chat.completions.create(
-                    model=MODEL,
-                    messages=messages_for_ai,
-                    temperature=0.7
-                ).choices[0].message.content
+                response = ask_hf_ai(prompt, st.session_state.ai_messages)
 
                 # Отображаем ответ с профессиональным стилем
                 st.markdown(f"""
