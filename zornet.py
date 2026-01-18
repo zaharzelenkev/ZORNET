@@ -19,7 +19,6 @@ from streamlit_folium import st_folium
 import folium
 import random
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
-import torch
 
 # Загружаем HF модель (работает локально или через API)
 hf_pipeline = pipeline("text-generation", model="mistralai/mistral-mini-7b-v0.1", device=-1)
