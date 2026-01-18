@@ -361,11 +361,11 @@ if st.session_state.page == "Главная":
     
     # --- Поисковая строка ---
     search_query = st.text_input(
-        "",
-        placeholder="🔍 Поиск в интернете...",
-        key="main_search",
-        label_visibility="collapsed"
-    )
+    "",
+    placeholder="🔍 Поиск в интернете...",
+    key=f"main_search_{st.session_state.page}",  # <-- новый уникальный ключ
+    label_visibility="collapsed"
+)
 
     # --- Результаты поиска ---
     if search_query:
