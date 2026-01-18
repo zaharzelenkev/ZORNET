@@ -338,82 +338,40 @@ def get_belta_news():
 
 # ================= ГЛАВНАЯ СТРАНИЦА =================
 if st.session_state.page == "Главная":
-    # ВЕРХНЯЯ ПАНЕЛЬ
-    col1, col2, col3 = st.columns([1, 3, 1])
-
-    with col1:
-        # КНОПКА AI
-        st.markdown("""
-        <style>
-        div[data-testid="stButton"] > button[kind="secondary"] {
-            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-            border: none !important;
-            color: white !important;
-            border-radius: 12px !important;
-            padding: 14px 28px !important;
-            font-weight: 600 !important;
-            font-size: 16px !important;
-            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3) !important;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-        
-        # Используем имя страницы для уникальности ключа
-if st.button("🤖 **ZORNET AI**", key=f"zornet_ai_btn_{st.session_state.page}", use_container_width=True):
-    st.session_state.page = "ZORNET AI"
-    st.rerun()
-
-    with col2:
-        # ПОИСКОВАЯ СТРОКА
-        search_query = st.text_input(
-            "",
-            placeholder="🔍 Поиск в интернете...",
-            key="main_search",
-            label_visibility="collapsed"
-        )
-
-    with col3:
-        # ВРЕМЯ И ДАТА
-        current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
-        st.markdown(f"""
-        <div class="time-widget">
-            <div>{current_time.strftime('%H:%M')}</div>
-            <div style="font-size: 12px; font-weight: 500; opacity: 0.9;">{current_time.strftime('%d.%m.%Y')}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # ЗАГОЛОВОК
+    
+    # --- Заголовок ZORNET сверху ---
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
-
-    # ВИДЖЕТЫ
+    
+    # --- 4 виджета сразу под заголовком ---
+    current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        if st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", use_container_width=True):
-            pass
-    
+        st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", use_container_width=True)
     with col2:
-        if st.button("⛅ -5°C\nМинск", use_container_width=True):
-            pass
-    
+        st.button("⛅ -5°C\nМинск", use_container_width=True)
     with col3:
-        if st.button("💵 3.20\nBYN/USD", use_container_width=True):
-            pass
-    
+        st.button("💵 3.20\nBYN/USD", use_container_width=True)
     with col4:
-        if st.button("🚌 ТРАНСПОРТ\n", use_container_width=True):
+        if st.button("🚌 ТРАНСПОРТ", use_container_width=True):
             st.session_state.page = "Транспорт"
             st.rerun()
-
+    
     st.markdown("---")
+    
+    # --- Поисковая строка ---
+    search_query = st.text_input(
+        "",
+        placeholder="🔍 Поиск в интернете...",
+        key="main_search",
+        label_visibility="collapsed"
+    )
 
-    # ПОИСКОВЫЕ РЕЗУЛЬТАТЫ
+    # --- Результаты поиска ---
     if search_query:
         st.markdown(f"### 🔍 Результаты поиска: **{search_query}**")
-        
         with st.spinner("Ищу информацию..."):
             results = search_zornet(search_query, num_results=5)
-            
             if results:
                 for idx, result in enumerate(results):
                     st.markdown(f"""
