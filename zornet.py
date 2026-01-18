@@ -1203,14 +1203,6 @@ with st.spinner("ZORNET думает..."):
                 {"role": "assistant", "content": "Привет! Я ZORNET AI. Чем могу помочь?"}
             ]
             st.rerun()
-
-# ДОБАВЬ ЭТО ПЕРЕД КОДОМ НОВОСТЕЙ:
-if "page" not in st.session_state:
-    st.session_state.page = "Главная"
-
-# Потом уже elif
-elif st.session_state.page == "Новости":
-    # ... твой код новостей
     
 # =================================================
 # СТРАНИЦА НОВОСТЕЙ
