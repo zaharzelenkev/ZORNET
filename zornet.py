@@ -340,57 +340,26 @@ if st.session_state.page == "Главная":
     # ===================== ЗОЛОТАЯ НАДПИСЬ =====================
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
 
-    # ===================== 4 ЗОЛОТЫХ ВИДЖЕТА =====================
+    # ===================== 4 ВИДЖЕТА =====================
     current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
     col1, col2, col3, col4 = st.columns(4)
-
-    # Функция для золотой кнопки
-    def gold_button(label, key):
-        style = """
-        style="
-            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-            color: white;
-            font-weight: 600;
-            border-radius: 12px;
-            padding: 14px 28px;
-            width: 100%;
-            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
-        "
-        """
-        return st.markdown(f'<button {style}>{label}</button>', unsafe_allow_html=True)
-
     with col1:
-        gold_button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", "time_btn")
+        st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", use_container_width=True)
     with col2:
-        gold_button("⛅ -5°C\nМинск", "weather_btn")
+        st.button("⛅ -5°C\nМинск", use_container_width=True)
     with col3:
-        gold_button("💵 3.20\nBYN/USD", "currency_btn")
+        st.button("💵 3.20\nBYN/USD", use_container_width=True)
     with col4:
-        # Кнопка ZORNET AI
-        if st.button("🤖 ZORNET AI", key="gold_ai_btn", use_container_width=True):
+        if st.button("🚌 ZORNET AI", use_container_width=True):
             st.session_state.page = "ZORNET AI"
             st.rerun()
 
     st.markdown("---")  # разделитель
 
-    # ===================== ВКЛАДКИ ПОД ВИДЖЕТАМИ =====================
-    tab1, tab2, tab3, tab4 = st.tabs(["🕒 Время", "⛅ Погода", "💵 Валюта", "🤖 ZORNET AI"])
-
-    with tab1:
-        st.write(f"Текущее время в Минске: {current_time.strftime('%H:%M')}")
-    with tab2:
-        st.write("Температура: -5°C, облачно")
-    with tab3:
-        st.write("Курс: 1 USD = 3.20 BYN")
-    with tab4:
-        st.write("Нажмите кнопку ZORNET AI сверху, чтобы перейти к чату с AI")
-
-    st.markdown("---")
-
     # ===================== ПОИСКОВАЯ СТРОКА =====================
     search_query = st.text_input(
         "",
-        placeholder="🔍 Поиск в интернете...",
+        placeholder="Поиск в интернете...",
         key=f"main_search_{st.session_state.page}",
         label_visibility="collapsed"
     )
