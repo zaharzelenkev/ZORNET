@@ -19,11 +19,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ================= API КЛЮЧ =================
-# ВСТАВЬ СВОЙ КЛЮЧ СЮДА:
-HF_API_KEY = "h_XzFyShNnTByfEsHPIehaA£hMtECtGWLjMk"
-client = InferenceClient(HF_API_KEY)
-
 # ================= СЕССИЯ =================
 if "page" not in st.session_state:
     st.session_state.page = "Главная"
@@ -141,44 +136,48 @@ with st.sidebar:
             st.rerun()
 
 # ================= ФУНКЦИИ AI =================
-def ask_hf_ai(prompt):
-    """Общение с AI - РАБОЧАЯ ВЕРСИЯ"""
+# ================= ФУНКЦИИ AI =================
+HF_API_KEY = st.secrets["HF_API_KEY"]
+
+HF_MODEL_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+
+HF_HEADERS = {
+    "Authorization": f"Bearer {HF_API_KEY}",
+    "Content-Type": "application/json"
+}
+
+SYSTEM_PROMPT = (
+    "Ты ZORNET AI — умный, быстрый и вежливый помощник "
+    "белорусского портала ZORNET. Ты должен быть помощником по абсолютно любым вопросом, осообенно по вопросом беларуси "
+    "Отвечай кратко, по делу, по-русски."
+)
+
+def ask_hf_ai(prompt: str) -> str:
+    payload = {
+        "inputs": SYSTEM_PROMPT + "\n\nПользователь: " + prompt,
+        "parameters": {
+            "max_new_tokens": 400,
+            "temperature": 0.7,
+            "top_p": 0.9
+        }
+    }
+
     try:
-        # Пробуем разные модели если одна не работает
-        models_to_try = [
-            "mistralai/Mistral-7B-Instruct-v0.1",
-            "google/flan-t5-xxl",
-            "microsoft/phi-2",
-            "HuggingFaceH4/zephyr-7b-beta"
-        ]
-        
-        for model in models_to_try:
-            try:
-                response = client.text_generation(
-                    model=model,
-                    prompt=f"Ты полезный AI помощник ZORNET. Отвечай кратко и ясно.\n\nВопрос: {prompt}\n\nОтвет:",
-                    max_new_tokens=200,
-                    temperature=0.7
-                )
-                if response:
-                    return str(response).strip()
-            except:
-                continue  # Пробуем следующую модель
-        
-        # Если все модели не работают, возвращаем запасной ответ
-        return f"Я ZORNET AI. На ваш вопрос: '{prompt}'. К сожалению, AI сервис временно недоступен. Попробуйте позже."
-        
-    except Exception as e:
-        # Отладочная информация (можно убрать в продакшене)
-        error_msg = str(e)
-        if "401" in error_msg:
-            return "❌ Ошибка: Неверный API ключ. Проверьте ключ в настройках."
-        elif "403" in error_msg:
-            return "🔒 Ошибка: Нет доступа к модели. Ключ может быть неактивен."
-        elif "429" in error_msg:
-            return "⏳ Ошибка: Слишком много запросов. Подождите немного."
-        else:
-            return f"⚠️ Временная ошибка AI сервиса. Попробуйте позже."
+        r = requests.post(
+            HF_MODEL_URL,
+            headers=HF_HEADERS,
+            json=payload,
+            timeout=60
+        )
+
+        if r.status_code != 200:
+            return "⚠️ ZORNET AI временно недоступен. Попробуйте позже."
+
+        data = r.json()
+        return data[0]["generated_text"].replace(SYSTEM_PROMPT, "").strip()
+
+    except Exception:
+        return "⚠️ Ошибка соединения с ZORNET AI."
 
 # ================= ФУНКЦИИ ПОИСКА =================
 def search_zornet(query, num_results=5):
