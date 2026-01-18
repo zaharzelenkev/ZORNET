@@ -695,7 +695,7 @@ elif st.session_state.page == "Новости":
             </div>
             """, unsafe_allow_html=True)
 
-# ... (предыдущий код) ...
+# ... (остальной код без изменений) ...
 
 # ================= СТРАНИЦА ПОГОДЫ =================
 elif st.session_state.page == "Погода":
@@ -713,113 +713,83 @@ elif st.session_state.page == "Погода":
     with tab1:
         st.subheader("Погода по вашему местоположению")
         
-        # Способ 1: Библиотека streamlit_geolocation
-        st.markdown("### Способ 1: Точное местоположение")
-        st.info("Нажмите кнопку ниже, чтобы ваш браузер запросил разрешение на доступ к GPS.")
-        
-        # Кнопка для запроса геолокации
-        if st.button("📍 Запросить мое местоположение", type="primary", key="request_geo"):
-            with st.spinner("Запрашиваю разрешение..."):
-                # Используем streamlit_geolocation
-                location = st_geo.get_location()
+        # Кнопка для запроса геолокации через streamlit-geolocation
+        if st.button("📍 Запросить доступ к моему местоположению", type="primary", key="request_geo"):
+            try:
+                # Пытаемся импортировать библиотеку
+                import streamlit_geolocation as st_geo
                 
-                if location and location.get("latitude"):
-                    lat = location["latitude"]
-                    lon = location["longitude"]
+                with st.spinner("Запрашиваю разрешение у браузера..."):
+                    location = st_geo.get_location()
                     
-                    st.success(f"✅ Местоположение получено!")
-                    st.write(f"Координаты: {lat:.4f}, {lon:.4f}")
-                    
-                    # Получаем погоду
-                    with st.spinner("Получаю погоду..."):
+                    if location and location.get("latitude"):
+                        lat = location["latitude"]
+                        lon = location["longitude"]
+                        
+                        st.success(f"✅ Разрешение получено! Координаты: {lat:.4f}, {lon:.4f}")
+                        
+                        # Получаем погоду
+                        with st.spinner("Получаю актуальную погоду..."):
+                            weather_data = get_weather_by_coords(lat, lon)
+                            
+                            if weather_data:
+                                st.session_state.weather_data = weather_data
+                                st.session_state.user_city = weather_data["current"]["city"]
+                                st.rerun()
+                            else:
+                                st.error("⚠️ Не удалось получить данные о погоде")
+                    else:
+                        st.error("❌ Не удалось получить местоположение. Проверьте разрешения браузера.")
+                        
+            except ImportError:
+                st.error("❌ Библиотека streamlit-geolocation не установлена!")
+                st.info("Добавьте 'streamlit-geolocation' в файл requirements.txt и перезапустите приложение")
+            except Exception as e:
+                st.error(f"❌ Ошибка: {e}")
+        
+        # Альтернатива: определение города по IP
+        st.markdown("---")
+        st.markdown("### 🌐 Альтернативный способ (без разрешений)")
+        
+        if st.button("🌍 Определить мой город автоматически", key="auto_city"):
+            with st.spinner("Определяю ваш город..."):
+                try:
+                    # Пробуем получить город по IP
+                    response = requests.get('https://ipapi.co/json/', timeout=5)
+                    if response.status_code == 200:
+                        data = response.json()
+                        city = data.get("city", "Минск")
+                        country = data.get("country_name", "Беларусь")
+                        lat = data.get("latitude", 53.9)
+                        lon = data.get("longitude", 27.5667)
+                        
+                        st.success(f"📍 Определено: {city}, {country}")
+                        
+                        # Получаем погоду
                         weather_data = get_weather_by_coords(lat, lon)
                         
                         if weather_data:
                             st.session_state.weather_data = weather_data
-                            st.session_state.user_city = weather_data["current"]["city"]
+                            st.session_state.user_city = city
                             st.rerun()
                         else:
                             st.error("Не удалось получить погоду")
-                else:
-                    st.error("❌ Не удалось получить местоположение. Проверьте разрешения браузера.")
-        
-        # Способ 2: Определение по IP (работает всегда)
-        st.markdown("### Способ 2: Приблизительное местоположение")
-        st.info("Определяем город по вашему IP адресу (не требует разрешений)")
-        
-        if st.button("🌐 Определить мой город по IP", key="ip_detect"):
-            with st.spinner("Определяю ваш город..."):
-                # Функция для получения города по IP
-                def get_city_by_ip():
-                    try:
-                        # Попробуем несколько бесплатных сервисов
-                        services = [
-                            "https://ipapi.co/json/",
-                            "http://ip-api.com/json/",
-                            "https://api.ipgeolocation.io/ipgeo?apiKey=demo"  # демо-ключ
-                        ]
-                        
-                        for url in services:
-                            try:
-                                response = requests.get(url, timeout=3)
-                                if response.status_code == 200:
-                                    data = response.json()
-                                    city = data.get("city") or data.get("city_name")
-                                    country = data.get("country") or data.get("country_name")
-                                    lat = data.get("latitude") or data.get("lat")
-                                    lon = data.get("longitude") or data.get("lon")
-                                    
-                                    if city and lat and lon:
-                                        return {
-                                            "city": city,
-                                            "country": country,
-                                            "lat": float(lat),
-                                            "lon": float(lon)
-                                        }
-                            except:
-                                continue
-                        
-                        # Если все сервисы не работают, возвращаем Минск
-                        return {
-                            "city": "Минск",
-                            "country": "Беларусь",
-                            "lat": 53.9,
-                            "lon": 27.5667
-                        }
-                    except:
-                        return None
-                
-                location_data = get_city_by_ip()
-                
-                if location_data:
-                    st.success(f"📍 Определено: {location_data['city']}, {location_data['country']}")
-                    
-                    # Автоматически получаем погоду
-                    weather_data = get_weather_by_coords(
-                        location_data["lat"],
-                        location_data["lon"]
-                    )
-                    
-                    if weather_data:
-                        st.session_state.weather_data = weather_data
-                        st.session_state.user_city = location_data["city"]
-                        st.rerun()
                     else:
-                        st.error("Не удалось получить погоду")
-                else:
-                    st.error("Не удалось определить местоположение")
+                        st.error("Не удалось определить местоположение")
+                except:
+                    st.error("Ошибка подключения")
         
-        # Способ 3: Ручной ввод координат
+        # Ручной ввод координат
         with st.expander("🔧 Ввести координаты вручную"):
             col1, col2 = st.columns(2)
             with col1:
-                lat_input = st.number_input("Широта", value=53.9, format="%.4f", key="manual_lat")
+                manual_lat = st.number_input("Широта", value=53.9, format="%.4f", key="man_lat")
             with col2:
-                lon_input = st.number_input("Долгота", value=27.5667, format="%.4f", key="manual_lon")
+                manual_lon = st.number_input("Долгота", value=27.5667, format="%.4f", key="man_lon")
             
-            if st.button("Получить погоду по координатам", key="manual_weather"):
+            if st.button("Получить погоду по координатам", key="manual_coords"):
                 with st.spinner("Получаю погоду..."):
-                    weather_data = get_weather_by_coords(lat_input, lon_input)
+                    weather_data = get_weather_by_coords(manual_lat, manual_lon)
                     
                     if weather_data:
                         st.session_state.weather_data = weather_data
@@ -827,113 +797,6 @@ elif st.session_state.page == "Погода":
                         st.rerun()
                     else:
                         st.error("Не удалось получить погоду")
-        
-        # Отображение погоды если она есть
-        if st.session_state.weather_data:
-            current = st.session_state.weather_data["current"]
-            
-            st.markdown("---")
-            st.markdown(f"### 🌤️ Погода в {current['city']}, {current['country']}")
-            
-            # Красивый виджет погоды
-            col_temp, col_icon = st.columns([2, 1])
-            with col_temp:
-                st.markdown(f"""
-                <div style="font-size: 4rem; font-weight: 800; color: #1a1a1a;">
-                    {current['temp']}°C
-                </div>
-                <div style="font-size: 1.5rem; color: #666; margin-top: -10px;">
-                    {get_weather_icon(current['icon'])} {current['description']}
-                </div>
-                <div style="font-size: 1rem; color: #888;">
-                    Ощущается как {current['feels_like']}°C
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col_icon:
-                st.markdown(f"""
-                <div style="text-align: center;">
-                    <div style="font-size: 5rem;">
-                        {get_weather_icon(current['icon'])}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Детали погоды
-            st.markdown("### 📊 Детали")
-            cols = st.columns(4)
-            details = [
-                ("💧 Влажность", f"{current['humidity']}%"),
-                ("💨 Ветер", f"{current['wind_speed']} м/с {get_wind_direction(current['wind_deg'])}"),
-                ("📊 Давление", f"{current['pressure']} гПа"),
-                ("👁️ Видимость", f"{current['visibility']} км"),
-                ("🌅 Восход", current['sunrise']),
-                ("🌇 Закат", current['sunset']),
-                ("☁️ Облачность", f"{current['clouds']}%"),
-                ("📍 Координаты", f"{lat_input if 'lat_input' in locals() else current.get('lat', 'N/A')}, {lon_input if 'lon_input' in locals() else current.get('lon', 'N/A')}")
-            ]
-            
-            for i in range(0, len(details), 2):
-                col1, col2 = st.columns(2)
-                with col1:
-                    if i < len(details):
-                        name, value = details[i]
-                        st.markdown(f"""
-                        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
-                            <div style="font-size: 0.9rem; color: #666;">{name}</div>
-                            <div style="font-size: 1.2rem; font-weight: bold; color: #1a1a1a;">{value}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                with col2:
-                    if i + 1 < len(details):
-                        name, value = details[i + 1]
-                        st.markdown(f"""
-                        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
-                            <div style="font-size: 0.9rem; color: #666;">{name}</div>
-                            <div style="font-size: 1.2rem; font-weight: bold; color: #1a1a1a;">{value}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-            
-            # Прогноз на 5 дней
-            if st.session_state.weather_data.get("forecast"):
-                st.markdown("### 📅 Прогноз на 5 дней")
-                
-                forecast_items = st.session_state.weather_data["forecast"]["list"]
-                daily_forecast = {}
-                
-                for item in forecast_items:
-                    date = item["dt_txt"].split(" ")[0]
-                    if date not in daily_forecast:
-                        daily_forecast[date] = item
-                
-                forecast_cols = st.columns(5)
-                dates = list(daily_forecast.keys())[:5]
-                
-                for idx, date in enumerate(dates):
-                    with forecast_cols[idx]:
-                        day_data = daily_forecast[date]
-                        day_name = datetime.datetime.strptime(date, "%Y-%m-%d").strftime("%a")
-                        
-                        st.markdown(f"""
-                        <div style="
-                            background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
-                            border-radius: 10px;
-                            padding: 15px;
-                            text-align: center;
-                            color: white;
-                        ">
-                            <div style="font-weight: bold; margin-bottom: 10px;">{day_name}</div>
-                            <div style="font-size: 2rem; margin: 10px 0;">
-                                {get_weather_icon(day_data['weather'][0]['icon'])}
-                            </div>
-                            <div style="font-size: 1.5rem; font-weight: bold;">
-                                {round(day_data['main']['temp'])}°C
-                            </div>
-                            <div style="font-size: 0.8rem; margin-top: 5px;">
-                                {day_data['weather'][0]['description']}
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
     
     with tab2:
         st.subheader("Поиск погоды по городу")
@@ -941,41 +804,162 @@ elif st.session_state.page == "Погода":
         city_input = st.text_input(
             "Введите название города",
             placeholder="Например: Минск, Москва, Лондон...",
-            key="city_search_input"
+            key="city_input"
         )
         
-        col1, col2 = st.columns([1, 4])
-        with col1:
-            search_btn = st.button("🔍 Найти", type="primary", use_container_width=True)
+        if st.button("🔍 Найти погоду", type="primary", key="search_city"):
+            if city_input:
+                with st.spinner(f"Ищу погоду для {city_input}..."):
+                    weather_data = get_weather_by_city(city_input)
+                    
+                    if weather_data:
+                        st.session_state.weather_data = weather_data
+                        st.session_state.user_city = city_input
+                        st.rerun()
+                    else:
+                        st.error(f"Город '{city_input}' не найден")
+            else:
+                st.warning("Введите название города")
         
-        if search_btn and city_input:
-            with st.spinner(f"Ищу погоду для {city_input}..."):
-                weather_data = get_weather_by_city(city_input)
-                
-                if weather_data:
-                    st.session_state.weather_data = weather_data
-                    st.session_state.user_city = city_input
-                    st.rerun()
-                else:
-                    st.error(f"Не удалось найти город '{city_input}'. Проверьте правильность написания.")
+        # Быстрые города
+        st.markdown("### 🏙️ Быстрый выбор")
+        quick_cities = ["Минск", "Гомель", "Витебск", "Могилёв", "Брест", "Гродно"]
+        cols = st.columns(3)
         
-        # Популярные города
-        st.markdown("### 🏙️ Популярные города")
-        popular_cities = ["Минск", "Москва", "Киев", "Варшава", "Вильнюс", "Рига"]
-        city_cols = st.columns(3)
-        
-        for idx, city in enumerate(popular_cities):
-            with city_cols[idx % 3]:
-                if st.button(city, key=f"pop_city_{city}", use_container_width=True):
-                    with st.spinner(f"Получаю погоду для {city}..."):
+        for idx, city in enumerate(quick_cities):
+            with cols[idx % 3]:
+                if st.button(city, key=f"quick_{city}", use_container_width=True):
+                    with st.spinner(f"Загружаю {city}..."):
                         weather_data = get_weather_by_city(city)
                         
                         if weather_data:
                             st.session_state.weather_data = weather_data
                             st.session_state.user_city = city
                             st.rerun()
-                        else:
-                            st.error(f"Не удалось получить погоду для {city}")
+    
+    # ===== ОТОБРАЖЕНИЕ ПОГОДЫ (если есть данные) =====
+    if st.session_state.weather_data:
+        current = st.session_state.weather_data["current"]
+        
+        st.markdown("---")
+        st.markdown(f"## 🌤️ Погода в {current['city']}, {current['country']}")
+        
+        # Основная информация
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            st.markdown(f"""
+            <div style="font-size: 4.5rem; font-weight: 800; color: #1a1a1a; line-height: 1;">
+                {current['temp']}°C
+            </div>
+            <div style="font-size: 1.8rem; color: #666; margin-top: 10px;">
+                {get_weather_icon(current['icon'])} {current['description']}
+            </div>
+            <div style="font-size: 1.2rem; color: #888; margin-top: 5px;">
+                💁 Ощущается как {current['feels_like']}°C
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown(f"""
+            <div style="text-align: center;">
+                <div style="font-size: 6rem;">
+                    {get_weather_icon(current['icon'])}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Детали
+        st.markdown("### 📊 Детали")
+        detail_cols = st.columns(4)
+        details = [
+            ("💧 Влажность", f"{current['humidity']}%"),
+            ("💨 Ветер", f"{current['wind_speed']} м/с"),
+            ("🧭 Направление", get_wind_direction(current['wind_deg'])),
+            ("📊 Давление", f"{current['pressure']} гПа"),
+            ("👁️ Видимость", f"{current['visibility']} км"),
+            ("☁️ Облачность", f"{current['clouds']}%"),
+            ("🌅 Восход", current['sunrise']),
+            ("🌇 Закат", current['sunset'])
+        ]
+        
+        for i in range(0, 8, 2):
+            col1, col2 = st.columns(2)
+            with col1:
+                name, value = details[i]
+                st.markdown(f"""
+                <div style="
+                    background: #f8f9fa;
+                    padding: 15px;
+                    border-radius: 12px;
+                    margin-bottom: 10px;
+                    border-left: 4px solid #DAA520;
+                ">
+                    <div style="font-size: 0.9rem; color: #666;">{name}</div>
+                    <div style="font-size: 1.3rem; font-weight: bold; color: #1a1a1a;">{value}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with col2:
+                if i + 1 < len(details):
+                    name, value = details[i + 1]
+                    st.markdown(f"""
+                    <div style="
+                        background: #f8f9fa;
+                        padding: 15px;
+                        border-radius: 12px;
+                        margin-bottom: 10px;
+                        border-left: 4px solid #DAA520;
+                    ">
+                        <div style="font-size: 0.9rem; color: #666;">{name}</div>
+                        <div style="font-size: 1.3rem; font-weight: bold; color: #1a1a1a;">{value}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+        
+        # Прогноз
+        if st.session_state.weather_data.get("forecast"):
+            st.markdown("### 📅 Прогноз на 5 дней")
+            
+            forecast = st.session_state.weather_data["forecast"]["list"]
+            days = {}
+            
+            for item in forecast:
+                date = item["dt_txt"].split(" ")[0]
+                if date not in days:
+                    days[date] = item
+            
+            forecast_dates = list(days.keys())[:5]
+            forecast_cols = st.columns(5)
+            
+            for idx, date in enumerate(forecast_dates):
+                with forecast_cols[idx]:
+                    day = days[date]
+                    day_name = datetime.datetime.strptime(date, "%Y-%m-%d").strftime("%a")
+                    
+                    st.markdown(f"""
+                    <div style="
+                        background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
+                        border-radius: 12px;
+                        padding: 15px;
+                        text-align: center;
+                        color: white;
+                        box-shadow: 0 4px 15px rgba(6, 147, 227, 0.3);
+                    ">
+                        <div style="font-weight: bold; font-size: 1.1rem; margin-bottom: 10px;">
+                            {day_name}
+                        </div>
+                        <div style="font-size: 2.5rem; margin: 10px 0;">
+                            {get_weather_icon(day['weather'][0]['icon'])}
+                        </div>
+                        <div style="font-size: 1.5rem; font-weight: bold;">
+                            {round(day['main']['temp'])}°C
+                        </div>
+                        <div style="font-size: 0.8rem; margin-top: 8px; opacity: 0.9;">
+                            {day['weather'][0]['description']}
+                        </div>
+                        <div style="font-size: 0.7rem; margin-top: 5px; opacity: 0.8;">
+                            💧 {day['main']['humidity']}% | 💨 {day['wind']['speed']} м/с
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
 # ================= СТРАНИЦА ТРАНСПОРТА =================
 elif st.session_state.page == "Транспорт":
