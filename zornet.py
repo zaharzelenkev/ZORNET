@@ -130,10 +130,10 @@ with st.sidebar:
         ("👤", "ПРОФИЛЬ", "Профиль"),
     ]
     
-    for icon, text, page in pages:
-        if st.button(f"{icon} {text}", key=f"nav_{page}", use_container_width=True):
-            st.session_state.page = page
-            st.rerun()
+    for i, (icon, text, page) in enumerate(pages):
+    if st.button(f"{icon} {text}", key=f"nav_{i}_{page}", use_container_width=True):
+        st.session_state.page = page
+        st.rerun()
 
 # ================= НАСТРОЙКИ =================
 HF_API_KEY = st.secrets["HF_API_KEY"]
