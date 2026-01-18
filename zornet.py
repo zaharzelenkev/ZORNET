@@ -299,9 +299,14 @@ vision_available = False
 vision_processor = None
 vision_model = None
 
-if torch is not None:
-    try:
-        from transformers import BlipProcessor, BlipForConditionalGeneration
+# Удали эту проверку или добавь import torch выше
+# Или замени на try/except:
+try:
+    import torch
+    # код с torch
+except ImportError:
+    # torch не установлен
+    pass
 
         @st.cache_resource
         def load_vision_model():
