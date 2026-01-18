@@ -581,38 +581,73 @@ elif st.session_state.page == "Погода":
         # Способ 1: Запрос геолокации
         st.markdown("### Способ 1: Запрос точного местоположения")
         
-        try:
-            # Пытаемся импортировать библиотеку
-            import streamlit_geolocation
+        # Создаем кнопку для запроса геолокации
+        if st.button("📍 Запросить доступ к моему местоположению", type="primary", key="geo_request"):
+            # Используем JavaScript для запроса геолокации
+            js_code = """
+            <script>
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        // Отправляем данные обратно в Streamlit
+                        window.parent.postMessage({
+                            type: 'streamlit:setComponentValue',
+                            value: 'geo:' + lat + ',' + lon
+                        }, '*');
+                    },
+                    function(error) {
+                        window.parent.postMessage({
+                            type: 'streamlit:setComponentValue',
+                            value: 'geo_error:' + error.code
+                        }, '*');
+                    }
+                );
+            } else {
+                window.parent.postMessage({
+                    type: 'streamlit:setComponentValue',
+                    value: 'geo_error:nosupport'
+                }, '*');
+            }
+            </script>
+            """
             
-            if st.button("📍 Запросить доступ к моему местоположению", type="primary", key="geo_request"):
-                with st.spinner("Запрашиваю разрешение у браузера..."):
-                    location = streamlit_geolocation.get_location()
-                    
-                    if location and location.get("latitude"):
-                        lat = location["latitude"]
-                        lon = location["longitude"]
-                        
-                        st.success(f"✅ Разрешение получено! Координаты: {lat:.4f}, {lon:.4f}")
-                        
-                        # Получаем погоду
-                        with st.spinner("Получаю актуальную погоду..."):
-                            weather_data = get_weather_by_coords(lat, lon)
-                            
-                            if weather_data:
-                                st.session_state.weather_data = weather_data
-                                st.session_state.user_city = weather_data["current"]["city"]
-                                st.rerun()
-                            else:
-                                st.error("⚠️ Не удалось получить данные о погоде")
-                    else:
-                        st.error("❌ Не удалось получить местоположение. Проверьте разрешения браузера.")
-                        
-        except ImportError:
-            st.error("❌ Библиотека streamlit-geolocation не установлена!")
-            st.info("Добавьте 'streamlit-geolocation' в файл requirements.txt")
+            # Отображаем JavaScript
+            st.components.v1.html(js_code, height=0)
+            
+            st.info("Запрашиваю разрешение у браузера... Пожалуйста, разрешите доступ к местоположению.")
         
-        # Способ 2: Автоматическое определение
+        # Проверяем, пришли ли данные геолокации
+        if 'geo_data' in st.session_state:
+            if st.session_state.geo_data.startswith('geo:'):
+                # Извлекаем координаты
+                coords = st.session_state.geo_data.replace('geo:', '').split(',')
+                lat = float(coords[0])
+                lon = float(coords[1])
+                
+                st.success(f"✅ Координаты получены: {lat:.4f}, {lon:.4f}")
+                
+                # Получаем погоду
+                with st.spinner("Получаю актуальную погоду..."):
+                    weather_data = get_weather_by_coords(lat, lon)
+                    
+                    if weather_data:
+                        st.session_state.weather_data = weather_data
+                        st.session_state.user_city = weather_data["current"]["city"]
+                        # Очищаем данные геолокации
+                        del st.session_state.geo_data
+                        st.rerun()
+                    else:
+                        st.error("⚠️ Не удалось получить данные о погоде")
+            elif st.session_state.geo_data.startswith('geo_error:'):
+                error_code = st.session_state.geo_data.replace('geo_error:', '')
+                if error_code == 'nosupport':
+                    st.error("❌ Ваш браузер не поддерживает геолокацию")
+                else:
+                    st.error("❌ Пользователь отказал в доступе к местоположению")
+        
+        # Способ 2: Автоматическое определение по IP
         st.markdown("### Способ 2: Автоматическое определение")
         
         if st.button("🌍 Определить мой город автоматически", key="auto_city"):
@@ -734,7 +769,6 @@ elif st.session_state.page == "Погода":
         
         # Детали
         st.markdown("### 📊 Детали")
-        detail_cols = st.columns(4)
         details = [
             ("💧 Влажность", f"{current['humidity']}%"),
             ("💨 Ветер", f"{current['wind_speed']} м/с"),
