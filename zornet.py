@@ -1,4 +1,3 @@
-import streamlit as st
 import sqlite3
 import datetime
 import os
@@ -8,340 +7,391 @@ import feedparser
 from PIL import Image
 from pathlib import Path
 import mimetypes
-import pandas as pd
 from duckduckgo_search import DDGS
 from huggingface_hub import InferenceClient
 
-# ================= НАСТРОЙКИ СТРАНИЦЫ =================
+# ================= НАСТРОЙКИ =================
 st.set_page_config(
-    page_title="ZORNET CLOUD",
-    page_icon="👑",
+    page_title="ZORNET",
+    page_icon="🇧🇾",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# ================= ИНИЦИАЛИЗАЦИЯ СОСТОЯНИЯ =================
+# ================= СЕССИЯ =================
 if "page" not in st.session_state:
     st.session_state.page = "Главная"
 if "ai_messages" not in st.session_state:
     st.session_state.ai_messages = []
-if "current_path" not in st.session_state:
-    st.session_state.current_path = "root"
-if "user_data" not in st.session_state:
-    st.session_state.user_data = {"name": "Пользователь Zornet", "bio": "Premium Cloud User", "gender": "Не указан"}
 
-# Создание директории для хранения файлов
-ROOT_DIR = Path("zornet_storage")
-ROOT_DIR.mkdir(exist_ok=True)
-
-# ================= CSS СТИЛИ (ЗОЛОТОЙ И БЕЛЫЙ) =================
+# ================= CSS СТИЛИ =================
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+    /* ОБЩИЙ СТИЛЬ */
+    .stApp { background-color: #ffffff; }
     
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
-    }
-
-    .stApp { background-color: #FFFFFF; }
+    /* СКРЫВАЕМ ЛИШНЕЕ */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
     
-    /* ЗОЛОТЫЕ ГРАДИЕНТЫ */
-    :root {
-        --gold-linear: linear-gradient(135deg, #BF953F, #FCF6BA, #B38728, #FBF5B7, #AA771C);
-        --gold-solid: #DAA520;
-    }
-
     /* ГЛАВНЫЙ ЗАГОЛОВОК */
     .gold-title {
-        font-size: 3.5rem;
+        font-family: 'Helvetica Neue', sans-serif;
+        font-size: 4rem;
         font-weight: 800;
         text-align: center;
-        background: var(--gold-linear);
+        background: linear-gradient(to bottom, #DAA520, #B8860B);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        margin-bottom: 20px;
-        filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.1));
-    }
-
-    /* КАРТОЧКИ И ПАНЕЛИ */
-    .glass-card {
-        background: #ffffff;
-        border-radius: 15px;
-        padding: 20px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-        border: 1px solid #f0f0f0;
-        transition: transform 0.3s ease;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        margin: 10px 0 30px 0;
     }
     
-    .glass-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 15px 35px rgba(218, 165, 32, 0.1);
-    }
-
-    /* КНОПКИ */
-    .stButton>button {
-        border-radius: 10px !important;
-        border: 1px solid #f0f0f0 !important;
-        transition: all 0.3s !important;
-    }
-    
-    .stButton>button:hover {
-        border-color: #DAA520 !important;
-        color: #DAA520 !important;
-        box-shadow: 0 4px 12px rgba(218, 165, 32, 0.2) !important;
-    }
-
-    /* ПЛАВАЮЩАЯ ПАНЕЛЬ (FAB) */
-    .fab-container {
-        position: fixed;
-        bottom: 30px;
-        right: 30px;
-        z-index: 100;
-    }
-
-    /* ФАЙЛОВЫЙ МЕНЕДЖЕР */
-    .file-icon {
-        font-size: 40px;
-        margin-bottom: 10px;
+    /* КНОПКИ ГЛАВНОЙ */
+    div.stButton > button {
+        background: #f8f9fa !important;
+        border: 1px solid #dee2e6 !important;
+        color: #1a1a1a !important;
+        padding: 20px !important; 
+        border-radius: 12px !important;
+        font-weight: bold !important;
+        width: 100% !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
     }
     
-    .file-card {
-        text-align: center;
-        padding: 15px;
-        background: #fdfdfd;
+    /* ЗОЛОТАЯ КНОПКА AI */
+    .gold-btn {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+        border: none !important;
+        color: white !important;
+        border-radius: 12px !important;
+        padding: 14px 28px !important;
+        font-weight: 600 !important;
+        font-size: 16px !important;
+        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3) !important;
+    }
+    
+    /* ВРЕМЯ В ЗОЛОТОЙ РАМКЕ */
+    .time-widget {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
         border-radius: 12px;
-        border: 1px solid #eee;
-    }
-
-    /* ПОГОДНЫЙ ВИДЖЕТ */
-    .weather-card {
-        background: var(--gold-linear);
-        color: #444;
-        padding: 25px;
-        border-radius: 20px;
+        padding: 12px 15px;
         text-align: center;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        color: white;
+        font-weight: 600;
+        font-size: 16px;
+        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
+    }
+    
+    /* РЕЗУЛЬТАТЫ ПОИСКА */
+    .search-result {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        border-left: 4px solid #DAA520;
+    }
+    
+    /* ЧАТ AI */
+    .user-message {
+        background: #f0f0f0;
+        padding: 12px 18px;
+        border-radius: 18px;
+        max-width: 70%;
+        margin-left: auto;
+        margin-bottom: 15px;
+    }
+    
+    .ai-message {
+        background: #f9f9f9;
+        padding: 12px 18px;
+        border-radius: 18px;
+        max-width: 70%;
+        margin-right: auto;
+        margin-bottom: 15px;
+        border-left: 4px solid #DAA520;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ================= БАЗА ДАННЫХ =================
-def init_all_dbs():
-    # БД Файлов и комментариев
-    conn = sqlite3.connect("zornet_system.db")
-    c = conn.cursor()
-    c.execute("""CREATE TABLE IF NOT EXISTS files 
-                 (id INTEGER PRIMARY KEY, name TEXT, path TEXT, size REAL, 
-                  type TEXT, date TEXT, comments TEXT, shared INTEGER DEFAULT 0)""")
-    c.execute("""CREATE TABLE IF NOT EXISTS users 
-                 (id INTEGER PRIMARY KEY, username TEXT, avatar BLOB, bio TEXT)""")
-    conn.commit()
-    conn.close()
-
-init_all_dbs()
-
-# ================= ФУНКЦИИ ПОГОДЫ (ПРОФЕССИОНАЛЬНЫЕ) =================
-def get_weather():
-    try:
-        # 1. Получаем местоположение по IP
-        geo_res = requests.get("http://ip-api.com/json/", timeout=5).json()
-        city = geo_res.get("city", "Minsk")
-        lat = geo_res.get("lat", 53.9)
-        lon = geo_res.get("lon", 27.5)
-        
-        # 2. Получаем погоду (Open-Meteo - бесплатно и без ключа)
-        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true&hourly=temperature_2m,relativehumidity_2m,windspeed_10m"
-        weather_res = requests.get(url).json()
-        curr = weather_res["current_weather"]
-        
-        return {
-            "city": city,
-            "temp": curr["temperature"],
-            "wind": curr["windspeed"],
-            "code": curr["weathercode"],
-            "time": curr["time"]
-        }
-    except:
-        return None
-
-# ================= ЛОГИКА ДИСКА =================
-def get_file_icon(mime_type, is_dir=False):
-    if is_dir: return "📂"
-    if "image" in mime_type: return "🖼️"
-    if "video" in mime_type: return "🎬"
-    if "pdf" in mime_type: return "📄"
-    if "audio" in mime_type: return "🎵"
-    return "📝"
-
-def save_file_metadata(name, path, size, file_type):
-    conn = sqlite3.connect("zornet_system.db")
-    c = conn.cursor()
-    c.execute("INSERT INTO files (name, path, size, type, date, comments) VALUES (?,?,?,?,?,?)",
-              (name, str(path), size, file_type, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"), ""))
-    conn.commit()
-    conn.close()
-
-# ================= САЙДБАР (БЕЗ ИЗМЕНЕНИЙ В ЛОГИКЕ) =================
+# ================= САЙДБАР =================
 with st.sidebar:
-    st.markdown(f"""
-        <div style='text-align: center; padding: 20px;'>
-            <h1 style='background: var(--gold-linear); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>ZORNET</h1>
-            <p style='color: #888; font-size: 0.8rem;'>PREMIUM CLOUD SYSTEM</p>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#DAA520;'>🇧🇾 ZORNET</h3>", unsafe_allow_html=True)
     
     pages = [
         ("🏠", "ГЛАВНАЯ", "Главная"),
         ("🤖", "ZORNET AI", "ZORNET AI"),
-        ("💾", "ZORNET DISK", "Диск"),
-        ("🌦️", "ПОГОДА", "Погода"),
         ("📰", "НОВОСТИ", "Новости"),
+        ("💾", "ДИСК", "Диск"),
         ("🚌", "ТРАНСПОРТ", "Транспорт"),
         ("👤", "ПРОФИЛЬ", "Профиль"),
     ]
     
+    # Используем уникальные ключи с индексом
     for i, (icon, text, page) in enumerate(pages):
-        if st.button(f"{icon} {text}", key=f"nav_{i}", use_container_width=True):
+        if st.button(f"{icon} {text}", key=f"nav_{i}_{page}", use_container_width=True):
             st.session_state.page = page
             st.rerun()
 
-# ================= КОНТЕНТ СТРАНИЦ =================
+# ================= НАСТРОЙКИ =================
+HF_API_KEY = st.secrets["HF_API_KEY"]
+CHAT_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"  # стабильная бесплатная модель
+API_URL = "https://router.huggingface.co/api/chat/completions"
 
-# --- ГЛАВНАЯ (ВАШ КОД + СТИЛИЗАЦИЯ) ---
-if st.session_state.page == "Главная":
-    st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
+HEADERS = {
+    "Authorization": f"Bearer {HF_API_KEY}",
+    "Content-Type": "application/json"
+}
+
+def ask_hf_ai(prompt: str) -> str:
+    payload = {
+        "model": CHAT_MODEL,
+        "messages": [
+            {"role": "system", "content": "Ты ZORNET AI — умный помощник. Отвечай по‑русски кратко и понятно."},
+            {"role": "user", "content": prompt}
+        ],
+        "max_new_tokens": 300,
+        "temperature": 0.7
+    }
+
+    try:
+        r = requests.post(API_URL, headers=HEADERS, json=payload, timeout=60)
+
+        if r.status_code == 503:
+            return "⏳ ZORNET AI загружается — попробуйте через несколько секунд."
+
+        if r.status_code != 200:
+            return "⚠️ ZORNET AI временно недоступен."
+
+        data = r.json()
+        # получаем ответ
+        text = data["choices"][0]["message"]["content"]
+        return text.strip()
+
+    except Exception:
+        return "⚠️ Ошибка соединения с ZORNET AI."
+
+# ================= ФУНКЦИИ ПОИСКА =================
+def search_zornet(query, num_results=5):
+    """Поиск в интернете - с запасными результатами"""
+    results = []
     
+    # Попытка поиска через DuckDuckGo
+    try:
+        with DDGS() as ddgs:
+            ddgs_results = list(ddgs.text(query, max_results=num_results, region='wt-wt'))
+            
+            if ddgs_results:
+                for r in ddgs_results[:num_results]:
+                    results.append({
+                        "title": r.get("title", query),
+                        "url": r.get("href", f"https://www.google.com/search?q={query}"),
+                        "snippet": r.get("body", f"Результаты по запросу: {query}")[:180] + "...",
+                    })
+                return results
+    except Exception as e:
+        st.error(f"Ошибка DuckDuckGo: {e}")
+    
+    # Если DuckDuckGo не работает, показываем запасные результаты
+    fallback_results = [
+        {
+            "title": f"{query} - поиск в Google",
+            "url": f"https://www.google.com/search?q={query}",
+            "snippet": f"Нажмите для поиска '{query}' в Google. Это лучший способ найти информацию в интернете."
+        },
+        {
+            "title": f"{query} в Википедии",
+            "url": f"https://ru.wikipedia.org/wiki/{query}",
+            "snippet": f"Ищите информацию о '{query}' в Википедии - свободной энциклопедии."
+        },
+        {
+            "title": "Решебники и ГДЗ онлайн",
+            "url": "https://reshak.ru/",
+            "snippet": "Бесплатные решебники и готовые домашние задания по всем предметам."
+        },
+        {
+            "title": "Образовательные ресурсы Беларуси",
+            "url": "https://adu.by/",
+            "snippet": "Официальный образовательный портал Министерства образования Республики Беларусь."
+        },
+        {
+            "title": "Учебные материалы и пособия",
+            "url": "https://nashol.com/",
+            "snippet": "Большая библиотека учебников, решебников и учебных материалов."
+        }
+    ]
+    
+    # Фильтруем релевантные результаты
+    relevant_results = []
+    for res in fallback_results:
+        if query.lower() in res["title"].lower() or query.lower() in res["snippet"].lower():
+            relevant_results.append(res)
+    
+    # Если нет релевантных, берем первые 3
+    if not relevant_results:
+        relevant_results = fallback_results[:3]
+    
+    return relevant_results
+
+# ================= ТРАНСПОРТНЫЕ ФУНКЦИИ =================
+def get_minsk_metro():
+    return [
+        {"name": "Малиновка", "line": "1", "next": "3 мин"},
+        {"name": "Петровщина", "line": "1", "next": "5 мин"},
+        {"name": "Площадь Ленина", "line": "1", "next": "2 мин"},
+        {"name": "Институт Культуры", "line": "1", "next": "4 мин"},
+        {"name": "Молодёжная", "line": "2", "next": "6 мин"},
+    ]
+
+def get_bus_trams():
+    return [
+        {"number": "100", "type": "автобус", "from": "Ст.м. Каменная Горка", "to": "Аэропорт", "next": "7 мин"},
+        {"number": "1", "type": "трамвай", "from": "Тракторный завод", "to": "Серебрянка", "next": "5 мин"},
+        {"number": "3с", "type": "троллейбус", "from": "ДС Веснянка", "to": "ДС Серова", "next": "3 мин"},
+        {"number": "40", "type": "автобус", "from": "Ст.м. Уручье", "to": "Дражня", "next": "10 мин"},
+    ]
+
+def get_taxi_prices():
+    return [
+        {"name": "Яндекс Такси", "price": "8-12 руб", "wait": "5-7 мин"},
+        {"name": "Uber", "price": "9-13 руб", "wait": "4-6 мин"},
+        {"name": "Такси Близко", "price": "7-10 руб", "wait": "8-10 мин"},
+        {"name": "Такси Город", "price": "6-9 руб", "wait": "10-15 мин"},
+    ]
+
+def get_belarusian_railway():
+    return [
+        {"number": "001Б", "from": "Минск", "to": "Брест", "time": "18:00 - 21:30"},
+        {"number": "735Б", "from": "Минск", "to": "Гомель", "time": "07:30 - 11:15"},
+        {"number": "603Б", "from": "Минск", "to": "Витебск", "time": "14:20 - 18:45"},
+    ]
+
+# ================= БАЗА ДАННЫХ =================
+def init_db():
+    conn = sqlite3.connect("zornet.db")
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY,
+            username TEXT UNIQUE,
+            email TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def get_user_count():
+    conn = sqlite3.connect("zornet.db")
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM users")
+    count = c.fetchone()[0]
+    conn.close()
+    return count
+
+# ================= ДИСК ФУНКЦИИ =================
+def init_disk_db():
+    conn = sqlite3.connect("zornet_disk.db")
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            size INTEGER,
+            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def get_disk_files():
+    conn = sqlite3.connect("zornet_disk.db")
+    c = conn.cursor()
+    c.execute("SELECT name, size, uploaded_at FROM files ORDER BY uploaded_at DESC LIMIT 10")
+    files = c.fetchall()
+    conn.close()
+    return files
+
+def save_file_to_db(filename, size):
+    conn = sqlite3.connect("zornet_disk.db")
+    c = conn.cursor()
+    c.execute("INSERT INTO files (name, size) VALUES (?, ?)", (filename, size))
+    conn.commit()
+    conn.close()
+
+# ================= НОВОСТИ =================
+def get_belta_news():
+    try:
+        headers = {"User-Agent": "ZORNET/1.0"}
+        response = requests.get("https://www.belta.by/rss", headers=headers, timeout=10)
+        feed = feedparser.parse(response.content)
+        return feed.entries[:5]
+    except:
+        return [
+            {"title": "Новости Беларуси", "link": "#", "summary": "Следите за обновлениями"},
+            {"title": "Экономические новости", "link": "#", "summary": "Развитие экономики страны"},
+            {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
+        ]
+
+if st.session_state.page == "Главная":
+    # ===================== ЗОЛОТАЯ НАДПИСЬ =====================
+    st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
+
+    # ===================== 4 ВИДЖЕТА =====================
+    current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.markdown('<div class="glass-card">🕒 <b>Время</b><br>'+datetime.datetime.now().strftime("%H:%M")+'</div>', unsafe_allow_html=True)
+        st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", use_container_width=True)
     with col2:
-        w = get_weather()
-        temp = f"{w['temp']}°C" if w else "N/A"
-        st.markdown(f'<div class="glass-card">⛅ <b>Погода</b><br>{temp}</div>', unsafe_allow_html=True)
+        st.button("⛅ -5°C\nМинск", use_container_width=True)
     with col3:
-        st.markdown('<div class="glass-card">💵 <b>USD/BYN</b><br>3.20</div>', unsafe_allow_html=True)
+        st.button("💵 3.20\nBYN/USD", use_container_width=True)
     with col4:
-        st.markdown('<div class="glass-card">🚀 <b>Статус</b><br>Premium</div>', unsafe_allow_html=True)
+        if st.button("🤖 ZORNET AI", use_container_width=True):
+            st.session_state.page = "ZORNET AI"
+            st.rerun()
 
-    st.write("")
-    search_query = st.text_input("", placeholder="Поиск в глобальной сети Zornet...", label_visibility="collapsed")
+    st.markdown("---")  # разделитель
+
+    # ===================== ПОИСКОВАЯ СТРОКА =====================
+    search_query = st.text_input(
+        "",
+        placeholder="Поиск в интернете...",
+        key=f"main_search_{st.session_state.page}",
+        label_visibility="collapsed"
+    )
+
+    # ===================== РЕЗУЛЬТАТЫ ПОИСКА =====================
     if search_query:
-        # Здесь ваша функция search_zornet
-        st.info(f"Поиск результатов для: {search_query}")
-
-# --- ZORNET DISK (НОВЫЙ ПРОФЕССИОНАЛЬНЫЙ ФУНКЦИОНАЛ) ---
-elif st.session_state.page == "Диск":
-    st.markdown('<div class="gold-title">ZORNET DISK</div>', unsafe_allow_html=True)
-    
-    # Верхняя панель управления
-    c1, c2, c3 = st.columns([2, 1, 1])
-    with c1:
-        uploaded_files = st.file_uploader("Перетащите файлы сюда (Drag & Drop)", accept_multiple_files=True, label_visibility="collapsed")
-        if uploaded_files:
-            for f in uploaded_files:
-                f_path = ROOT_DIR / f.name
-                with open(f_path, "wb") as buffer:
-                    buffer.write(f.getbuffer())
-                save_file_metadata(f.name, f_path, f.size/1024, mimetypes.guess_type(f.name)[0] or "unknown")
-            st.success("Файлы загружены!")
-            st.rerun()
-            
-    with c2:
-        new_folder = st.text_input("", placeholder="Имя новой папки")
-        if st.button("➕ Создать папку", use_container_width=True):
-            (ROOT_DIR / new_folder).mkdir(exist_ok=True)
-            st.rerun()
-            
-    with c3:
-        st.selectbox("Сортировка", ["По дате", "По размеру", "По типу"], label_visibility="collapsed")
-
-    st.markdown("---")
-
-    # Отображение файлов в стиле Material Grid
-    files = list(ROOT_DIR.iterdir())
-    if not files:
-        st.info("Ваше облако пусто. Загрузите первый файл!")
-    else:
-        # Сетка 4 колонки
-        cols = st.columns(4)
-        for idx, item in enumerate(files):
-            with cols[idx % 4]:
-                st.markdown(f"""
-                <div class="file-card">
-                    <div class="file-icon">{get_file_icon(mimetypes.guess_type(item.name)[0] or "", item.is_dir())}</div>
-                    <div style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{item.name}</div>
-                    <div style="color: #888; font-size: 0.7rem;">{item.stat().st_size/1024:.1f} KB</div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Мини-панель действий
-                act_col1, act_col2 = st.columns(2)
-                with act_col1:
-                    if not item.is_dir():
-                        st.download_button("💾", data=open(item, "rb").read(), file_name=item.name, key=f"dl_{idx}", help="Скачать")
-                with act_col2:
-                    if st.button("🗑️", key=f"del_{idx}", help="Удалить"):
-                        if item.is_file(): item.unlink()
-                        st.rerun()
-                
-                # Предпросмотр (если изображение)
-                if "image" in (mimetypes.guess_type(item.name)[0] or ""):
-                    with st.expander("Просмотр"):
-                        st.image(str(item))
-                
-                # Комментарии
-                with st.expander("💬 Заметки"):
-                    note = st.text_area("Ваш комментарий", key=f"note_{idx}", label_visibility="collapsed")
-                    if st.button("Сохранить", key=f"snote_{idx}"):
-                        st.toast("Заметка сохранена!")
-
-# --- ПОГОДА (ПРОФЕССИОНАЛЬНАЯ ВКЛАДКА) ---
-elif st.session_state.page == "Погода":
-    st.markdown('<div class="gold-title">МЕТЕОЦЕНТР ZORNET</div>', unsafe_allow_html=True)
-    
-    w_data = get_weather()
-    if w_data:
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            st.markdown(f"""
-            <div class="weather-card">
-                <h2 style="color: #444;">{w_data['city']}</h2>
-                <h1 style="font-size: 4rem; color: #444;">{w_data['temp']}°C</h1>
-                <p>Ветер: {w_data['wind']} км/ч</p>
-                <hr>
-                <p>Обновлено: {w_data['time']}</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col2:
-            st.markdown("### Прогноз на ближайшие часы")
-            # Генерация фиктивных данных для графика (в реальности берется из почасового API)
-            chart_data = pd.DataFrame({
-                'Температура': [w_data['temp'] + i for i in range(12)],
-                'Влажность': [50 + i*2 for i in range(12)]
-            })
-            st.line_chart(chart_data)
-    else:
-        st.error("Не удалось определить местоположение. Проверьте доступ к сети.")
-
-# --- ПРОФИЛЬ ---
-elif st.session_state.page == "Профиль":
-    st.markdown('<div class="gold-title">ЛИЧНЫЙ КАБИНЕТ</div>', unsafe_allow_html=True)
-    
-    c1, c2 = st.columns([1, 2])
-    with c1:
-        st.markdown('<div class="glass-card" style="text-align:center;">', unsafe_allow_html=True)
-        st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=150)
-        st.markdown(f"<h3>{st.session_state.user_data['name']}</h3>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-    with c2:
-        with st.form("user_edit"):
-            st.session_state.user_data['name'] = st.text_input("Имя/Ник", st.session_state.user_data['name'])
-            st.session_state.user_data['bio'] = st.text_area("О себе", st.session_state.user_data['bio'])
-            st.session_state.user_data['gender'] = st.selectbox("Пол", ["Мужской", "Женский", "Не указан"])
-            if st.form_submit_button("Сохранить изменения"):
-                st.success("Профиль обновлен!")
+        st.markdown(f"### 🔍 Результаты поиска: **{search_query}**")
+        with st.spinner("Ищу информацию..."):
+            results = search_zornet(search_query, num_results=5)
+            if results:
+                for idx, result in enumerate(results):
+                    st.markdown(f"""
+                    <div class="search-result">
+                        <div style="font-weight: 600; color: #1a1a1a; font-size: 16px;">
+                            {idx + 1}. {result['title']}
+                        </div>
+                        <div style="color: #1a73e8; font-size: 13px; margin: 5px 0;">
+                            {result['url'][:60]}...
+                        </div>
+                        <div style="color: #555; font-size: 14px;">
+                            {result['snippet']}
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <a href="{result['url']}" target="_blank" 
+                               style="padding: 6px 12px; background: #DAA520; color: white; 
+                                      border-radius: 6px; text-decoration: none; font-size: 12px;">
+                                Перейти на сайт
+                            </a>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.info("По вашему запросу ничего не найдено.")
 
 # ================= СТРАНИЦА AI =================
 elif st.session_state.page == "ZORNET AI":
@@ -539,18 +589,8 @@ if st.session_state.page == "Главная":
     else:
         st.info("Папка пуста.")
 
-# ПЛАВАЮЩАЯ КНОПКА ПОДДЕРЖКИ
-st.markdown("""
-<div class="fab-container">
-    <button style="background: var(--gold-linear); border: none; width: 60px; height: 60px; border-radius: 50%; color: white; font-size: 24px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); cursor: pointer;">
-    💬
-    </button>
-</div>
-""", unsafe_allow_html=True)
-
 # ================= ИНИЦИАЛИЗАЦИЯ =================
 if __name__ == "__main__":
     # Инициализация всех баз данных
     init_db()
     init_disk_db()
-
