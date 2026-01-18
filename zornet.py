@@ -1,14 +1,19 @@
 import streamlit as st
 import sqlite3
 import datetime
+import os
 import pytz
 import requests
 import feedparser
+from PIL import Image
+from pathlib import Path
+import mimetypes
 from duckduckgo_search import DDGS
+from huggingface_hub import InferenceClient
 
-# ================= НАСТРОЙКИ СТРАНИЦЫ =================
+# ================= НАСТРОЙКИ =================
 st.set_page_config(
-    page_title="ZORNET GOLD",
+    page_title="ZORNET",
     page_icon="🇧🇾",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -18,344 +23,611 @@ st.set_page_config(
 if "page" not in st.session_state:
     st.session_state.page = "Главная"
 if "ai_messages" not in st.session_state:
-    st.session_state.ai_messages = [
-        {"role": "assistant", "content": "Привет! Я ZORNET AI. Я работаю бесплатно и быстро. Чем помочь?"}
-    ]
+    st.session_state.ai_messages = []
 
-# ================= CSS СТИЛИ (ЗОЛОТАЯ ТЕМА) =================
+# ================= CSS СТИЛИ =================
 st.markdown("""
 <style>
-    /* ФОН И БАЗА */
-    .stApp {
-        background-color: #0e0e0e; /* Темный элитный фон */
-        color: #ffffff;
-    }
+    /* ОБЩИЙ СТИЛЬ */
+    .stApp { background-color: #ffffff; }
+    
+    /* СКРЫВАЕМ ЛИШНЕЕ */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
     
     /* ГЛАВНЫЙ ЗАГОЛОВОК */
     .gold-title {
         font-family: 'Helvetica Neue', sans-serif;
         font-size: 4rem;
-        font-weight: 900;
+        font-weight: 800;
         text-align: center;
-        background: linear-gradient(180deg, #FFD700 0%, #B8860B 100%);
+        background: linear-gradient(to bottom, #DAA520, #B8860B);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        text-shadow: 0px 4px 10px rgba(255, 215, 0, 0.3);
-        margin-bottom: 20px;
         letter-spacing: 4px;
         text-transform: uppercase;
+        margin: 10px 0 30px 0;
     }
     
-    /* ЗОЛОТЫЕ КНОПКИ */
+    /* КНОПКИ ГЛАВНОЙ */
     div.stButton > button {
-        background: linear-gradient(145deg, #FFD700 0%, #D4AF37 50%, #B8860B 100%) !important;
-        color: #000000 !important;
-        border: none !important;
+        background: #f8f9fa !important;
+        border: 1px solid #dee2e6 !important;
+        color: #1a1a1a !important;
+        padding: 20px !important; 
         border-radius: 12px !important;
-        padding: 18px 20px !important;
-        font-size: 18px !important;
-        font-weight: 800 !important;
-        box-shadow: 0 6px 15px rgba(218, 165, 32, 0.2) !important;
-        transition: all 0.3s ease !important;
+        font-weight: bold !important;
         width: 100% !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
     }
     
-    div.stButton > button:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 25px rgba(255, 215, 0, 0.4) !important;
-        background: linear-gradient(145deg, #FFE033 0%, #FFD700 100%) !important;
+    /* ЗОЛОТАЯ КНОПКА AI */
+    .gold-btn {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+        border: none !important;
+        color: white !important;
+        border-radius: 12px !important;
+        padding: 14px 28px !important;
+        font-weight: 600 !important;
+        font-size: 16px !important;
+        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3) !important;
     }
-
-    /* ПОЛЯ ВВОДА */
-    div[data-testid="stTextInput"] input {
-        background-color: #1a1a1a !important;
-        color: #FFD700 !important;
-        border: 1px solid #B8860B !important;
-    }
-
-    /* ЧАТ */
-    .user-message {
-        background: #333;
+    
+    /* ВРЕМЯ В ЗОЛОТОЙ РАМКЕ */
+    .time-widget {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+        border-radius: 12px;
+        padding: 12px 15px;
+        text-align: center;
         color: white;
-        padding: 12px 18px;
-        border-radius: 18px 18px 0 18px;
-        margin-left: auto;
-        max-width: 80%;
-        margin-bottom: 10px;
-        border: 1px solid #444;
-    }
-    
-    .ai-message {
-        background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
-        border-left: 4px solid #FFD700;
-        color: #e0e0e0;
-        padding: 12px 18px;
-        border-radius: 18px 18px 18px 0;
-        margin-right: auto;
-        max-width: 80%;
-        margin-bottom: 10px;
+        font-weight: 600;
+        font-size: 16px;
+        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
     }
     
     /* РЕЗУЛЬТАТЫ ПОИСКА */
     .search-result {
-        background: #1a1a1a;
+        background: #f8f9fa;
         padding: 15px;
         border-radius: 10px;
         margin-bottom: 10px;
-        border-left: 3px solid #FFD700;
+        border-left: 4px solid #DAA520;
     }
-    a { color: #FFD700 !important; text-decoration: none; }
+    
+    /* ЧАТ AI */
+    .user-message {
+        background: #f0f0f0;
+        padding: 12px 18px;
+        border-radius: 18px;
+        max-width: 70%;
+        margin-left: auto;
+        margin-bottom: 15px;
+    }
+    
+    .ai-message {
+        background: #f9f9f9;
+        padding: 12px 18px;
+        border-radius: 18px;
+        max-width: 70%;
+        margin-right: auto;
+        margin-bottom: 15px;
+        border-left: 4px solid #DAA520;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# ================= ЛОГИКА ZORNET AI (БЕСПЛАТНО) =================
-def ask_zornet_ai(prompt: str) -> str:
-    """Бесплатный AI через DuckDuckGo (без VPN и ключей)"""
+# ================= САЙДБАР =================
+with st.sidebar:
+    st.markdown("<h3 style='color:#DAA520;'>🇧🇾 ZORNET</h3>", unsafe_allow_html=True)
+    
+    pages = [
+        ("🏠", "ГЛАВНАЯ", "Главная"),
+        ("🤖", "ZORNET AI", "ZORNET AI"),
+        ("📰", "НОВОСТИ", "Новости"),
+        ("💾", "ДИСК", "Диск"),
+        ("🚌", "ТРАНСПОРТ", "Транспорт"),
+        ("👤", "ПРОФИЛЬ", "Профиль"),
+    ]
+    
+    # Используем уникальные ключи с индексом
+    for i, (icon, text, page) in enumerate(pages):
+        if st.button(f"{icon} {text}", key=f"nav_{i}_{page}", use_container_width=True):
+            st.session_state.page = page
+            st.rerun()
+
+# ================= НАСТРОЙКИ =================
+HF_API_KEY = st.secrets["HF_API_KEY"]
+CHAT_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"  # стабильная бесплатная модель
+API_URL = "https://router.huggingface.co/api/chat/completions"
+
+HEADERS = {
+    "Authorization": f"Bearer {HF_API_KEY}",
+    "Content-Type": "application/json"
+}
+
+def ask_hf_ai(prompt: str) -> str:
+    payload = {
+        "model": CHAT_MODEL,
+        "messages": [
+            {"role": "system", "content": "Ты ZORNET AI — умный помощник. Отвечай по‑русски кратко и понятно."},
+            {"role": "user", "content": prompt}
+        ],
+        "max_new_tokens": 300,
+        "temperature": 0.7
+    }
+
     try:
-        with DDGS() as ddgs:
-            # Используем модель gpt-4o-mini (она быстрая и умная)
-            response = ddgs.chat(prompt, model='gpt-4o-mini')
-            return response
-    except Exception as e:
-        return f"⚠️ ZORNET AI перезагружается. Попробуйте через 5 секунд. (Ошибка: {e})"
+        r = requests.post(API_URL, headers=HEADERS, json=payload, timeout=60)
+
+        if r.status_code == 503:
+            return "⏳ ZORNET AI загружается — попробуйте через несколько секунд."
+
+        if r.status_code != 200:
+            return "⚠️ ZORNET AI временно недоступен."
+
+        data = r.json()
+        # получаем ответ
+        text = data["choices"][0]["message"]["content"]
+        return text.strip()
+
+    except Exception:
+        return "⚠️ Ошибка соединения с ZORNET AI."
 
 # ================= ФУНКЦИИ ПОИСКА =================
 def search_zornet(query, num_results=5):
-    """Поиск в интернете + запасные варианты"""
+    """Поиск в интернете - с запасными результатами"""
     results = []
     
-    # 1. Попытка реального поиска
+    # Попытка поиска через DuckDuckGo
     try:
         with DDGS() as ddgs:
-            ddgs_results = list(ddgs.text(query, max_results=num_results, region='ru-ru'))
+            ddgs_results = list(ddgs.text(query, max_results=num_results, region='wt-wt'))
+            
             if ddgs_results:
-                for r in ddgs_results:
+                for r in ddgs_results[:num_results]:
                     results.append({
                         "title": r.get("title", query),
-                        "url": r.get("href", "#"),
-                        "snippet": r.get("body", "")[:200] + "..."
+                        "url": r.get("href", f"https://www.google.com/search?q={query}"),
+                        "snippet": r.get("body", f"Результаты по запросу: {query}")[:180] + "...",
                     })
                 return results
-    except Exception:
-        pass # Если ошибка, идем к запасным
+    except Exception as e:
+        st.error(f"Ошибка DuckDuckGo: {e}")
     
-    # 2. Запасные результаты (как в старом коде)
+    # Если DuckDuckGo не работает, показываем запасные результаты
     fallback_results = [
-        {"title": f"{query} - Google Поиск", "url": f"https://www.google.com/search?q={query}", "snippet": "Искать в Google..."},
-        {"title": "Решебники и ГДЗ", "url": "https://reshak.ru/", "snippet": "ГДЗ по всем предметам."},
-        {"title": "Образование Беларуси", "url": "https://adu.by/", "snippet": "Официальный портал."},
-        {"title": "Википедия", "url": f"https://ru.wikipedia.org/wiki/{query}", "snippet": "Свободная энциклопедия."}
+        {
+            "title": f"{query} - поиск в Google",
+            "url": f"https://www.google.com/search?q={query}",
+            "snippet": f"Нажмите для поиска '{query}' в Google. Это лучший способ найти информацию в интернете."
+        },
+        {
+            "title": f"{query} в Википедии",
+            "url": f"https://ru.wikipedia.org/wiki/{query}",
+            "snippet": f"Ищите информацию о '{query}' в Википедии - свободной энциклопедии."
+        },
+        {
+            "title": "Решебники и ГДЗ онлайн",
+            "url": "https://reshak.ru/",
+            "snippet": "Бесплатные решебники и готовые домашние задания по всем предметам."
+        },
+        {
+            "title": "Образовательные ресурсы Беларуси",
+            "url": "https://adu.by/",
+            "snippet": "Официальный образовательный портал Министерства образования Республики Беларусь."
+        },
+        {
+            "title": "Учебные материалы и пособия",
+            "url": "https://nashol.com/",
+            "snippet": "Большая библиотека учебников, решебников и учебных материалов."
+        }
     ]
-    return fallback_results[:3]
+    
+    # Фильтруем релевантные результаты
+    relevant_results = []
+    for res in fallback_results:
+        if query.lower() in res["title"].lower() or query.lower() in res["snippet"].lower():
+            relevant_results.append(res)
+    
+    # Если нет релевантных, берем первые 3
+    if not relevant_results:
+        relevant_results = fallback_results[:3]
+    
+    return relevant_results
 
-# ================= ДАННЫЕ (ТРАНСПОРТ, НОВОСТИ) =================
+# ================= ТРАНСПОРТНЫЕ ФУНКЦИИ =================
 def get_minsk_metro():
     return [
         {"name": "Малиновка", "line": "1", "next": "3 мин"},
         {"name": "Петровщина", "line": "1", "next": "5 мин"},
         {"name": "Площадь Ленина", "line": "1", "next": "2 мин"},
+        {"name": "Институт Культуры", "line": "1", "next": "4 мин"},
+        {"name": "Молодёжная", "line": "2", "next": "6 мин"},
     ]
 
 def get_bus_trams():
     return [
-        {"number": "100", "type": "автобус", "from": "Центр", "to": "Аэропорт", "next": "7 мин"},
-        {"number": "1", "type": "трамвай", "from": "Вокзал", "to": "Зеленый луг", "next": "5 мин"},
+        {"number": "100", "type": "автобус", "from": "Ст.м. Каменная Горка", "to": "Аэропорт", "next": "7 мин"},
+        {"number": "1", "type": "трамвай", "from": "Тракторный завод", "to": "Серебрянка", "next": "5 мин"},
+        {"number": "3с", "type": "троллейбус", "from": "ДС Веснянка", "to": "ДС Серова", "next": "3 мин"},
+        {"number": "40", "type": "автобус", "from": "Ст.м. Уручье", "to": "Дражня", "next": "10 мин"},
     ]
 
+def get_taxi_prices():
+    return [
+        {"name": "Яндекс Такси", "price": "8-12 руб", "wait": "5-7 мин"},
+        {"name": "Uber", "price": "9-13 руб", "wait": "4-6 мин"},
+        {"name": "Такси Близко", "price": "7-10 руб", "wait": "8-10 мин"},
+        {"name": "Такси Город", "price": "6-9 руб", "wait": "10-15 мин"},
+    ]
+
+def get_belarusian_railway():
+    return [
+        {"number": "001Б", "from": "Минск", "to": "Брест", "time": "18:00 - 21:30"},
+        {"number": "735Б", "from": "Минск", "to": "Гомель", "time": "07:30 - 11:15"},
+        {"number": "603Б", "from": "Минск", "to": "Витебск", "time": "14:20 - 18:45"},
+    ]
+
+# ================= БАЗА ДАННЫХ =================
+def init_db():
+    conn = sqlite3.connect("zornet.db")
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY,
+            username TEXT UNIQUE,
+            email TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def get_user_count():
+    conn = sqlite3.connect("zornet.db")
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM users")
+    count = c.fetchone()[0]
+    conn.close()
+    return count
+
+# ================= ДИСК ФУНКЦИИ =================
+def init_disk_db():
+    conn = sqlite3.connect("zornet_disk.db")
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            size INTEGER,
+            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def get_disk_files():
+    conn = sqlite3.connect("zornet_disk.db")
+    c = conn.cursor()
+    c.execute("SELECT name, size, uploaded_at FROM files ORDER BY uploaded_at DESC LIMIT 10")
+    files = c.fetchall()
+    conn.close()
+    return files
+
+def save_file_to_db(filename, size):
+    conn = sqlite3.connect("zornet_disk.db")
+    c = conn.cursor()
+    c.execute("INSERT INTO files (name, size) VALUES (?, ?)", (filename, size))
+    conn.commit()
+    conn.close()
+
+# ================= НОВОСТИ =================
 def get_belta_news():
     try:
-        # Используем RSS BelTA или заглушку, если не грузит
-        d = feedparser.parse("https://www.belta.by/rss")
-        if d.entries:
-            return d.entries[:6]
+        headers = {"User-Agent": "ZORNET/1.0"}
+        response = requests.get("https://www.belta.by/rss", headers=headers, timeout=10)
+        feed = feedparser.parse(response.content)
+        return feed.entries[:5]
     except:
-        pass
-    return [
-        {"title": "Новости Беларуси: Экономика растет", "link": "#", "summary": "Обзор экономических событий..."},
-        {"title": "Спорт: Динамо Минск победило", "link": "#", "summary": "Обзор матча..."},
-        {"title": "Погода на неделю", "link": "#", "summary": "Ожидается потепление..."}
-    ]
+        return [
+            {"title": "Новости Беларуси", "link": "#", "summary": "Следите за обновлениями"},
+            {"title": "Экономические новости", "link": "#", "summary": "Развитие экономики страны"},
+            {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
+        ]
 
-# ================= БАЗА ДАННЫХ (ДИСК И ЮЗЕРЫ) =================
-def init_dbs():
-    conn = sqlite3.connect("zornet.db")
-    c = conn.cursor()
-    c.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT)")
-    c.execute("CREATE TABLE IF NOT EXISTS files (name TEXT, size INTEGER, date TEXT)")
-    conn.commit()
-    conn.close()
-
-def save_file(name, size):
-    conn = sqlite3.connect("zornet.db")
-    c = conn.cursor()
-    c.execute("INSERT INTO files VALUES (?, ?, ?)", (name, size, str(datetime.datetime.now())))
-    conn.commit()
-    conn.close()
-
-def get_files():
-    conn = sqlite3.connect("zornet.db")
-    conn.row_factory = sqlite3.Row
-    c = conn.cursor()
-    c.execute("SELECT * FROM files ORDER BY date DESC")
-    return c.fetchall()
-
-# Инициализация при старте
-init_dbs()
-
-# ================= САЙДБАР =================
-with st.sidebar:
-    st.markdown("<h2 style='color:#FFD700;'>⚡ ZORNET</h2>", unsafe_allow_html=True)
-    
-    # Навигация через кнопки (более надежно)
-    if st.button("🏠 ГЛАВНАЯ", key="nav_main", use_container_width=True): st.session_state.page = "Главная"
-    if st.button("🤖 AI ЧАТ", key="nav_ai", use_container_width=True): st.session_state.page = "ZORNET AI"
-    if st.button("📰 НОВОСТИ", key="nav_news", use_container_width=True): st.session_state.page = "Новости"
-    if st.button("💾 ДИСК", key="nav_disk", use_container_width=True): st.session_state.page = "Диск"
-    if st.button("🚌 ТРАНСПОРТ", key="nav_trans", use_container_width=True): st.session_state.page = "Транспорт"
-    if st.button("👤 ПРОФИЛЬ", key="nav_prof", use_container_width=True): st.session_state.page = "Профиль"
-
-# ================= ГЛАВНАЯ =================
 if st.session_state.page == "Главная":
+    # ===================== ЗОЛОТАЯ НАДПИСЬ =====================
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
-    
-    # 1. ЗОЛОТЫЕ КНОПКИ БЫСТРОГО ДОСТУПА
-    col1, col2, col3 = st.columns(3)
+
+    # ===================== 4 ВИДЖЕТА =====================
+    current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
-        if st.button("🤖 СПРОСИТЬ AI", use_container_width=True):
+        st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", use_container_width=True)
+    with col2:
+        st.button("⛅ -5°C\nМинск", use_container_width=True)
+    with col3:
+        st.button("💵 3.20\nBYN/USD", use_container_width=True)
+    with col4:
+        if st.button("🤖 ZORNET AI", use_container_width=True):
             st.session_state.page = "ZORNET AI"
             st.rerun()
-    with col2:
-        if st.button("💾 МОЙ ДИСК", use_container_width=True):
-            st.session_state.page = "Диск"
-            st.rerun()
-    with col3:
-        if st.button("🚌 РАСПИСАНИЕ", use_container_width=True):
-            st.session_state.page = "Транспорт"
-            st.rerun()
 
-    st.markdown("---")
+    st.markdown("---")  # разделитель
 
-    # 2. ПОИСК (Работает лучше)
-    search_query = st.text_input("", placeholder="🔍 Поиск в интернете...", label_visibility="collapsed")
+    # ===================== ПОИСКОВАЯ СТРОКА =====================
+    search_query = st.text_input(
+        "",
+        placeholder="Поиск в интернете...",
+        key=f"main_search_{st.session_state.page}",
+        label_visibility="collapsed"
+    )
+
+    # ===================== РЕЗУЛЬТАТЫ ПОИСКА =====================
     if search_query:
-        st.markdown(f"### Результаты для: **{search_query}**")
-        results = search_zornet(search_query)
-        for res in results:
-            st.markdown(f"""
-            <div class="search-result">
-                <a href="{res['url']}" target="_blank" style="font-size:18px; font-weight:bold;">{res['title']}</a>
-                <p style="color:#ccc; margin-top:5px;">{res['snippet']}</p>
-            </div>
-            """, unsafe_allow_html=True)
+        st.markdown(f"### 🔍 Результаты поиска: **{search_query}**")
+        with st.spinner("Ищу информацию..."):
+            results = search_zornet(search_query, num_results=5)
+            if results:
+                for idx, result in enumerate(results):
+                    st.markdown(f"""
+                    <div class="search-result">
+                        <div style="font-weight: 600; color: #1a1a1a; font-size: 16px;">
+                            {idx + 1}. {result['title']}
+                        </div>
+                        <div style="color: #1a73e8; font-size: 13px; margin: 5px 0;">
+                            {result['url'][:60]}...
+                        </div>
+                        <div style="color: #555; font-size: 14px;">
+                            {result['snippet']}
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <a href="{result['url']}" target="_blank" 
+                               style="padding: 6px 12px; background: #DAA520; color: white; 
+                                      border-radius: 6px; text-decoration: none; font-size: 12px;">
+                                Перейти на сайт
+                            </a>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.info("По вашему запросу ничего не найдено.")
 
-    st.markdown("---")
-
-    # 3. РАЗВОРАЧИВАЮЩИЕСЯ ВКЛАДКИ (ТВОЯ ПРОСЬБА)
-    st.subheader("📌 Инфо-панель")
-    
-    with st.expander("🌤️ Погода и Время (Развернуть)", expanded=True):
-        tz = pytz.timezone('Europe/Minsk')
-        now = datetime.datetime.now(tz)
-        t_col1, t_col2, t_col3 = st.columns(3)
-        t_col1.metric("Время (Минск)", now.strftime("%H:%M"))
-        t_col2.metric("Погода", "-4°C", "Облачно")
-        t_col3.metric("Дата", now.strftime("%d.%m.%Y"))
-
-    with st.expander("💵 Курсы валют (Развернуть)"):
-        c1, c2, c3 = st.columns(3)
-        c1.metric("USD", "3.20 BYN", "+0.01")
-        c2.metric("EUR", "3.45 BYN", "-0.02")
-        c3.metric("RUB", "3.35 BYN", "0.00")
-
-# ================= ZORNET AI (БЕЗ VPN) =================
+# ================= СТРАНИЦА AI =================
 elif st.session_state.page == "ZORNET AI":
     st.markdown('<div class="gold-title">🤖 ZORNET AI</div>', unsafe_allow_html=True)
     
-    # История
-    for msg in st.session_state.ai_messages:
-        role_style = "user-message" if msg["role"] == "user" else "ai-message"
-        st.markdown(f'<div class="{role_style}">{msg["content"]}</div>', unsafe_allow_html=True)
+    # ИНИЦИАЛИЗАЦИЯ ЧАТА
+    if "ai_messages" not in st.session_state:
+        st.session_state.ai_messages = [
+            {"role": "assistant", "content": "Привет! Я ZORNET AI. Чем могу помочь?"}
+        ]
     
-    # Ввод
-    if prompt := st.chat_input("Напишите вопрос..."):
+    # ИСТОРИЯ СООБЩЕНИЙ
+    for message in st.session_state.ai_messages:
+        if message["role"] == "user":
+            st.markdown(f'<div class="user-message">{message["content"]}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="ai-message">{message["content"]}</div>', unsafe_allow_html=True)
+    
+    # ПОЛЕ ВВОДА
+    if prompt := st.chat_input("Спросите ZORNET AI..."):
+        # ДОБАВЛЯЕМ СООБЩЕНИЕ ПОЛЬЗОВАТЕЛЯ
         st.session_state.ai_messages.append({"role": "user", "content": prompt})
-        st.rerun()
-
-    # Ответ AI (генерация после рерана)
-    if st.session_state.ai_messages and st.session_state.ai_messages[-1]["role"] == "user":
+        
+        # ПОЛУЧАЕМ ОТВЕТ
         with st.spinner("ZORNET думает..."):
-            last_msg = st.session_state.ai_messages[-1]["content"]
-            response = ask_zornet_ai(last_msg)
+            response = ask_hf_ai(prompt)
             st.session_state.ai_messages.append({"role": "assistant", "content": response})
+        
         st.rerun()
+    
+    # БОКОВАЯ ПАНЕЛЬ С ПРИМЕРАМИ
+    with st.sidebar:
+        st.markdown("### 💡 Примеры вопросов")
+        
+        examples = [
+            "Напиши план развития для IT-стартапа",
+            "Объясни квантовую физику просто",
+            "Помоги написать деловое письмо",
+            "Какие технологии AI самые перспективные?",
+            "Напиши простой сайт на HTML",
+            "Объясни разницу Python и JavaScript",
+            "Помоги составить резюме",
+            "Какие книги по саморазвитию посоветуешь?"
+        ]
+        
+        for example in examples:
+            if st.button(example, key=f"ex_{example[:10]}", use_container_width=True):
+                st.session_state.ai_messages.append({"role": "user", "content": example})
+                st.rerun()
+        
+        # ОЧИСТКА ИСТОРИИ
+        if st.button("🧹 Очистить историю", use_container_width=True):
+            st.session_state.ai_messages = [
+                {"role": "assistant", "content": "Привет! Я ZORNET AI. Чем могу помочь?"}
+            ]
+            st.rerun()
 
-    if st.button("🗑️ Очистить диалог"):
-        st.session_state.ai_messages = []
-        st.rerun()
-
-# ================= НОВОСТИ =================
+# ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
     st.markdown('<div class="gold-title">📰 НОВОСТИ</div>', unsafe_allow_html=True)
-    news = get_belta_news()
-    for item in news:
-        st.markdown(f"""
-        <div style="background:#222; padding:15px; border-radius:10px; margin-bottom:15px; border-left:4px solid #FFD700;">
-            <a href="{item.link}" style="font-size:20px; font-weight:bold; color:#FFD700;">{item.title}</a>
-            <p style="margin-top:10px; color:#ddd;">{item.summary[:200]}...</p>
-        </div>
-        """, unsafe_allow_html=True)
+    
+    with st.spinner("Загружаю новости..."):
+        news = get_belta_news()
+        
+        for item in news:
+            st.markdown(f"""
+            <div style="
+                background: #f8f9fa;
+                border-left: 4px solid #DAA520;
+                padding: 15px;
+                margin-bottom: 15px;
+                border-radius: 8px;
+            ">
+                <a href="{item.link}" target="_blank" 
+                   style="color:#DAA520; font-size:1.2rem; font-weight:bold; text-decoration:none;">
+                    {item.title}
+                </a>
+                <p style="color:#1a1a1a; margin-top:10px;">{item.summary[:200]}...</p>
+            </div>
+            """, unsafe_allow_html=True)
 
-# ================= ТРАНСПОРТ =================
+# ================= СТРАНИЦА ТРАНСПОРТА =================
 elif st.session_state.page == "Транспорт":
     st.markdown('<div class="gold-title">🚌 ТРАНСПОРТ</div>', unsafe_allow_html=True)
     
-    tab1, tab2 = st.tabs(["🚇 Метро", "🚌 Автобусы"])
+    tab1, tab2, tab3, tab4 = st.tabs(["🚇 Метро", "🚌 Автобусы/Трамваи", "🚕 Такси", "🚂 Железная дорога"])
     
     with tab1:
-        for m in get_minsk_metro():
-            st.success(f"🚇 **{m['name']}** (Линия {m['line']}) — через {m['next']}")
-            
+        st.subheader("Минское метро")
+        for station in get_minsk_metro():
+            col1, col2, col3 = st.columns([3, 1, 1])
+            with col1:
+                st.write(f"**{station['name']}**")
+            with col2:
+                st.write(f"Линия {station['line']}")
+            with col3:
+                st.success(f"🚇 {station['next']}")
+    
     with tab2:
-        for b in get_bus_trams():
-            st.info(f"🚌 **№{b['number']}** ({b['from']} - {b['to']}) — через {b['next']}")
+        st.subheader("Автобусы и трамваи")
+        for route in get_bus_trams():
+            col1, col2, col3, col4 = st.columns([1, 2, 2, 1])
+            with col1:
+                st.write(f"**{route['number']}**")
+            with col2:
+                st.write(f"{route['type']}")
+            with col3:
+                st.write(f"{route['from']} → {route['to']}")
+            with col4:
+                st.info(f"⏱️ {route['next']}")
+    
+    with tab3:
+        st.subheader("Сравнение цен такси")
+        for service in get_taxi_prices():
+            col1, col2, col3 = st.columns([2, 1, 1])
+            with col1:
+                st.write(f"**{service['name']}**")
+            with col2:
+                st.write(f"💵 {service['price']}")
+            with col3:
+                st.write(f"🕒 {service['wait']}")
+    
+    with tab4:
+        st.subheader("Белорусская железная дорога")
+        for train in get_belarusian_railway():
+            col1, col2, col3, col4 = st.columns([1, 2, 2, 2])
+            with col1:
+                st.write(f"**{train['number']}**")
+            with col2:
+                st.write(f"📍 {train['from']}")
+            with col3:
+                st.write(f"➡️ {train['to']}")
+            with col4:
+                st.write(f"🕒 {train['time']}")
 
-# ================= ДИСК =================
+# ================= СТРАНИЦА ДИСКА =================
 elif st.session_state.page == "Диск":
     st.markdown('<div class="gold-title">💾 ДИСК</div>', unsafe_allow_html=True)
     
-    uploaded_files = st.file_uploader("Загрузить файл", accept_multiple_files=True)
+    # ИНИЦИАЛИЗАЦИЯ БД
+    init_disk_db()
+    
+    # ЗАГРУЗКА ФАЙЛОВ
+    uploaded_files = st.file_uploader(
+        "Загрузите файлы",
+        accept_multiple_files=True,
+        help="Выберите файлы для загрузки в облако"
+    )
+    
     if uploaded_files:
-        for f in uploaded_files:
-            save_file(f.name, f.size)
-        st.success("Файлы сохранены!")
-        st.rerun()
+        for uploaded_file in uploaded_files:
+            # Сохраняем временно
+            with open(f"temp_{uploaded_file.name}", "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            
+            # Сохраняем в БД
+            save_file_to_db(uploaded_file.name, uploaded_file.size)
         
-    st.subheader("Ваши файлы")
-    files = get_files()
+        st.success(f"✅ Загружено {len(uploaded_files)} файлов")
+        st.rerun()
+    
+    # СПИСОК ФАЙЛОВ
+    st.subheader("📁 Ваши файлы")
+    
+    files = get_disk_files()
     if files:
-        for f in files:
-            col1, col2 = st.columns([3, 1])
-            col1.write(f"📄 **{f['name']}**")
-            col2.write(f"{f['size']} байт")
-            st.markdown("---")
+        for name, size, uploaded_at in files:
+            col1, col2, col3 = st.columns([3, 1, 1])
+            with col1:
+                st.write(f"**{name}**")
+            with col2:
+                st.write(f"{size:,} байт")
+            with col3:
+                st.write(uploaded_at[:10])
     else:
-        st.info("Диск пуст")
+        st.info("У вас пока нет файлов в облаке")
 
-# ================= ПРОФИЛЬ =================
+# ================= СТРАНИЦА ПРОФИЛЯ =================
 elif st.session_state.page == "Профиль":
     st.markdown('<div class="gold-title">👤 ПРОФИЛЬ</div>', unsafe_allow_html=True)
     
-    c1, c2 = st.columns([1, 2])
-    with c1:
+    # ИНИЦИАЛИЗАЦИЯ БД
+    init_db()
+    user_count = get_user_count()
+    
+    # ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
         st.markdown("""
-        <div style="width:150px; height:150px; background:linear-gradient(45deg, #FFD700, #B8860B); 
-        border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:60px; color:black; font-weight:bold;">Z</div>
+        <div style="text-align: center;">
+            <div style="
+                width: 120px; 
+                height: 120px; 
+                border-radius: 50%; 
+                background: linear-gradient(135deg, #DAA520, #B8860B);
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                margin: 0 auto 20px;
+                color: white;
+                font-size: 48px;
+                font-weight: bold;
+            ">
+                Z
+            </div>
+            <h3>ZORNET User</h3>
+        </div>
         """, unsafe_allow_html=True)
-    with c2:
-        st.subheader("ZORNET USER")
-        st.write("Статус: **Premium Gold**")
-        st.write(f"Дата регистрации: {datetime.date.today()}")
+    
+    with col2:
+        st.subheader("📊 Статистика")
+        
+        stat_cols = st.columns(3)
+        with stat_cols[0]:
+            st.metric("Пользователей", user_count)
+        with stat_cols[1]:
+            st.metric("AI запросов", "∞")
+        with stat_cols[2]:
+            st.metric("Поисков", "∞")
+        
+        st.markdown("---")
+        
+        # НАСТРОЙКИ
+        st.subheader("⚙️ Настройки")
+        
+        with st.form("profile_form"):
+            username = st.text_input("Имя пользователя", "ZornetUser")
+            email = st.text_input("Email", "user@zornet.app")
+            
+            if st.form_submit_button("💾 Сохранить изменения"):
+                st.success("Настройки сохранены!")
 
-    with st.expander("⚙️ Настройки"):
-        st.text_input("Никнейм", value="User")
-        st.button("Сохранить")
+# ================= ИНИЦИАЛИЗАЦИЯ =================
+if __name__ == "__main__":
+    # Инициализация всех баз данных
+    init_db()
+    init_disk_db()
