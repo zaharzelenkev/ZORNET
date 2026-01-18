@@ -26,8 +26,8 @@ if "ai_messages" not in st.session_state:
     st.session_state.ai_messages = []
 if "weather_data" not in st.session_state:
     st.session_state.weather_data = None
-if "location_permission" not in st.session_state:
-    st.session_state.location_permission = False
+if "user_city" not in st.session_state:
+    st.session_state.user_city = None
 
 # ================= CSS СТИЛИ =================
 st.markdown("""
@@ -170,13 +170,12 @@ with st.sidebar:
         ("🏠", "ГЛАВНАЯ", "Главная"),
         ("🤖", "ZORNET AI", "ZORNET AI"),
         ("📰", "НОВОСТИ", "Новости"),
-        ("🌤️", "ПОГОДА", "Погода"),  # Добавлена вкладка погоды
+        ("🌤️", "ПОГОДА", "Погода"),
         ("💾", "ДИСК", "Диск"),
         ("🚌", "ТРАНСПОРТ", "Транспорт"),
         ("👤", "ПРОФИЛЬ", "Профиль"),
     ]
     
-    # Используем уникальные ключи с индексом
     for i, (icon, text, page) in enumerate(pages):
         if st.button(f"{icon} {text}", key=f"nav_{i}_{page}", use_container_width=True):
             st.session_state.page = page
@@ -206,15 +205,18 @@ def get_wind_direction(degrees):
 
 def get_weather_by_coords(lat, lon):
     """Получает погоду по координатам через OpenWeatherMap API"""
-    API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"  # Демо-ключ, замени на свой!
+    # ЗАМЕНИ ЭТОТ КЛЮЧ НА СВОЙ БЕСПЛАТНЫЙ КЛЮЧ С OpenWeatherMap!
+    API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"
     
     try:
+        # Текущая погода
         url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
         response = requests.get(url, timeout=10)
         
         if response.status_code == 200:
             data = response.json()
             
+            # Прогноз на 5 дней
             forecast_url = f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
             forecast_response = requests.get(forecast_url, timeout=10)
             forecast_data = forecast_response.json() if forecast_response.status_code == 200 else None
@@ -239,7 +241,7 @@ def get_weather_by_coords(lat, lon):
                 "forecast": forecast_data
             }
         else:
-            st.error(f"API ошибка: {response.status_code}")
+            st.error(f"Ошибка API: {response.status_code}")
             return None
     except Exception as e:
         st.error(f"Ошибка получения погоды: {e}")
@@ -247,9 +249,10 @@ def get_weather_by_coords(lat, lon):
 
 def get_weather_by_city(city_name):
     """Получает погоду по названию города"""
-    API_KEY = "f2b2b0b5b5b5b5b5b5b5b5b5b5b5b5b5"
+    API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"  # Замени на свой ключ!
     
     try:
+        # Сначала получаем координаты города
         geocode_url = f"http://api.openweathermap.org/geo/1.0/direct?q={city_name}&limit=1&appid={API_KEY}"
         geocode_response = requests.get(geocode_url, timeout=10)
         
@@ -266,127 +269,7 @@ def get_weather_by_city(city_name):
         st.error(f"Ошибка: {e}")
         return None
 
-# HTML/JS для запроса геолокации
-geolocation_html = """
-<script>
-function getLocation() {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            // Успех
-            function(position) {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                // Отправляем координаты в Streamlit
-                window.parent.postMessage({
-                    type: 'streamlit:setComponentValue',
-                    value: lat + ',' + lon
-                }, '*');
-                
-                document.getElementById('location-status').innerHTML = 
-                    '<span style="color: green;">✓ Местоположение получено!</span>';
-            },
-            // Ошибка
-            function(error) {
-                let errorMessage = "❌ Ошибка получения местоположения: ";
-                switch(error.code) {
-                    case error.PERMISSION_DENIED:
-                        errorMessage += "Пользователь отказал в доступе";
-                        break;
-                    case error.POSITION_UNAVAILABLE:
-                        errorMessage += "Информация о местоположении недоступна";
-                        break;
-                    case error.TIMEOUT:
-                        errorMessage += "Время запроса истекло";
-                        break;
-                    default:
-                        errorMessage += "Неизвестная ошибка";
-                        break;
-                }
-                document.getElementById('location-status').innerHTML = 
-                    '<span style="color: red;">' + errorMessage + '</span>';
-            },
-            // Опции
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
-            }
-        );
-    } else {
-        document.getElementById('location-status').innerHTML = 
-            '<span style="color: red;">❌ Ваш браузер не поддерживает геолокацию</span>';
-    }
-}
-
-// Запускаем при загрузке если пользователь уже дал разрешение
-window.onload = function() {
-    if (localStorage.getItem('location-permission') === 'granted') {
-        getLocation();
-    }
-};
-</script>
-
-<div style="text-align: center; padding: 20px;">
-    <button onclick="getLocation()" style="
-        padding: 12px 24px;
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: bold;
-        cursor: pointer;
-        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
-    ">
-        📍 Получить мое местоположение
-    </button>
-    
-    <div id="location-status" style="margin-top: 15px; font-size: 14px;">
-        Нажмите кнопку выше для получения местоположения
-    </div>
-    
-    <div style="margin-top: 20px; font-size: 12px; color: #666;">
-        Мы используем ваш IP и данные браузера для определения приблизительного местоположения
-    </div>
-</div>
-"""
-
-# Альтернатива: получение приблизительного местоположения по IP
-def get_location_by_ip():
-    """Получает приблизительное местоположение по IP адресу"""
-    try:
-        response = requests.get('https://ipapi.co/json/', timeout=5)
-        if response.status_code == 200:
-            data = response.json()
-            return {
-                "lat": data.get("latitude"),
-                "lon": data.get("longitude"),
-                "city": data.get("city"),
-                "country": data.get("country_name"),
-                "ip": data.get("ip")
-            }
-    except:
-        pass
-    
-    # Fallback на публичные геолокационные сервисы
-    try:
-        response = requests.get('http://ip-api.com/json/', timeout=5)
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("status") == "success":
-                return {
-                    "lat": data.get("lat"),
-                    "lon": data.get("lon"),
-                    "city": data.get("city"),
-                    "country": data.get("country"),
-                    "ip": data.get("query")
-                }
-    except:
-        pass
-    
-    return None
-
-# ================= НАСТРОЙКИ =================
+# ================= НАСТРОЙКИ AI =================
 HF_API_KEY = st.secrets.get("HF_API_KEY", "")
 CHAT_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"
 API_URL = "https://router.huggingface.co/api/chat/completions"
@@ -428,7 +311,7 @@ def ask_hf_ai(prompt: str) -> str:
 
 # ================= ФУНКЦИИ ПОИСКА =================
 def search_zornet(query, num_results=5):
-    """Поиск в интернете - с запасными результатами"""
+    """Поиск в интернете"""
     results = []
     
     try:
@@ -444,8 +327,9 @@ def search_zornet(query, num_results=5):
                     })
                 return results
     except Exception as e:
-        st.error(f"Ошибка DuckDuckGo: {e}")
+        st.error(f"Ошибка поиска: {e}")
     
+    # Запасные результаты
     fallback_results = [
         {
             "title": f"{query} - поиск в Google",
@@ -459,15 +343,7 @@ def search_zornet(query, num_results=5):
         },
     ]
     
-    relevant_results = []
-    for res in fallback_results:
-        if query.lower() in res["title"].lower() or query.lower() in res["snippet"].lower():
-            relevant_results.append(res)
-    
-    if not relevant_results:
-        relevant_results = fallback_results[:3]
-    
-    return relevant_results
+    return fallback_results[:num_results]
 
 # ================= ТРАНСПОРТНЫЕ ФУНКЦИИ =================
 def get_minsk_metro():
@@ -578,7 +454,7 @@ if st.session_state.page == "Главная":
     with col1:
         st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", use_container_width=True)
     with col2:
-        if st.button("⛅ -5°C\nМинск", use_container_width=True):
+        if st.button("⛅ Погода", use_container_width=True):
             st.session_state.page = "Погода"
             st.rerun()
     with col3:
@@ -593,7 +469,7 @@ if st.session_state.page == "Главная":
     search_query = st.text_input(
         "",
         placeholder="Поиск в интернете...",
-        key=f"main_search_{st.session_state.page}",
+        key="main_search",
         label_visibility="collapsed"
     )
 
@@ -649,27 +525,6 @@ elif st.session_state.page == "ZORNET AI":
             st.session_state.ai_messages.append({"role": "assistant", "content": response})
         
         st.rerun()
-    
-    with st.sidebar:
-        st.markdown("### 💡 Примеры вопросов")
-        
-        examples = [
-            "Напиши план развития для IT-стартапа",
-            "Объясни квантовую физику просто",
-            "Помоги написать деловое письмо",
-            "Какие технологии AI самые перспективные?",
-        ]
-        
-        for example in examples:
-            if st.button(example, key=f"ex_{example[:10]}", use_container_width=True):
-                st.session_state.ai_messages.append({"role": "user", "content": example})
-                st.rerun()
-        
-        if st.button("🧹 Очистить историю", use_container_width=True):
-            st.session_state.ai_messages = [
-                {"role": "assistant", "content": "Привет! Я ZORNET AI. Чем могу помочь?"}
-            ]
-            st.rerun()
 
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
@@ -695,17 +550,9 @@ elif st.session_state.page == "Новости":
             </div>
             """, unsafe_allow_html=True)
 
-# ... (остальной код без изменений) ...
-
 # ================= СТРАНИЦА ПОГОДЫ =================
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
-    
-    # Инициализация
-    if "weather_data" not in st.session_state:
-        st.session_state.weather_data = None
-    if "user_city" not in st.session_state:
-        st.session_state.user_city = None
     
     # Вкладки
     tab1, tab2 = st.tabs(["📍 По местоположению", "🏙️ По городу"])
@@ -713,14 +560,16 @@ elif st.session_state.page == "Погода":
     with tab1:
         st.subheader("Погода по вашему местоположению")
         
-        # Кнопка для запроса геолокации через streamlit-geolocation
-        if st.button("📍 Запросить доступ к моему местоположению", type="primary", key="request_geo"):
-            try:
-                # Пытаемся импортировать библиотеку
-                import streamlit_geolocation as st_geo
-                
+        # Способ 1: Запрос геолокации
+        st.markdown("### Способ 1: Запрос точного местоположения")
+        
+        try:
+            # Пытаемся импортировать библиотеку
+            import streamlit_geolocation
+            
+            if st.button("📍 Запросить доступ к моему местоположению", type="primary", key="geo_request"):
                 with st.spinner("Запрашиваю разрешение у браузера..."):
-                    location = st_geo.get_location()
+                    location = streamlit_geolocation.get_location()
                     
                     if location and location.get("latitude"):
                         lat = location["latitude"]
@@ -741,20 +590,17 @@ elif st.session_state.page == "Погода":
                     else:
                         st.error("❌ Не удалось получить местоположение. Проверьте разрешения браузера.")
                         
-            except ImportError:
-                st.error("❌ Библиотека streamlit-geolocation не установлена!")
-                st.info("Добавьте 'streamlit-geolocation' в файл requirements.txt и перезапустите приложение")
-            except Exception as e:
-                st.error(f"❌ Ошибка: {e}")
+        except ImportError:
+            st.error("❌ Библиотека streamlit-geolocation не установлена!")
+            st.info("Добавьте 'streamlit-geolocation' в файл requirements.txt")
         
-        # Альтернатива: определение города по IP
-        st.markdown("---")
-        st.markdown("### 🌐 Альтернативный способ (без разрешений)")
+        # Способ 2: Автоматическое определение
+        st.markdown("### Способ 2: Автоматическое определение")
         
         if st.button("🌍 Определить мой город автоматически", key="auto_city"):
             with st.spinner("Определяю ваш город..."):
                 try:
-                    # Пробуем получить город по IP
+                    # Получаем город по IP
                     response = requests.get('https://ipapi.co/json/', timeout=5)
                     if response.status_code == 200:
                         data = response.json()
@@ -779,7 +625,7 @@ elif st.session_state.page == "Погода":
                 except:
                     st.error("Ошибка подключения")
         
-        # Ручной ввод координат
+        # Способ 3: Ручной ввод
         with st.expander("🔧 Ввести координаты вручную"):
             col1, col2 = st.columns(2)
             with col1:
@@ -1026,16 +872,7 @@ def get_icon(file_path):
     if ext in [".mp4", ".avi"]: return "🎬"
     return "📦"
 
-def render_breadcrumb(path):
-    parts = list(path.relative_to(ROOT_DIR).parts)
-    breadcrumb_html = ["<a href='#' onclick='window.location.reload()'>Главная</a>"]
-    p = ROOT_DIR
-    for part in parts:
-        p = p / part
-        breadcrumb_html.append(f"<a href='#' onclick='window.location.reload()'>{part}</a>")
-    st.markdown(" / ".join(breadcrumb_html), unsafe_allow_html=True)
-
-if st.session_state.page == "Диск":
+elif st.session_state.page == "Диск":
     st.markdown('<div class="gold-title">💾 ZORNET DISK</div>', unsafe_allow_html=True)
     
     ROOT_DIR = Path("zornet_files")
@@ -1045,9 +882,9 @@ if st.session_state.page == "Диск":
         st.session_state.current_dir = ROOT_DIR
     
     current_dir = st.session_state.current_dir
-    render_breadcrumb(current_dir)
-
-    st.subheader("Загрузить файлы (Drag & Drop поддерживается)")
+    
+    # Загрузка файлов
+    st.subheader("Загрузить файлы")
     uploaded_files = st.file_uploader("Выберите файлы", type=None, accept_multiple_files=True)
     if uploaded_files:
         for uploaded_file in uploaded_files:
@@ -1057,8 +894,9 @@ if st.session_state.page == "Диск":
             save_file_to_db(uploaded_file.name, uploaded_file.size)
         st.success(f"✅ Загружено {len(uploaded_files)} файлов")
         st.rerun()
-
-    st.subheader(f"Содержимое папки: {current_dir.name}")
+    
+    # Список файлов
+    st.subheader(f"Содержимое папки")
     items = list(current_dir.iterdir())
     if items:
         for item in sorted(items, key=lambda x: (x.is_file(), x.name.lower())):
