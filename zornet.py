@@ -27,7 +27,7 @@ if "HF_API_KEY" not in st.secrets:
     st.info("Вставь свой HF API ключ в Streamlit Cloud Secrets")
     st.stop()
 
-HF_API_KEY = st.secrets["HF_API_KEY"]
+HF_API_KEY = st.secrets["h_XzFyShNnTByfEsHPIehaA£hMtECtGWLjMk"]
 client = InferenceClient(HF_API_KEY)
 
 # 2. Убрал неработающий vision блок
