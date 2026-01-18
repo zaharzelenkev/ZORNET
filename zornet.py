@@ -156,19 +156,65 @@ def ask_hf_ai(prompt):
 
 # ================= ФУНКЦИИ ПОИСКА =================
 def search_zornet(query, num_results=5):
-    """Поиск в интернете"""
+    """Поиск в интернете - с запасными результатами"""
     results = []
+    
+    # Попытка поиска через DuckDuckGo
     try:
         with DDGS() as ddgs:
-            for r in ddgs.text(query, max_results=num_results):
-                results.append({
-                    "title": r.get("title", "Без названия"),
-                    "url": r.get("href", "#"),
-                    "snippet": r.get("body", "Нет описания")[:180] + "...",
-                })
+            ddgs_results = list(ddgs.text(query, max_results=num_results, region='wt-wt'))
+            
+            if ddgs_results:
+                for r in ddgs_results[:num_results]:
+                    results.append({
+                        "title": r.get("title", query),
+                        "url": r.get("href", f"https://www.google.com/search?q={query}"),
+                        "snippet": r.get("body", f"Результаты по запросу: {query}")[:180] + "...",
+                    })
+                return results
     except Exception as e:
-        st.error(f"Ошибка поиска")
-    return results
+        st.error(f"Ошибка DuckDuckGo: {e}")
+    
+    # Если DuckDuckGo не работает, показываем запасные результаты
+    fallback_results = [
+        {
+            "title": f"{query} - поиск в Google",
+            "url": f"https://www.google.com/search?q={query}",
+            "snippet": f"Нажмите для поиска '{query}' в Google. Это лучший способ найти информацию в интернете."
+        },
+        {
+            "title": f"{query} в Википедии",
+            "url": f"https://ru.wikipedia.org/wiki/{query}",
+            "snippet": f"Ищите информацию о '{query}' в Википедии - свободной энциклопедии."
+        },
+        {
+            "title": "Решебники и ГДЗ онлайн",
+            "url": "https://reshak.ru/",
+            "snippet": "Бесплатные решебники и готовые домашние задания по всем предметам."
+        },
+        {
+            "title": "Образовательные ресурсы Беларуси",
+            "url": "https://adu.by/",
+            "snippet": "Официальный образовательный портал Министерства образования Республики Беларусь."
+        },
+        {
+            "title": "Учебные материалы и пособия",
+            "url": "https://nashol.com/",
+            "snippet": "Большая библиотека учебников, решебников и учебных материалов."
+        }
+    ]
+    
+    # Фильтруем релевантные результаты
+    relevant_results = []
+    for res in fallback_results:
+        if query.lower() in res["title"].lower() or query.lower() in res["snippet"].lower():
+            relevant_results.append(res)
+    
+    # Если нет релевантных, берем первые 3
+    if not relevant_results:
+        relevant_results = fallback_results[:3]
+    
+    return relevant_results
 
 # ================= ТРАНСПОРТНЫЕ ФУНКЦИИ =================
 def get_minsk_metro():
