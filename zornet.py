@@ -1607,15 +1607,6 @@ elif st.session_state.page == "Профиль":
                     <span style="color: #4CAF50; font-weight: 600;">Онлайн</span>
                 </div>
                 """, unsafe_allow_html=True)
-                
-                # Бэйджи
-                st.markdown("""
-                <div style="text-align: center; margin-top: 20px;">
-                    <span class="gold-badge">💎 Премиум</span>
-                    <span class="gold-badge">⭐ Лидер</span>
-                    <span class="gold-badge">🚀 Активный</span>
-                </div>
-                """, unsafe_allow_html=True)
             
             with col_profile_right:
                 # Информация профиля
@@ -1711,19 +1702,11 @@ elif st.session_state.page == "Профиль":
             email_notif = st.checkbox("Email уведомления", value=True)
             push_notif = st.checkbox("Push-уведомления", value=True)
             ai_notif = st.checkbox("Уведомления от AI", value=True)
-            
-            st.markdown("**🌐 Внешний вид**")
-            theme = st.selectbox("Тема", ["Золотая (по умолчанию)", "Темная", "Светлая"])
-            density = st.selectbox("Плотность интерфейса", ["Комфортная", "Компактная", "Просторная"])
         
         with settings_col2:
             st.markdown("**🔒 Безопасность**")
             two_factor = st.checkbox("Двухфакторная аутентификация")
             login_history = st.button("📋 История входов", use_container_width=True)
-            
-            st.markdown("**🌍 Язык и регион**")
-            language = st.selectbox("Язык", ["Русский", "English", "Беларуская"])
-            timezone = st.selectbox("Часовой пояс", ["Europe/Minsk", "Europe/Moscow", "UTC"])
         
         if st.button("💾 Сохранить настройки", type="primary", use_container_width=True):
             st.success("Настройки сохранены!")
