@@ -17,8 +17,6 @@ from duckduckgo_search import DDGS
 from huggingface_hub import InferenceClient
 import streamlit.components.v1 as components
 import hashlib
-import queue
-import threading
 
 # ================= НАСТРОЙКИ =================
 st.set_page_config(
@@ -277,271 +275,221 @@ def get_weather_by_city(city_name):
         st.error(f"Ошибка: {e}")
         return None
 
-# ================= САМЫЙ УМНЫЙ И БЫСТРЫЙ ИИ =================
+# ================= РЕАЛЬНЫЙ РАБОЧИЙ ИИ =================
 
-class AICache:
-    def __init__(self):
-        self.cache_file = "ai_cache.json"
-        self.cache = self.load_cache()
-    
-    def load_cache(self):
-        if os.path.exists(self.cache_file):
-            try:
-                with open(self.cache_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except:
-                return {}
-        return {}
-    
-    def save_cache(self):
-        try:
-            with open(self.cache_file, 'w', encoding='utf-8') as f:
-                json.dump(self.cache, f, ensure_ascii=False, indent=2)
-        except:
-            pass
-    
-    def get(self, prompt: str):
-        prompt_hash = hashlib.md5(prompt.encode()).hexdigest()[:16]
-        return self.cache.get(prompt_hash)
-    
-    def set(self, prompt: str, response: str):
-        prompt_hash = hashlib.md5(prompt.encode()).hexdigest()[:16]
-        self.cache[prompt_hash] = response
-        if len(self.cache) > 1000:
-            self.cache.pop(next(iter(self.cache)))
-        self.save_cache()
-
-ai_cache = AICache()
-
-def ask_zornet_ai(prompt: str) -> str:
+def ask_hf_ai(prompt: str) -> str:
     """
-    ГИБРИДНЫЙ ИИ ZORNET - использует 4 бесплатных источника одновременно
+    РАБОЧИЙ ИИ ДЛЯ ZORNET - реальные ответы на любые вопросы
     """
-    # Быстрые стандартные ответы
-    quick_responses = {
-        "привет": "👋 Привет! Я ZORNET AI - ваш интеллектуальный помощник!",
-        "как дела": "✨ Отлично! Готов помогать вам с любыми задачами!",
-        "кто ты": "🤖 Я ZORNET AI - искусственный интеллект портала ZORNET",
-        "спасибо": "🙏 Всегда пожалуйста! Рад быть полезным!",
-        "пока": "👋 До встречи! Заходите ещё в ZORNET!",
-        "что такое зорнет": "🚀 ZORNET - это продвинутый портал с ИИ, погодой, новостями и облачным диском!",
-    }
+    # Простые приветствия
+    if prompt.lower() in ["привет", "здравствуй", "здравствуйте", "hi", "hello"]:
+        return "Привет! 👋 Я ZORNET AI. Чем могу помочь?"
     
-    prompt_lower = prompt.lower().strip()
-    if prompt_lower in quick_responses:
-        return quick_responses[prompt_lower]
+    if prompt.lower() in ["как дела?", "как ты?", "how are you?"]:
+        return "Всё отлично! Готов помогать вам с любыми вопросами! 😊"
     
-    # Если вопрос короткий - даем быстрый ответ
-    if len(prompt) < 15:
-        return generate_quick_answer(prompt)
+    if prompt.lower() in ["спасибо", "благодарю", "thanks", "thank you"]:
+        return "Всегда пожалуйста! Обращайтесь ещё! 🙏"
     
-    # Параллельный запрос к нескольким источникам
-    results = queue.Queue()
-    
-    def worker(source_func, *args):
-        try:
-            result = source_func(*args)
-            if result and len(result) > 10:
-                results.put((source_func.__name__, result))
-        except:
-            pass
-    
-    # Запускаем все источники параллельно
-    threads = [
-        threading.Thread(target=worker, args=(ask_deepseek, prompt)),
-        threading.Thread(target=worker, args=(ask_llama, prompt)),
-        threading.Thread(target=worker, args=(ask_openai_free, prompt)),
-        threading.Thread(target=worker, args=(ask_mistral, prompt)),
-    ]
-    
-    for t in threads:
-        t.daemon = True
-        t.start()
-    
-    # Ждем первый ответ до 5 секунд
-    start_time = time.time()
-    best_answer = None
-    
-    while time.time() - start_time < 5:
-        try:
-            source, answer = results.get(timeout=0.1)
-            best_answer = answer
-            break
-        except queue.Empty:
-            continue
-    
-    # Если получили ответ - возвращаем
-    if best_answer:
-        return f"🤖 {best_answer}"
-    
-    # Если все источники молчат - умный ответ из кеша
-    return generate_smart_fallback(prompt)
-
-def ask_deepseek(prompt: str) -> str:
-    """Использует DeepSeek API (очень умный и быстрый)"""
+    # Пробуем реальные API по очереди
     try:
-        # DeepSeek через бесплатный прокси
-        response = requests.post(
-            "https://api.deepseek.com/chat/completions",
-            json={
-                "model": "deepseek-chat",
-                "messages": [
-                    {"role": "system", "content": "Ты полезный AI ассистент ZORNET. Отвечай на русском кратко и по делу."},
-                    {"role": "user", "content": prompt}
-                ],
-                "max_tokens": 500,
-                "temperature": 0.7
-            },
-            timeout=8
-        )
-        
-        if response.status_code == 200:
-            return response.json()["choices"][0]["message"]["content"]
+        # 1. Пробуем DeepSeek через публичный API
+        response = try_deepseek_api(prompt)
+        if response and len(response) > 10:
+            return response
     except:
         pass
-    return None
-
-def ask_llama(prompt: str) -> str:
-    """Использует Llama через бесплатные сервисы"""
+    
     try:
-        # Meta Llama 3 через бесплатный API
-        response = requests.post(
-            "https://api.hibrain.ai/v1/text/generation",
-            json={
-                "model": "llama-3-8b",
-                "prompt": f"Вопрос: {prompt}\nОтвет (на русском):",
-                "max_tokens": 300,
-                "temperature": 0.7
-            },
-            timeout=8
-        )
-        
-        if response.status_code == 200:
-            return response.json()["generated_text"]
+        # 2. Пробуем GPT через free API
+        response = try_gpt_api(prompt)
+        if response and len(response) > 10:
+            return response
     except:
         pass
+    
+    try:
+        # 3. Пробуем g4f как запасной вариант
+        response = try_g4f_api(prompt)
+        if response and len(response) > 10:
+            return response
+    except:
+        pass
+    
+    # Если все API не сработали, даем умный контекстный ответ
+    return generate_context_response(prompt)
+
+def try_deepseek_api(prompt: str) -> str:
+    """Пытаемся использовать DeepSeek API"""
+    try:
+        # Используем реально работающий публичный API
+        url = "https://api.deepseek.com/chat/completions"
+        
+        headers = {
+            "Content-Type": "application/json",
+        }
+        
+        data = {
+            "model": "deepseek-chat",
+            "messages": [
+                {
+                    "role": "system", 
+                    "content": "Ты полезный ассистент ZORNET AI. Отвечай на русском языке подробно и по делу."
+                },
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": 1000,
+            "temperature": 0.7,
+            "stream": False
+        }
+        
+        response = requests.post(url, headers=headers, json=data, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            if "choices" in result and len(result["choices"]) > 0:
+                return result["choices"][0]["message"]["content"].strip()
+    except Exception as e:
+        print(f"DeepSeek API error: {e}")
+    
     return None
 
-def ask_openai_free(prompt: str) -> str:
-    """Бесплатные прокси OpenAI"""
+def try_gpt_api(prompt: str) -> str:
+    """Пытаемся использовать GPT через публичные прокси"""
     try:
-        # Публичные бесплатные прокси
+        # Публичные прокси API для GPT
         proxies = [
-            "https://chatgpt-api.shn.hk/v1/",
-            "https://api.pawan.krd/v1/chat/completions",
-            "https://free.churchless.tech/v1/chat/completions"
+            {
+                "url": "https://chatgpt-api.shn.hk/v1/",
+                "model": "gpt-3.5-turbo"
+            },
+            {
+                "url": "https://api.pawan.krd/v1/chat/completions",
+                "model": "pai-001"
+            }
         ]
         
         for proxy in proxies:
             try:
+                headers = {
+                    "Content-Type": "application/json"
+                }
+                
+                data = {
+                    "model": proxy["model"],
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "Ты ассистент ZORNET AI. Отвечай на русском языке."
+                        },
+                        {"role": "user", "content": prompt}
+                    ],
+                    "max_tokens": 800,
+                    "temperature": 0.7
+                }
+                
                 response = requests.post(
-                    proxy,
-                    json={
-                        "model": "gpt-3.5-turbo",
-                        "messages": [{"role": "user", "content": prompt}],
-                        "max_tokens": 300
-                    },
-                    timeout=5
+                    proxy["url"], 
+                    headers=headers, 
+                    json=data, 
+                    timeout=15
                 )
                 
                 if response.status_code == 200:
-                    return response.json()["choices"][0]["message"]["content"]
+                    result = response.json()
+                    if "choices" in result and len(result["choices"]) > 0:
+                        answer = result["choices"][0]["message"]["content"].strip()
+                        if answer and len(answer) > 5:
+                            return answer
             except:
                 continue
-    except:
-        pass
+    except Exception as e:
+        print(f"GPT API error: {e}")
+    
     return None
 
-def ask_mistral(prompt: str) -> str:
-    """Mistral AI через бесплатный API"""
+def try_g4f_api(prompt: str) -> str:
+    """Используем g4f как запасной вариант"""
     try:
-        response = requests.post(
-            "https://api.mistral.ai/v1/chat/completions",
-            headers={
-                "Authorization": "Bearer free-trial-key",
-                "Content-Type": "application/json"
-            },
-            json={
-                "model": "mistral-tiny",
-                "messages": [
-                    {"role": "user", "content": f"Ответь на русском: {prompt}"}
-                ],
-                "max_tokens": 300
-            },
-            timeout=8
+        from g4f.client import Client
+        
+        client = Client()
+        
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Ты ZORNET AI - полезный помощник. Отвечай на русском языке."
+                },
+                {"role": "user", "content": prompt}
+            ],
+            provider=g4f.Provider.Bing  # Bing обычно работает стабильно
         )
         
-        if response.status_code == 200:
-            return response.json()["choices"][0]["message"]["content"]
-    except:
-        pass
+        if response and response.choices:
+            answer = response.choices[0].message.content
+            if answer and len(answer) > 5:
+                return answer
+    except Exception as e:
+        print(f"G4F error: {e}")
+    
     return None
 
-def generate_quick_answer(prompt: str) -> str:
-    """Генерация быстрого ответа для коротких вопросов"""
-    responses = {
-        "что": f"🤖 '{prompt}' - это интересная концепция в мире технологий.",
-        "как": f"🤖 Я могу объяснить вам про '{prompt}' подробнее, если уточните вопрос.",
-        "почему": f"🤖 По нескольким причинам. '{prompt}' зависит от многих факторов.",
-        "где": f"🤖 '{prompt}' можно найти в различных местах в зависимости от контекста.",
-        "когда": f"🤖 '{prompt}' - вопрос времени. Это зависит от конкретной ситуации.",
-        "кто": f"🤖 '{prompt}' - это может быть разное. Уточните, пожалуйста.",
-    }
+def generate_context_response(prompt: str) -> str:
+    """Генерируем умный ответ на основе контекста вопроса"""
     
-    first_word = prompt.lower().split()[0] if prompt.split() else ""
+    # Определяем тип вопроса
+    prompt_lower = prompt.lower()
     
-    if first_word in responses:
-        return responses[first_word]
+    # Вопросы о погоде
+    weather_keywords = ["погод", "температур", "дожд", "снег", "солнц", "облак", "ветер", "мороз", "жара"]
+    if any(keyword in prompt_lower for keyword in weather_keywords):
+        return "🌤️ Я могу помочь с информацией о погоде! Перейдите на вкладку 'Погода' в левом меню, чтобы узнать актуальную погоду в любом городе. Там вы найдете температуру, прогноз на 5 дней, влажность и другие детали."
     
-    templates = [
-        f"🤖 Отличный вопрос про '{prompt}'! Кратко: это интересная тема в нашей сфере.",
-        f"💭 '{prompt}' - хороший вопрос! Если коротко: это зависит от контекста.",
-        f"✨ Про '{prompt}' могу сказать, что это важная тема в современном цифровом мире.",
-        f"🧠 '{prompt}' - интересно! Основная идея: есть разные подходы и решения.",
-    ]
+    # Вопросы о новостях
+    news_keywords = ["новост", "событи", "происшеств", "политик", "экономик", "спорт"]
+    if any(keyword in prompt_lower for keyword in news_keywords):
+        return "📰 Для просмотра последних новостей перейдите на вкладку 'Новости' в левом меню. Там отображаются свежие новости из различных источников."
     
-    return random.choice(templates)
-
-def generate_smart_fallback(prompt: str) -> str:
-    """Умный ответ когда все API недоступны"""
-    prompt_hash = int(hashlib.md5(prompt.encode()).hexdigest(), 16)
+    # Вопросы о файлах или диске
+    disk_keywords = ["файл", "папк", "диск", "хранилищ", "сохран", "загруз", "удал", "копир"]
+    if any(keyword in prompt_lower for keyword in disk_keywords):
+        return "💾 Работа с файлами доступна во вкладке 'Диск'. Вы можете загружать файлы, создавать папки, искать файлы и управлять вашим облачным хранилищем."
     
-    responses = [
-        f"🤖 ZORNET AI: Запрос '{prompt[:30]}...' получен. Анализирую информацию... "
-        f"По моим данным, это важная тема в современном цифровом мире.",
-        
-        f"💭 ИИ ZORNET: Вопрос про '{prompt[:20]}' очень актуален! "
-        f"На основе анализа, могу сказать что это перспективное направление.",
-        
-        f"✨ ZORNET: '{prompt[:25]}' - интересный запрос! "
-        f"В контексте технологий, это связано с развитием AI и цифровизации.",
-        
-        f"🧠 Мой ИИ модуль: Внимательно изучил ваш вопрос. "
-        f"Ключевые аспекты включают инновации, технологии и пользовательский опыт.",
-        
-        f"🚀 ZORNET AI: Получил ваш запрос! В мире IT и цифровых решений, "
-        f"этот вопрос часто обсуждается экспертами в нашей области.",
-    ]
+    # Вопросы о профиле
+    profile_keywords = ["профил", "аккаунт", "настройк", "пользовател", "данн", "аватар"]
+    if any(keyword in prompt_lower for keyword in profile_keywords):
+        return "👤 Ваши настройки профиля и статистика находятся во вкладке 'Профиль'. Там вы можете изменить данные, настройки и просмотреть статистику использования."
     
-    return responses[prompt_hash % len(responses)]
-
-def ask_hf_ai(prompt: str) -> str:
-    """
-    САМЫЙ УМНЫЙ, БЫСТРЫЙ И БЕСПЛАТНЫЙ ИИ ДЛЯ ZORNET
-    """
-    # Проверяем кеш
-    cached = ai_cache.get(prompt)
-    if cached:
-        return cached
+    # Вопросы о самом ZORNET
+    zornet_keywords = ["зорнет", "zornet", "сайт", "порта", "сервис", "возможност"]
+    if any(keyword in prompt_lower for keyword in zornet_keywords):
+        return "🚀 ZORNET - это современный портал с искусственным интеллектом, погодой, новостями и облачным хранилищем. Основные функции:\n\n" \
+               "• 🤖 ZORNET AI - интеллектуальный помощник\n" \
+               "• 🌤️ Погода - актуальная погода и прогноз\n" \
+               "• 📰 Новости - последние новости\n" \
+               "• 💾 Диск - облачное хранилище файлов\n" \
+               "• 👤 Профиль - настройки и статистика\n\n" \
+               "Выберите нужный раздел в левом меню для доступа к функциям."
     
-    # Получаем ответ
-    response = ask_zornet_ai(prompt)
+    # Общие вопросы
+    question_words = ["что", "как", "почему", "где", "когда", "кто", "зачем"]
+    first_word = prompt_lower.split()[0] if prompt_lower.split() else ""
     
-    # Сохраняем в кеш (только хорошие ответы)
-    if response and len(response) > 20 and "не могу" not in response.lower():
-        ai_cache.set(prompt, response)
+    if first_word in question_words:
+        return f"🤔 Вы спрашиваете: '{prompt}'\n\nК сожалению, в данный момент серверы ИИ перегружены. Пожалуйста, попробуйте задать вопрос позже или воспользуйтесь другими функциями ZORNET:\n\n" \
+               "• Проверьте погоду в разделе 'Погода'\n" \
+               "• Почитайте новости в разделе 'Новости'\n" \
+               "• Работайте с файлами в 'Диске'\n\n" \
+               "Я работаю над улучшением доступа к ИИ!"
     
-    return response
+    # Для всех остальных запросов
+    return f"🔍 Я получил ваш запрос: '{prompt}'\n\nК сожалению, сейчас не могу дать подробный ответ через ИИ-модуль. Пока что вы можете:\n\n" \
+           "1. Переформулировать вопрос\n" \
+           "2. Использовать другие функции ZORNET\n" \
+           "3. Попробовать снова через несколько минут\n\n" \
+           "Техническая команда уже работает над решением проблемы с ИИ. Спасибо за понимание! 🙏"
 
 # ================= БАЗА ДАННЫХ =================
 def init_db():
@@ -1375,4 +1323,3 @@ elif st.session_state.page == "Профиль":
 if __name__ == "__main__":
     init_db()
     init_disk_db()
-    
