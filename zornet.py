@@ -833,7 +833,6 @@ elif st.session_state.page == "Транспорт":
                 st.write(f"➡️ {train['to']}")
             with col4:
                 st.write(f"🕒 {train['time']}")
-# ... (весь предыдущий код до страницы Диска остается без изменений) ...
 
 # ================= СТРАНИЦА ТРАНСПОРТА =================
 elif st.session_state.page == "Транспорт":
@@ -888,118 +887,608 @@ elif st.session_state.page == "Транспорт":
                 st.write(f"➡️ {train['to']}")
             with col4:
                 st.write(f"🕒 {train['time']}")
-# ================= СТРАНИЦА ДИСКА =================
-elif st.session_state.page == "Диск":
-    st.markdown('<div class="gold-title">💾 ДИСК</div>', unsafe_allow_html=True)
+
+# ... (весь предыдущий код до страницы Диска остается БЕЗ ИЗМЕНЕНИЙ) ...
+
+# ================= СТРАНИЦА ТРАНСПОРТА =================
+elif st.session_state.page == "Транспорт":
+    st.markdown('<div class="gold-title">🚌 ТРАНСПОРТ</div>', unsafe_allow_html=True)
     
-    # --- Папки и файлы на диске ---
-    ROOT_DIR = Path("zornet_files")
-    ROOT_DIR.mkdir(exist_ok=True)
-
-    if "current_dir" not in st.session_state:
-        st.session_state.current_dir = ROOT_DIR
-
-    current_dir = st.session_state.current_dir
-
-    # --- Breadcrumb ---
-    def render_breadcrumb(path):
-        parts = list(path.relative_to(ROOT_DIR).parts)
-        breadcrumb_html = ["<a href='#' onclick='window.location.reload()'>Главная</a>"]
-        p = ROOT_DIR
-        for part in parts:
-            p = p / part
-            breadcrumb_html.append(f"<a href='#' onclick='window.location.reload()'>{part}</a>")
-        st.markdown(" / ".join(breadcrumb_html), unsafe_allow_html=True)
-
-    render_breadcrumb(current_dir)
-
-    # --- Навигация вверх ---
-    if current_dir != ROOT_DIR:
-        if st.button("🔙 Назад"):
-            st.session_state.current_dir = current_dir.parent
-            st.experimental_rerun()
-
-    # --- Создание новой папки ---
-    st.subheader("Создать папку")
-    new_folder = st.text_input("Название папки")
-    if st.button("Создать папку"):
-        if new_folder:
-            folder_path = current_dir / new_folder
-            folder_path.mkdir(exist_ok=True)
-            st.success(f"Папка '{new_folder}' создана")
-            st.experimental_rerun()
-
-    # --- Загрузка файлов drag & drop ---
-    st.subheader("Загрузить файлы (Drag & Drop поддерживается)")
-    uploaded_files = st.file_uploader("Выберите файлы", type=None, accept_multiple_files=True)
-    if uploaded_files:
-        for uploaded_file in uploaded_files:
-            file_path = current_dir / uploaded_file.name
-            with open(file_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            save_file_to_db(uploaded_file.name, uploaded_file.size)  # Сохраняем в БД
-        st.success(f"✅ Загружено {len(uploaded_files)} файлов")
-        st.experimental_rerun()
-
-    # --- Иконки ---
-    def get_icon(file_path):
-        ext = file_path.suffix.lower()
-        if file_path.is_dir(): return "📁"
-        if ext in [".jpg", ".jpeg", ".png", ".gif"]: return "🖼️"
-        if ext == ".pdf": return "📄"
-        if ext in [".doc", ".docx"]: return "📝"
-        if ext in [".mp3", ".wav"]: return "🎵"
-        if ext in [".mp4", ".avi"]: return "🎬"
-        return "📦"
-
-    # --- Список файлов и папок ---
-    st.subheader(f"Содержимое папки: {current_dir.name}")
-    items = list(current_dir.iterdir())
-    if items:
-        for item in sorted(items, key=lambda x: (x.is_file(), x.name.lower())):
-            col1, col2, col3, col4 = st.columns([4,2,2,2])
+    tab1, tab2, tab3, tab4 = st.tabs(["🚇 Метро", "🚌 Автобусы/Трамваи", "🚕 Такси", "🚂 Железная дорога"])
+    
+    with tab1:
+        st.subheader("Минское метро")
+        for station in get_minsk_metro():
+            col1, col2, col3 = st.columns([3, 1, 1])
             with col1:
-                icon = get_icon(item)
-                if item.is_dir():
-                    if st.button(f"{icon} {item.name}"):
-                        st.session_state.current_dir = item
-                        st.experimental_rerun()
-                else:
-                    st.markdown(f"<div class='file-item'>{icon} {item.name}</div>", unsafe_allow_html=True)
-                    # Превью изображений
-                    if item.suffix.lower() in [".jpg", ".jpeg", ".png", ".gif"]:
-                        image = Image.open(item)
-                        st.image(image, width=150, caption=item.name)
-                    # Превью PDF
-                    if item.suffix.lower() == ".pdf":
-                        st.write(f"📄 PDF файл: {item.name}")
-                    # Превью видео
-                    if item.suffix.lower() in [".mp4", ".avi"]:
-                        st.video(str(item))
+                st.write(f"**{station['name']}**")
             with col2:
-                if item.is_file():
-                    st.download_button("Скачать", data=open(item, "rb").read(), file_name=item.name)
+                st.write(f"Линия {station['line']}")
             with col3:
-                # Переименование
-                new_name = st.text_input(f"Переименовать {item.name}", key=f"rename_{item}")
-                if st.button(f"Переименовать {item.name}", key=f"btn_rename_{item}"):
-                    new_path = item.parent / new_name
-                    item.rename(new_path)
-                    st.experimental_rerun()
+                st.success(f"🚇 {station['next']}")
+    
+    with tab2:
+        st.subheader("Автобусы и трамваи")
+        for route in get_bus_trams():
+            col1, col2, col3, col4 = st.columns([1, 2, 2, 1])
+            with col1:
+                st.write(f"**{route['number']}**")
+            with col2:
+                st.write(f"{route['type']}")
+            with col3:
+                st.write(f"{route['from']} → {route['to']}")
             with col4:
-                if st.button(f"Удалить {item.name}", key=f"del_{item}"):
-                    if item.is_dir():
-                        for child in item.iterdir():
-                            if child.is_file():
-                                child.unlink()
-                            else:
-                                os.rmdir(child)
-                        os.rmdir(item)
-                    else:
-                        item.unlink()
-                    st.experimental_rerun()
-    else:
-        st.info("Папка пуста.")
+                st.info(f"⏱️ {route['next']}")
+    
+    with tab3:
+        st.subheader("Сравнение цен такси")
+        for service in get_taxi_prices():
+            col1, col2, col3 = st.columns([2, 1, 1])
+            with col1:
+                st.write(f"**{service['name']}**")
+            with col2:
+                st.write(f"💵 {service['price']}")
+            with col3:
+                st.write(f"🕒 {service['wait']}")
+    
+    with tab4:
+        st.subheader("Белорусская железная дорога")
+        for train in get_belarusian_railway():
+            col1, col2, col3, col4 = st.columns([1, 2, 2, 2])
+            with col1:
+                st.write(f"**{train['number']}**")
+            with col2:
+                st.write(f"📍 {train['from']}")
+            with col3:
+                st.write(f"➡️ {train['to']}")
+            with col4:
+                st.write(f"🕒 {train['time']}")
+
+# ================= ПРОФЕССИОНАЛЬНЫЙ ОБЛАЧНЫЙ ДИСК ZORNET DISK =================
+elif st.session_state.page == "Диск":
+    
+    # Инициализация базы данных диска
+    def init_advanced_disk_db():
+        conn = sqlite3.connect("zornet_cloud.db")
+        c = conn.cursor()
+        
+        # Таблица пользователей диска
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS disk_users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE,
+                email TEXT,
+                avatar TEXT,
+                storage_used INTEGER DEFAULT 0,
+                storage_limit INTEGER DEFAULT 1073741824,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # Таблица файлов и папок
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS cloud_files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_id TEXT UNIQUE,
+                name TEXT NOT NULL,
+                path TEXT NOT NULL,
+                size INTEGER,
+                file_type TEXT,
+                category TEXT,
+                owner_id INTEGER DEFAULT 1,
+                is_folder BOOLEAN DEFAULT 0,
+                parent_id TEXT DEFAULT 'root',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                modified_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_public BOOLEAN DEFAULT 0,
+                download_count INTEGER DEFAULT 0,
+                starred BOOLEAN DEFAULT 0,
+                tags TEXT DEFAULT '',
+                description TEXT DEFAULT ''
+            )
+        """)
+        
+        # Таблица общих доступов
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS shared_access (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_id TEXT,
+                user_id INTEGER,
+                permission TEXT DEFAULT 'view',
+                shared_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP,
+                FOREIGN KEY (file_id) REFERENCES cloud_files (file_id)
+            )
+        """)
+        
+        conn.commit()
+        conn.close()
+    
+    # Инициализируем базу данных
+    init_advanced_disk_db()
+    
+    # CSS для профессионального диска
+    st.markdown("""
+    <style>
+        /* ОСНОВНОЙ КОНТЕЙНЕР ДИСКА */
+        .disk-main-container {
+            background: linear-gradient(135deg, #fafafa 0%, #ffffff 100%);
+            border-radius: 24px;
+            padding: 30px;
+            margin: 10px 0;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+        }
+        
+        /* ЗАГОЛОВОК ДИСКА */
+        .disk-header {
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+            border-radius: 20px;
+            padding: 30px;
+            color: white;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(218, 165, 32, 0.25);
+            animation: fadeIn 0.5s ease;
+        }
+        
+        /* АНИМАЦИЯ ПОЯВЛЕНИЯ */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* КНОПКИ ДИСКА */
+        .disk-btn {
+            background: white !important;
+            border: 2px solid #DAA520 !important;
+            color: #B8860B !important;
+            padding: 14px 28px !important;
+            border-radius: 12px !important;
+            font-weight: 600 !important;
+            font-size: 16px !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-shadow: 0 6px 20px rgba(218, 165, 32, 0.15) !important;
+        }
+        
+        .disk-btn:hover {
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+            color: white !important;
+            transform: translateY(-3px) scale(1.02) !important;
+            box-shadow: 0 12px 30px rgba(218, 165, 32, 0.3) !important;
+            border-color: transparent !important;
+        }
+        
+        .disk-btn-primary {
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+            border: none !important;
+            color: white !important;
+            padding: 16px 32px !important;
+            border-radius: 12px !important;
+            font-weight: 700 !important;
+            font-size: 17px !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-shadow: 0 8px 25px rgba(218, 165, 32, 0.25) !important;
+            letter-spacing: 0.5px;
+        }
+        
+        .disk-btn-primary:hover {
+            transform: translateY(-3px) scale(1.03) !important;
+            box-shadow: 0 15px 35px rgba(218, 165, 32, 0.4) !important;
+        }
+        
+        /* КАРТОЧКИ ФАЙЛОВ И ПАПОК */
+        .file-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin: 12px 0;
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.07);
+            animation: fadeIn 0.4s ease;
+        }
+        
+        .file-card:hover {
+            transform: translateY(-8px);
+            border-color: #DAA520;
+            box-shadow: 0 15px 35px rgba(218, 165, 32, 0.2);
+        }
+        
+        .file-card-selected {
+            border: 3px solid #DAA520;
+            background: linear-gradient(135deg, #fff9e6 0%, #fff3cc 100%);
+            box-shadow: 0 10px 30px rgba(218, 165, 32, 0.25);
+        }
+        
+        .folder-card {
+            background: linear-gradient(135deg, #fff9e6 0%, #ffe699 100%);
+            border-radius: 16px;
+            padding: 24px;
+            margin: 12px 0;
+            border: 2px solid #ffd966;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(255, 217, 102, 0.15);
+        }
+        
+        .folder-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            border-color: #DAA520;
+            box-shadow: 0 12px 30px rgba(218, 165, 32, 0.25);
+        }
+        
+        /* ИКОНКИ ФАЙЛОВ */
+        .file-icon-large {
+            font-size: 3.5rem;
+            text-align: center;
+            margin-bottom: 15px;
+            transition: transform 0.3s ease;
+        }
+        
+        .file-icon-large:hover {
+            transform: scale(1.1);
+        }
+        
+        /* ПАНЕЛЬ ИНСТРУМЕНТОВ */
+        .toolbar {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.05);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        /* ПРОГРЕСС БАР ХРАНИЛИЩА */
+        .storage-container {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+        
+        .storage-bar {
+            height: 14px;
+            background: #e9ecef;
+            border-radius: 7px;
+            overflow: hidden;
+            margin: 15px 0;
+            position: relative;
+        }
+        
+        .storage-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #DAA520, #FFD700, #FFC107);
+            border-radius: 7px;
+            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .storage-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(200%); }
+        }
+        
+        /* ДРОП ЗОНА */
+        .drop-zone {
+            border: 4px dashed #DAA520;
+            border-radius: 20px;
+            padding: 60px 40px;
+            text-align: center;
+            background: rgba(255, 249, 230, 0.5);
+            transition: all 0.3s ease;
+            margin: 25px 0;
+            cursor: pointer;
+        }
+        
+        .drop-zone:hover {
+            background: rgba(255, 243, 204, 0.7);
+            border-color: #B8860B;
+            transform: scale(1.01);
+        }
+        
+        .drop-zone.drag-over {
+            background: rgba(255, 230, 153, 0.9);
+            border-color: #B8860B;
+            transform: scale(1.02);
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(218, 165, 32, 0.4); }
+            70% { box-shadow: 0 0 0 20px rgba(218, 165, 32, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(218, 165, 32, 0); }
+        }
+        
+        /* ТАБЛИЦА ФАЙЛОВ */
+        .files-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+        
+        .files-table th {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 20px;
+            text-align: left;
+            font-weight: 700;
+            color: #495057;
+            border-bottom: 3px solid #DAA520;
+            font-size: 16px;
+        }
+        
+        .files-table td {
+            padding: 18px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            vertical-align: middle;
+            transition: background 0.2s ease;
+        }
+        
+        .files-table tr:hover td {
+            background: #f8f9fa;
+        }
+        
+        .files-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        /* ПРЕВЬЮ ИЗОБРАЖЕНИЙ */
+        .image-preview-container {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+            margin: 15px 0;
+        }
+        
+        .image-preview-container:hover {
+            transform: scale(1.03);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.2);
+        }
+        
+        .image-preview {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        /* УВЕДОМЛЕНИЯ */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 20px 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(76, 175, 80, 0.3);
+            z-index: 1000;
+            animation: slideIn 0.5s ease, fadeOut 0.5s ease 2.5s forwards;
+            max-width: 350px;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; transform: translateX(100%); }
+        }
+        
+        /* ВКЛАДКИ */
+        .disk-tabs {
+            background: white;
+            border-radius: 16px;
+            padding: 10px;
+            margin: 20px 0;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+        
+        /* ПОИСК */
+        .search-box {
+            background: white;
+            border: 2px solid #DAA520;
+            border-radius: 12px;
+            padding: 15px 20px;
+            font-size: 16px;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.1);
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: #B8860B;
+            box-shadow: 0 6px 25px rgba(218, 165, 32, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        /* ЗАГРУЗОЧНЫЙ ИНДИКАТОР */
+        .upload-progress {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            border: 2px solid #DAA520;
+            box-shadow: 0 8px 25px rgba(218, 165, 32, 0.15);
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #DAA520, #FFD700);
+            border-radius: 5px;
+            transition: width 0.3s ease;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Основной контейнер диска
+    st.markdown('<div class="disk-main-container">', unsafe_allow_html=True)
+    
+    # Заголовок диска
+    st.markdown("""
+    <div class="disk-header">
+        <h1 style="margin: 0; font-size: 3rem; font-weight: 800;">💾 ZORNET DISK</h1>
+        <p style="margin: 10px 0 0 0; font-size: 1.2rem; opacity: 0.9;">Профессиональное облачное хранилище с золотым стилем</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Инициализация переменных сессии для диска
+    if 'disk_current_path' not in st.session_state:
+        st.session_state.disk_current_path = Path("zornet_cloud")
+        st.session_state.disk_current_path.mkdir(exist_ok=True)
+    
+    if 'disk_selected_files' not in st.session_state:
+        st.session_state.disk_selected_files = []
+    
+    if 'disk_view_mode' not in st.session_state:
+        st.session_state.disk_view_mode = "grid"  # "grid" или "list"
+    
+    if 'disk_search_query' not in st.session_state:
+        st.session_state.disk_search_query = ""
+    
+    # Функции для работы с диском
+    def get_file_icon(file_path):
+        """Возвращает иконку для файла с улучшенными стилями"""
+        ext = file_path.suffix.lower()
+        if file_path.is_dir(): 
+            return "📁"
+        if ext in [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"]: 
+            return "🖼️"
+        if ext == ".pdf": 
+            return "📄"
+        if ext in [".doc", ".docx", ".txt", ".rtf"]: 
+            return "📝"
+        if ext in [".xls", ".xlsx", ".csv"]: 
+            return "📊"
+        if ext in [".ppt", ".pptx"]: 
+            return "📈"
+        if ext in [".mp3", ".wav", ".ogg", ".flac"]: 
+            return "🎵"
+        if ext in [".mp4", ".avi", ".mov", ".mkv", ".wmv"]: 
+            return "🎬"
+        if ext in [".zip", ".rar", ".7z", ".tar", ".gz"]: 
+            return "🗜️"
+        if ext in [".py", ".js", ".html", ".css", ".java", ".cpp"]: 
+            return "💻"
+        return "📄"
+    
+    def format_file_size(size_bytes):
+        """Форматирует размер файла в читаемый вид"""
+        if size_bytes < 1024:
+            return f"{size_bytes} B"
+        elif size_bytes < 1024 * 1024:
+            return f"{size_bytes / 1024:.1f} KB"
+        elif size_bytes < 1024 * 1024 * 1024:
+            return f"{size_bytes / (1024 * 1024):.1f} MB"
+        else:
+            return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
+    
+    def get_disk_usage():
+        """Получает статистику использования диска"""
+        total_size = 0
+        file_count = 0
+        folder_count = 0
+        
+        for path in st.session_state.disk_current_path.rglob('*'):
+            if path.is_file():
+                total_size += path.stat().st_size
+                file_count += 1
+            else:
+                folder_count += 1
+        
+        return {
+            'total_size': total_size,
+            'file_count': file_count,
+            'folder_count': folder_count,
+            'used_percentage': min(100, (total_size / (1024 * 1024 * 1024)) * 100)  # Предполагаем 1GB лимит
+        }
+    
+    # ПАНЕЛЬ ИНСТРУМЕНТОВ
+    st.markdown('<div class="toolbar">', unsafe_allow_html=True)
+    
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    
+    with col1:
+        if st.button("📤 Загрузить", key="upload_btn", use_container_width=True):
+            st.session_state.show_upload = True
+    
+    with col2:
+        if st.button("📁 Новая папка", key="new_folder_btn", use_container_width=True):
+            st.session_state.show_new_folder = True
+    
+    with col3:
+        if st.button("🔍 Поиск", key="search_btn", use_container_width=True):
+            st.session_state.show_search = True
+    
+    with col4:
+        if st.button("⭐ Избранное", key="starred_btn", use_container_width=True):
+            st.session_state.show_starred = True
+    
+    with col5:
+        if st.button("🔄 Обновить", key="refresh_btn", use_container_width=True):
+            st.rerun()
+    
+    with col6:
+        view_mode = st.selectbox("Вид:", ["Сетка", "Список"], 
+                                index=0 if st.session_state.disk_view_mode == "grid" else 1,
+                                key="view_select",
+                                label_visibility="collapsed")
+        st.session_state.disk_view_mode = "grid" if view_mode == "Сетка" else "list"
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # ПАНЕЛЬ ХРАНИЛИЩА
+    disk_stats = get_disk_usage()
+    used_percentage = disk_stats['used_percentage']
+    
+    st.markdown(f"""
+    <div class="storage-container">
+        <h3 style="margin: 0 0 15px 0; color: #333;">📊 Использование хранилища</h3>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <span style="color: #666;">Использовано: {format_file_size(disk_stats['total_size'])}</span>
+            <span style="color: #666;">Лимит: 1.0 GB</span>
+        </div>
+        <div class="storage-bar">
+            <div class="storage-fill" style="width: {used_percentage}%;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+            <span style="color: #666;">📁 Папок: {disk_stats['folder_count']}</span>
+            <span style="color: #666;">📄 Файлов: {disk_stats['file_count']}</span>
+            <span style="color: {
 
 # ================= СТРАНИЦА ПРОФИЛЯ =================
 elif st.session_state.page == "Профиль":
