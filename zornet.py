@@ -187,6 +187,32 @@ with st.sidebar:
             st.session_state.page = page
             st.rerun()
 
+# ================= ФУНКЦИЯ ПОИСКА =================
+def search_zornet(query, num_results=5):
+    """Функция поиска в интернете"""
+    try:
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=num_results))
+            
+            formatted_results = []
+            for result in results:
+                formatted_results.append({
+                    'title': result.get('title', 'Без названия'),
+                    'url': result.get('href', '#'),
+                    'snippet': result.get('body', 'Описание отсутствует')[:150] + '...'
+                })
+            return formatted_results
+    except Exception as e:
+        print(f"Ошибка поиска: {e}")
+        # Возвращаем тестовые данные если поиск не работает
+        return [
+            {
+                'title': f'Результат поиска: {query}',
+                'url': 'https://www.google.com/search?q=' + query,
+                'snippet': f'Информация по запросу "{query}". Используйте поисковые системы для получения подробной информации.'
+            }
+        ]
+
 # ================= ФУНКЦИИ ПОГОДЫ =================
 def get_weather_icon(condition_code):
     """Возвращает эмодзи для погодных условий"""
