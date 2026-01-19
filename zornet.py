@@ -306,81 +306,23 @@ def get_icon(file_path):
         return "🎬"
     return "📦"
     
-# ================= НАСТРОЙКИ AI =================
-HF_API_KEY = st.secrets.get("HF_API_KEY", "")
-CHAT_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"
-API_URL = "https://router.huggingface.co/api/chat/completions"
-
-HEADERS = {
-    "Authorization": f"Bearer {HF_API_KEY}",
-    "Content-Type": "application/json"
-} if HF_API_KEY else {}
-
+# ================= НАСТРОЙКИ AI (ОБНОВЛЕННЫЕ) =================
 def ask_hf_ai(prompt: str) -> str:
-    if not HF_API_KEY:
-        return "⚠️ API ключ не настроен. Добавьте HF_API_KEY в secrets.toml"
-    
-    payload = {
-        "model": CHAT_MODEL,
-        "messages": [
-            {"role": "system", "content": "Ты ZORNET AI — умный помощник. Отвечай по‑русски кратко и понятно."},
-            {"role": "user", "content": prompt}
-        ],
-        "max_new_tokens": 300,
-        "temperature": 0.7
-    }
-
+    """
+    Использует бесплатный чат DuckDuckGo (модель GPT-4o-mini).
+    Не требует API ключей. Быстро и умно.
+    """
     try:
-        r = requests.post(API_URL, headers=HEADERS, json=payload, timeout=60)
-
-        if r.status_code == 503:
-            return "⏳ ZORNET AI загружается — попробуйте через несколько секунд."
-
-        if r.status_code != 200:
-            return "⚠️ ZORNET AI временно недоступен."
-
-        data = r.json()
-        text = data["choices"][0]["message"]["content"]
-        return text.strip()
-
-    except Exception:
-        return "⚠️ Ошибка соединения с ZORNET AI."
-
-# ================= ФУНКЦИИ ПОИСКА =================
-def search_zornet(query, num_results=5):
-    """Поиск в интернете"""
-    results = []
-    
-    try:
+        # Имитация работы "думает" для интерфейса (можно убрать, но красиво)
         with DDGS() as ddgs:
-            ddgs_results = list(ddgs.text(query, max_results=num_results, region='wt-wt'))
+            # model='gpt-4o-mini' - это умная и быстрая модель
+            # Можно также использовать 'laama-3-70b' (от Meta) если нужна альтернатива
+            response = ddgs.chat(prompt, model='gpt-4o-mini')
+            return response
             
-            if ddgs_results:
-                for r in ddgs_results[:num_results]:
-                    results.append({
-                        "title": r.get("title", query),
-                        "url": r.get("href", f"https://www.google.com/search?q={query}"),
-                        "snippet": r.get("body", f"Результаты по запросу: {query}")[:180] + "...",
-                    })
-                return results
     except Exception as e:
-        st.error(f"Ошибка поиска: {e}")
-    
-    # Запасные результаты
-    fallback_results = [
-        {
-            "title": f"{query} - поиск в Google",
-            "url": f"https://www.google.com/search?q={query}",
-            "snippet": f"Нажмите для поиска '{query}' в Google."
-        },
-        {
-            "title": f"{query} в Википедии",
-            "url": f"https://ru.wikipedia.org/wiki/{query}",
-            "snippet": f"Ищите информацию о '{query}' в Википедии."
-        },
-    ]
-    
-    return fallback_results[:num_results]
+        # Если вдруг интернет пропал или DDG заблокировал запрос
+        return f"⚠️ ZORNET AI временно недоступен. Ошибка сети. (Код: {str(e)})"
 
 # ================= ТРАНСПОРТНЫЕ ФУНКЦИИ =================
 def get_minsk_metro():
