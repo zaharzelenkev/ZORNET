@@ -13,3 +13,9 @@ transformers>=4.35.0
 torch>=2.0.0
 duckduckgo-search>=6.0.0
 streamlit-geolocation
+beautifulsoup4
+g4f[all]
+curl_cffi
+nest_asyncio
+pandas
+pathlib
