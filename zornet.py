@@ -5,10 +5,6 @@ import os
 import pytz
 import json
 import requests
-import time
-import random
-import g4f
-from g4f.client import Client
 import feedparser
 from PIL import Image
 from pathlib import Path
@@ -309,41 +305,116 @@ def get_icon(file_path):
     if ext in [".mp4", ".avi", ".mov"]: 
         return "🎬"
     return "📦"
+    
+# ================= НАСТРОЙКИ AI =================
+HF_API_KEY = st.secrets.get("HF_API_KEY", "")
+CHAT_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"
+API_URL = "https://router.huggingface.co/api/chat/completions"
+
+HEADERS = {
+    "Authorization": f"Bearer {HF_API_KEY}",
+    "Content-Type": "application/json"
+} if HF_API_KEY else {}
 
 def ask_hf_ai(prompt: str) -> str:
-    """
-    Профессиональный ИИ-модуль. 
-    Использует только проверенных бесплатных провайдеров без API-ключей.
-    """
-    try:
-        client = Client()
-        
-        # Мы явно указываем провайдеров, которые не просят ключи
-        response = client.chat.completions.create(
-            model="gpt-4o", 
-            provider=g4f.Provider.Blackbox, # Один из самых стабильных на сегодня
-            messages=[{"role": "user", "content": prompt}],
-        )
-        
-        answer = response.choices[0].message.content
-        if answer:
-            return answer
-        else:
-            return "⚠️ Провайдер вернул пустой ответ. Попробуйте еще раз."
-
-    except Exception as e:
-        # Резервный план: если Blackbox упал, пробуем автоматический выбор из других
-        try:
-            # Здесь мы исключаем Puter и другие проблемные API
-            response = client.chat.completions.create(
-                model="gpt-4",
-                provider=g4f.Provider.ChatGptEs, 
-                messages=[{"role": "user", "content": prompt}],
-            )
-            return response.choices[0].message.content
-        except Exception as second_error:
-            return f"⚠️ Режим ожидания: Сервер перегружен. Попробуйте через минуту. (Тех. инфо: {str(second_error)})"
+    if not HF_API_KEY:
+        return "⚠️ API ключ не настроен. Добавьте HF_API_KEY в secrets.toml"
     
+    payload = {
+        "model": CHAT_MODEL,
+        "messages": [
+            {"role": "system", "content": "Ты ZORNET AI — умный помощник. Отвечай по‑русски кратко и понятно."},
+            {"role": "user", "content": prompt}
+        ],
+        "max_new_tokens": 300,
+        "temperature": 0.7
+    }
+
+    try:
+        r = requests.post(API_URL, headers=HEADERS, json=payload, timeout=60)
+
+        if r.status_code == 503:
+            return "⏳ ZORNET AI загружается — попробуйте через несколько секунд."
+
+        if r.status_code != 200:
+            return "⚠️ ZORNET AI временно недоступен."
+
+        data = r.json()
+        text = data["choices"][0]["message"]["content"]
+        return text.strip()
+
+    except Exception:
+        return "⚠️ Ошибка соединения с ZORNET AI."
+
+# ================= ФУНКЦИИ ПОИСКА =================
+def search_zornet(query, num_results=5):
+    """Поиск в интернете"""
+    results = []
+    
+    try:
+        with DDGS() as ddgs:
+            ddgs_results = list(ddgs.text(query, max_results=num_results, region='wt-wt'))
+            
+            if ddgs_results:
+                for r in ddgs_results[:num_results]:
+                    results.append({
+                        "title": r.get("title", query),
+                        "url": r.get("href", f"https://www.google.com/search?q={query}"),
+                        "snippet": r.get("body", f"Результаты по запросу: {query}")[:180] + "...",
+                    })
+                return results
+    except Exception as e:
+        st.error(f"Ошибка поиска: {e}")
+    
+    # Запасные результаты
+    fallback_results = [
+        {
+            "title": f"{query} - поиск в Google",
+            "url": f"https://www.google.com/search?q={query}",
+            "snippet": f"Нажмите для поиска '{query}' в Google."
+        },
+        {
+            "title": f"{query} в Википедии",
+            "url": f"https://ru.wikipedia.org/wiki/{query}",
+            "snippet": f"Ищите информацию о '{query}' в Википедии."
+        },
+    ]
+    
+    return fallback_results[:num_results]
+
+# ================= ТРАНСПОРТНЫЕ ФУНКЦИИ =================
+def get_minsk_metro():
+    return [
+        {"name": "Малиновка", "line": "1", "next": "3 мин"},
+        {"name": "Петровщина", "line": "1", "next": "5 мин"},
+        {"name": "Площадь Ленина", "line": "1", "next": "2 мин"},
+        {"name": "Институт Культуры", "line": "1", "next": "4 мин"},
+        {"name": "Молодёжная", "line": "2", "next": "6 мин"},
+    ]
+
+def get_bus_trams():
+    return [
+        {"number": "100", "type": "автобус", "from": "Ст.м. Каменная Горка", "to": "Аэропорт", "next": "7 мин"},
+        {"number": "1", "type": "трамвай", "from": "Тракторный завод", "to": "Серебрянка", "next": "5 мин"},
+        {"number": "3с", "type": "троллейбус", "from": "ДС Веснянка", "to": "ДС Серова", "next": "3 мин"},
+        {"number": "40", "type": "автобус", "from": "Ст.м. Уручье", "to": "Дражня", "next": "10 мин"},
+    ]
+
+def get_taxi_prices():
+    return [
+        {"name": "Яндекс Такси", "price": "8-12 руб", "wait": "5-7 мин"},
+        {"name": "Uber", "price": "9-13 руб", "wait": "4-6 мин"},
+        {"name": "Такси Близко", "price": "7-10 руб", "wait": "8-10 мин"},
+        {"name": "Такси Город", "price": "6-9 руб", "wait": "10-15 мин"},
+    ]
+
+def get_belarusian_railway():
+    return [
+        {"number": "001Б", "from": "Минск", "to": "Брест", "time": "18:00 - 21:30"},
+        {"number": "735Б", "from": "Минск", "to": "Гомель", "time": "07:30 - 11:15"},
+        {"number": "603Б", "from": "Минск", "to": "Витебск", "time": "14:20 - 18:45"},
+    ]
+
 # ================= БАЗА ДАННЫХ =================
 def init_db():
     conn = sqlite3.connect("zornet.db")
