@@ -16,7 +16,6 @@ import mimetypes
 from duckduckgo_search import DDGS
 from huggingface_hub import InferenceClient
 import streamlit.components.v1 as components
-import hashlib
 
 # ================= НАСТРОЙКИ =================
 st.set_page_config(
@@ -187,32 +186,6 @@ with st.sidebar:
             st.session_state.page = page
             st.rerun()
 
-# ================= ФУНКЦИЯ ПОИСКА =================
-def search_zornet(query, num_results=5):
-    """Функция поиска в интернете"""
-    try:
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=num_results))
-            
-            formatted_results = []
-            for result in results:
-                formatted_results.append({
-                    'title': result.get('title', 'Без названия'),
-                    'url': result.get('href', '#'),
-                    'snippet': result.get('body', 'Описание отсутствует')[:150] + '...'
-                })
-            return formatted_results
-    except Exception as e:
-        print(f"Ошибка поиска: {e}")
-        # Возвращаем тестовые данные если поиск не работает
-        return [
-            {
-                'title': f'Результат поиска: {query}',
-                'url': 'https://www.google.com/search?q=' + query,
-                'snippet': f'Информация по запросу "{query}". Используйте поисковые системы для получения подробной информации.'
-            }
-        ]
-
 # ================= ФУНКЦИИ ПОГОДЫ =================
 def get_weather_icon(condition_code):
     """Возвращает эмодзи для погодных условий"""
@@ -301,222 +274,76 @@ def get_weather_by_city(city_name):
         st.error(f"Ошибка: {e}")
         return None
 
-# ================= РЕАЛЬНЫЙ РАБОЧИЙ ИИ =================
+# Обработчик сообщений от JavaScript
+def handle_js_messages():
+    """Обрабатывает сообщения от JavaScript компонентов"""
+    # Проверяем если есть сообщение от геолокации
+    if 'location_result' not in st.session_state:
+        # Пытаемся получить данные из query parameters (если JavaScript их отправил)
+        query_params = st.experimental_get_query_params()
+        
+        if 'geolocation' in query_params:
+            try:
+                geo_data = json.loads(query_params['geolocation'][0])
+                st.session_state.location_result = geo_data
+                # Очищаем параметры
+                st.experimental_set_query_params()
+                st.rerun()
+            except:
+                pass
+
+# ================= ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ДИСКА =================
+def get_icon(file_path):
+    """Возвращает иконку для файла"""
+    ext = file_path.suffix.lower()
+    if file_path.is_dir(): 
+        return "📁"
+    if ext in [".jpg", ".jpeg", ".png", ".gif"]: 
+        return "🖼️"
+    if ext == ".pdf": 
+        return "📄"
+    if ext in [".doc", ".docx"]: 
+        return "📝"
+    if ext in [".mp3", ".wav"]: 
+        return "🎵"
+    if ext in [".mp4", ".avi", ".mov"]: 
+        return "🎬"
+    return "📦"
 
 def ask_hf_ai(prompt: str) -> str:
     """
-    РАБОЧИЙ ИИ ДЛЯ ZORNET - реальные ответы на любые вопросы
+    Профессиональный ИИ-модуль. 
+    Использует только проверенных бесплатных провайдеров без API-ключей.
     """
-    # Простые приветствия
-    if prompt.lower() in ["привет", "здравствуй", "здравствуйте", "hi", "hello"]:
-        return "Привет! 👋 Я ZORNET AI. Чем могу помочь?"
-    
-    if prompt.lower() in ["как дела?", "как ты?", "how are you?"]:
-        return "Всё отлично! Готов помогать вам с любыми вопросами! 😊"
-    
-    if prompt.lower() in ["спасибо", "благодарю", "thanks", "thank you"]:
-        return "Всегда пожалуйста! Обращайтесь ещё! 🙏"
-    
-    # Пробуем реальные API по очереди
     try:
-        # 1. Пробуем DeepSeek через публичный API
-        response = try_deepseek_api(prompt)
-        if response and len(response) > 10:
-            return response
-    except:
-        pass
-    
-    try:
-        # 2. Пробуем GPT через free API
-        response = try_gpt_api(prompt)
-        if response and len(response) > 10:
-            return response
-    except:
-        pass
-    
-    try:
-        # 3. Пробуем g4f как запасной вариант
-        response = try_g4f_api(prompt)
-        if response and len(response) > 10:
-            return response
-    except:
-        pass
-    
-    # Если все API не сработали, даем умный контекстный ответ
-    return generate_context_response(prompt)
-
-def try_deepseek_api(prompt: str) -> str:
-    """Пытаемся использовать DeepSeek API"""
-    try:
-        # Используем реально работающий публичный API
-        url = "https://api.deepseek.com/chat/completions"
-        
-        headers = {
-            "Content-Type": "application/json",
-        }
-        
-        data = {
-            "model": "deepseek-chat",
-            "messages": [
-                {
-                    "role": "system", 
-                    "content": "Ты полезный ассистент ZORNET AI. Отвечай на русском языке подробно и по делу."
-                },
-                {"role": "user", "content": prompt}
-            ],
-            "max_tokens": 1000,
-            "temperature": 0.7,
-            "stream": False
-        }
-        
-        response = requests.post(url, headers=headers, json=data, timeout=30)
-        
-        if response.status_code == 200:
-            result = response.json()
-            if "choices" in result and len(result["choices"]) > 0:
-                return result["choices"][0]["message"]["content"].strip()
-    except Exception as e:
-        print(f"DeepSeek API error: {e}")
-    
-    return None
-
-def try_gpt_api(prompt: str) -> str:
-    """Пытаемся использовать GPT через публичные прокси"""
-    try:
-        # Публичные прокси API для GPT
-        proxies = [
-            {
-                "url": "https://chatgpt-api.shn.hk/v1/",
-                "model": "gpt-3.5-turbo"
-            },
-            {
-                "url": "https://api.pawan.krd/v1/chat/completions",
-                "model": "pai-001"
-            }
-        ]
-        
-        for proxy in proxies:
-            try:
-                headers = {
-                    "Content-Type": "application/json"
-                }
-                
-                data = {
-                    "model": proxy["model"],
-                    "messages": [
-                        {
-                            "role": "system",
-                            "content": "Ты ассистент ZORNET AI. Отвечай на русском языке."
-                        },
-                        {"role": "user", "content": prompt}
-                    ],
-                    "max_tokens": 800,
-                    "temperature": 0.7
-                }
-                
-                response = requests.post(
-                    proxy["url"], 
-                    headers=headers, 
-                    json=data, 
-                    timeout=15
-                )
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    if "choices" in result and len(result["choices"]) > 0:
-                        answer = result["choices"][0]["message"]["content"].strip()
-                        if answer and len(answer) > 5:
-                            return answer
-            except:
-                continue
-    except Exception as e:
-        print(f"GPT API error: {e}")
-    
-    return None
-
-def try_g4f_api(prompt: str) -> str:
-    """Используем g4f как запасной вариант"""
-    try:
-        from g4f.client import Client
-        
         client = Client()
         
+        # Мы явно указываем провайдеров, которые не просят ключи
         response = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "Ты ZORNET AI - полезный помощник. Отвечай на русском языке."
-                },
-                {"role": "user", "content": prompt}
-            ],
-            provider=g4f.Provider.Bing  # Bing обычно работает стабильно
+            model="gpt-4o", 
+            provider=g4f.Provider.Blackbox, # Один из самых стабильных на сегодня
+            messages=[{"role": "user", "content": prompt}],
         )
         
-        if response and response.choices:
-            answer = response.choices[0].message.content
-            if answer and len(answer) > 5:
-                return answer
+        answer = response.choices[0].message.content
+        if answer:
+            return answer
+        else:
+            return "⚠️ Провайдер вернул пустой ответ. Попробуйте еще раз."
+
     except Exception as e:
-        print(f"G4F error: {e}")
+        # Резервный план: если Blackbox упал, пробуем автоматический выбор из других
+        try:
+            # Здесь мы исключаем Puter и другие проблемные API
+            response = client.chat.completions.create(
+                model="gpt-4",
+                provider=g4f.Provider.ChatGptEs, 
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return response.choices[0].message.content
+        except Exception as second_error:
+            return f"⚠️ Режим ожидания: Сервер перегружен. Попробуйте через минуту. (Тех. инфо: {str(second_error)})"
     
-    return None
-
-def generate_context_response(prompt: str) -> str:
-    """Генерируем умный ответ на основе контекста вопроса"""
-    
-    # Определяем тип вопроса
-    prompt_lower = prompt.lower()
-    
-    # Вопросы о погоде
-    weather_keywords = ["погод", "температур", "дожд", "снег", "солнц", "облак", "ветер", "мороз", "жара"]
-    if any(keyword in prompt_lower for keyword in weather_keywords):
-        return "🌤️ Я могу помочь с информацией о погоде! Перейдите на вкладку 'Погода' в левом меню, чтобы узнать актуальную погоду в любом городе. Там вы найдете температуру, прогноз на 5 дней, влажность и другие детали."
-    
-    # Вопросы о новостях
-    news_keywords = ["новост", "событи", "происшеств", "политик", "экономик", "спорт"]
-    if any(keyword in prompt_lower for keyword in news_keywords):
-        return "📰 Для просмотра последних новостей перейдите на вкладку 'Новости' в левом меню. Там отображаются свежие новости из различных источников."
-    
-    # Вопросы о файлах или диске
-    disk_keywords = ["файл", "папк", "диск", "хранилищ", "сохран", "загруз", "удал", "копир"]
-    if any(keyword in prompt_lower for keyword in disk_keywords):
-        return "💾 Работа с файлами доступна во вкладке 'Диск'. Вы можете загружать файлы, создавать папки, искать файлы и управлять вашим облачным хранилищем."
-    
-    # Вопросы о профиле
-    profile_keywords = ["профил", "аккаунт", "настройк", "пользовател", "данн", "аватар"]
-    if any(keyword in prompt_lower for keyword in profile_keywords):
-        return "👤 Ваши настройки профиля и статистика находятся во вкладке 'Профиль'. Там вы можете изменить данные, настройки и просмотреть статистику использования."
-    
-    # Вопросы о самом ZORNET
-    zornet_keywords = ["зорнет", "zornet", "сайт", "порта", "сервис", "возможност"]
-    if any(keyword in prompt_lower for keyword in zornet_keywords):
-        return "🚀 ZORNET - это современный портал с искусственным интеллектом, погодой, новостями и облачным хранилищем. Основные функции:\n\n" \
-               "• 🤖 ZORNET AI - интеллектуальный помощник\n" \
-               "• 🌤️ Погода - актуальная погода и прогноз\n" \
-               "• 📰 Новости - последние новости\n" \
-               "• 💾 Диск - облачное хранилище файлов\n" \
-               "• 👤 Профиль - настройки и статистика\n\n" \
-               "Выберите нужный раздел в левом меню для доступа к функциям."
-    
-    # Общие вопросы
-    question_words = ["что", "как", "почему", "где", "когда", "кто", "зачем"]
-    first_word = prompt_lower.split()[0] if prompt_lower.split() else ""
-    
-    if first_word in question_words:
-        return f"🤔 Вы спрашиваете: '{prompt}'\n\nК сожалению, в данный момент серверы ИИ перегружены. Пожалуйста, попробуйте задать вопрос позже или воспользуйтесь другими функциями ZORNET:\n\n" \
-               "• Проверьте погоду в разделе 'Погода'\n" \
-               "• Почитайте новости в разделе 'Новости'\n" \
-               "• Работайте с файлами в 'Диске'\n\n" \
-               "Я работаю над улучшением доступа к ИИ!"
-    
-    # Для всех остальных запросов
-    return f"🔍 Я получил ваш запрос: '{prompt}'\n\nК сожалению, сейчас не могу дать подробный ответ через ИИ-модуль. Пока что вы можете:\n\n" \
-           "1. Переформулировать вопрос\n" \
-           "2. Использовать другие функции ZORNET\n" \
-           "3. Попробовать снова через несколько минут\n\n" \
-           "Техническая команда уже работает над решением проблемы с ИИ. Спасибо за понимание! 🙏"
-
 # ================= БАЗА ДАННЫХ =================
 def init_db():
     conn = sqlite3.connect("zornet.db")
@@ -689,7 +516,7 @@ elif st.session_state.page == "Новости":
             </div>
             """, unsafe_allow_html=True)
 
-# ================= СТРАНИЦА ПОГОДЫ =================
+# ================= СТРАНИЦА ПОГОДЫ (ПРОСТО И РАБОЧЕ) =================
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
     
