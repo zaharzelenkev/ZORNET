@@ -538,30 +538,6 @@ if st.session_state.page == "Главная":
             else:
                 st.info("По вашему запросу ничего не найдено.")
 
-# ================= СТРАНИЦА AI =================
-elif st.session_state.page == "ZORNET AI":
-    st.markdown('<div class="gold-title">🤖 ZORNET AI</div>', unsafe_allow_html=True)
-    
-    if "ai_messages" not in st.session_state:
-        st.session_state.ai_messages = [
-            {"role": "assistant", "content": "Привет! Я ZORNET AI. Чем могу помочь?"}
-        ]
-    
-    for message in st.session_state.ai_messages:
-        if message["role"] == "user":
-            st.markdown(f'<div class="user-message">{message["content"]}</div>', unsafe_allow_html=True)
-        else:
-            st.markdown(f'<div class="ai-message">{message["content"]}</div>', unsafe_allow_html=True)
-    
-    if prompt := st.chat_input("Спросите ZORNET AI..."):
-        st.session_state.ai_messages.append({"role": "user", "content": prompt})
-        
-        with st.spinner("ZORNET думает..."):
-            response = ask_hf_ai(prompt)
-            st.session_state.ai_messages.append({"role": "assistant", "content": response})
-        
-        st.rerun()
-
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
     st.markdown('<div class="gold-title">📰 НОВОСТИ</div>', unsafe_allow_html=True)
