@@ -1188,16 +1188,6 @@ elif st.session_state.page == "Диск":
         if st.button("← Назад к файлам"):
             st.session_state.show_search = False
             st.rerun()
-    
-    # ОСНОВНОЙ КОНТЕНТ - ФАЙЛЫ И ПАПКИ
-    else:
-        # Дроп зона
-        st.markdown("""
-        <div class="drop-zone" onclick="document.querySelector('input[type=file]').click();">
-            <h3 style="margin: 0; color: #B8860B;">📤 Перетащите файлы сюда</h3>
-            <p style="margin: 5px 0 0 0; color: #666;">или нажмите для выбора файлов</p>
-        </div>
-        """, unsafe_allow_html=True)
         
         # Быстрая загрузка через дроп зону
         quick_upload = st.file_uploader(
