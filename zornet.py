@@ -1038,7 +1038,7 @@ elif st.session_state.page == "Диск":
     # ПАНЕЛЬ ИНСТРУМЕНТОВ
     st.markdown("### 🛠 Панель инструментов")
     
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         btn_upload_class = "disk-btn-active" if st.session_state.disk_action == "upload" else "disk-btn"
@@ -1060,15 +1060,6 @@ elif st.session_state.page == "Диск":
     
     with col4:
         if st.button("🔄 Обновить", key="btn_refresh", use_container_width=True):
-            st.rerun()
-    
-    with col5:
-        view_mode = st.selectbox("Вид:", ["Сетка", "Список"], key="view_mode")
-    
-    with col6:
-        if st.button("🏠 Главная", key="btn_home", use_container_width=True):
-            st.session_state.disk_current_path = "zornet_cloud"
-            st.session_state.disk_action = "view"
             st.rerun()
     
     # СТАТИСТИКА ХРАНИЛИЩА
@@ -1113,26 +1104,32 @@ elif st.session_state.page == "Диск":
             st.session_state.disk_action = "view"
             st.rerun()
         
-        if st.button("← Назад к файлам"):
-            st.session_state.disk_action = "view"
-            st.rerun()
+        col_back1, col_back2 = st.columns(2)
+        with col_back1:
+            if st.button("← Назад к файлам", use_container_width=True):
+                st.session_state.disk_action = "view"
+                st.rerun()
     
     elif st.session_state.disk_action == "new_folder":
         st.markdown("### 📁 Создание новой папки")
         
         folder_name = st.text_input("Введите название папки:")
         
-        if st.button("✅ Создать папку", type="primary"):
-            if folder_name:
-                new_folder_path = os.path.join(st.session_state.disk_current_path, folder_name)
-                os.makedirs(new_folder_path, exist_ok=True)
-                st.success(f"Папка '{folder_name}' создана!")
+        col_create, col_back = st.columns(2)
+        
+        with col_create:
+            if st.button("✅ Создать папку", type="primary", use_container_width=True):
+                if folder_name:
+                    new_folder_path = os.path.join(st.session_state.disk_current_path, folder_name)
+                    os.makedirs(new_folder_path, exist_ok=True)
+                    st.success(f"Папка '{folder_name}' создана!")
+                    st.session_state.disk_action = "view"
+                    st.rerun()
+        
+        with col_back:
+            if st.button("← Назад к файлам", use_container_width=True):
                 st.session_state.disk_action = "view"
                 st.rerun()
-        
-        if st.button("← Назад к файлам"):
-            st.session_state.disk_action = "view"
-            st.rerun()
     
     elif st.session_state.disk_action == "search":
         st.markdown("### 🔍 Поиск файлов")
@@ -1210,12 +1207,17 @@ elif st.session_state.page == "Диск":
                     breadcrumb.append((part, path_so_far))
             
             st.markdown("**Путь:** ", unsafe_allow_html=True)
+            crumb_cols = st.columns(len(breadcrumb) * 2 - 1)
+            
             for i, (name, path) in enumerate(breadcrumb):
-                if st.button(name, key=f"breadcrumb_{i}"):
-                    st.session_state.disk_current_path = path
-                    st.rerun()
+                with crumb_cols[i * 2]:
+                    if st.button(name, key=f"breadcrumb_{i}"):
+                        st.session_state.disk_current_path = path
+                        st.rerun()
+                
                 if i < len(breadcrumb) - 1:
-                    st.markdown(" / ", unsafe_allow_html=True)
+                    with crumb_cols[i * 2 + 1]:
+                        st.markdown("/", unsafe_allow_html=True)
         
         # Список файлов и папок
         try:
@@ -1229,105 +1231,67 @@ elif st.session_state.page == "Диск":
             # Сортируем: сначала папки, потом файлы
             items.sort(key=lambda x: (not os.path.isdir(os.path.join(st.session_state.disk_current_path, x)), x.lower()))
             
-            if view_mode == "Сетка":
-                # Режим сетки
-                cols = st.columns(3)
-                for idx, item in enumerate(items):
-                    with cols[idx % 3]:
-                        item_path = os.path.join(st.session_state.disk_current_path, item)
-                        is_dir = os.path.isdir(item_path)
-                        icon = "📁" if is_dir else get_file_icon(item)
-                        
-                        if is_dir:
-                            st.markdown(f"""
-                            <div class="folder-card">
-                                <div style="font-size: 2.5rem; text-align: center;">{icon}</div>
-                                <div style="text-align: center; font-weight: 600; margin-top: 10px;">{item}</div>
-                                <div style="text-align: center; color: #666; font-size: 0.9em;">Папка</div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            
-                            if st.button(f"Открыть", key=f"open_{item}", use_container_width=True):
-                                st.session_state.disk_current_path = item_path
-                                st.rerun()
-                        
-                        else:
-                            file_size = os.path.getsize(item_path)
-                            st.markdown(f"""
-                            <div class="file-card">
-                                <div style="font-size: 2.5rem; text-align: center;">{icon}</div>
-                                <div style="text-align: center; font-weight: 600; margin-top: 10px;">{item}</div>
-                                <div style="text-align: center; color: #666; font-size: 0.9em;">{format_file_size(file_size)}</div>
-                            </div>
-                            """, unsafe_allow_html=True)
-                            
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                with open(item_path, 'rb') as f:
-                                    st.download_button(
-                                        "📥 Скачать",
-                                        f.read(),
-                                        item,
-                                        key=f"dl_{item}",
-                                        use_container_width=True
-                                    )
-                            with col2:
-                                if st.button("👁️ Просмотр", key=f"view_{item}", use_container_width=True):
-                                    # Превью файла
-                                    if item.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
-                                        try:
-                                            image = Image.open(item_path)
-                                            st.image(image, caption=item, use_column_width=True)
-                                        except:
-                                            st.error("Не удалось открыть изображение")
-                                    elif item.lower().endswith('.txt'):
-                                        try:
-                                            with open(item_path, 'r', encoding='utf-8') as f:
-                                                content = f.read()
-                                            st.text_area("Содержимое файла", content, height=200)
-                                        except:
-                                            st.error("Не удалось открыть файл")
-                                    elif item.lower().endswith('.pdf'):
-                                        st.info(f"PDF файл: {item}")
-                                        with open(item_path, 'rb') as f:
-                                            st.download_button("Скачать PDF", f.read(), item)
-            
-            else:
-                # Режим списка
-                for item in items:
+            # Показываем файлы в сетке
+            cols = st.columns(3)
+            for idx, item in enumerate(items):
+                with cols[idx % 3]:
                     item_path = os.path.join(st.session_state.disk_current_path, item)
                     is_dir = os.path.isdir(item_path)
                     icon = "📁" if is_dir else get_file_icon(item)
                     
-                    col1, col2, col3, col4, col5 = st.columns([1, 3, 2, 2, 2])
+                    if is_dir:
+                        st.markdown(f"""
+                        <div class="folder-card">
+                            <div style="font-size: 2.5rem; text-align: center;">{icon}</div>
+                            <div style="text-align: center; font-weight: 600; margin-top: 10px;">{item}</div>
+                            <div style="text-align: center; color: #666; font-size: 0.9em;">Папка</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        if st.button(f"Открыть", key=f"open_{item}", use_container_width=True):
+                            st.session_state.disk_current_path = item_path
+                            st.rerun()
                     
-                    with col1:
-                        st.markdown(f"<div style='font-size: 1.5rem;'>{icon}</div>", unsafe_allow_html=True)
-                    
-                    with col2:
-                        st.markdown(f"**{item}**")
-                    
-                    with col3:
-                        if is_dir:
-                            st.text("Папка")
-                        else:
-                            st.text(format_file_size(os.path.getsize(item_path)))
-                    
-                    with col4:
-                        if is_dir:
-                            if st.button("📂 Открыть", key=f"list_open_{item}"):
-                                st.session_state.disk_current_path = item_path
-                                st.rerun()
-                        else:
+                    else:
+                        file_size = os.path.getsize(item_path)
+                        st.markdown(f"""
+                        <div class="file-card">
+                            <div style="font-size: 2.5rem; text-align: center;">{icon}</div>
+                            <div style="text-align: center; font-weight: 600; margin-top: 10px;">{item}</div>
+                            <div style="text-align: center; color: #666; font-size: 0.9em;">{format_file_size(file_size)}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        col1, col2 = st.columns(2)
+                        with col1:
                             with open(item_path, 'rb') as f:
-                                st.download_button("📥 Скачать", f.read(), item, key=f"list_dl_{item}")
-                    
-                    with col5:
-                        if not is_dir:
-                            if st.button("🗑️ Удалить", key=f"list_del_{item}"):
-                                os.remove(item_path)
-                                st.success(f"Файл '{item}' удален")
-                                st.rerun()
+                                st.download_button(
+                                    "📥 Скачать",
+                                    f.read(),
+                                    item,
+                                    key=f"dl_{item}",
+                                    use_container_width=True
+                                )
+                        with col2:
+                            if st.button("👁️ Просмотр", key=f"view_{item}", use_container_width=True):
+                                # Превью файла
+                                if item.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
+                                    try:
+                                        image = Image.open(item_path)
+                                        st.image(image, caption=item, use_column_width=True)
+                                    except:
+                                        st.error("Не удалось открыть изображение")
+                                elif item.lower().endswith('.txt'):
+                                    try:
+                                        with open(item_path, 'r', encoding='utf-8') as f:
+                                            content = f.read()
+                                        st.text_area("Содержимое файла", content, height=200)
+                                    except:
+                                        st.error("Не удалось открыть файл")
+                                elif item.lower().endswith('.pdf'):
+                                    st.info(f"PDF файл: {item}")
+                                    with open(item_path, 'rb') as f:
+                                        st.download_button("Скачать PDF", f.read(), item)
 
 # ================= СТРАНИЦА ПРОФИЛЯ =================
 elif st.session_state.page == "Профиль":
