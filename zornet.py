@@ -890,20 +890,14 @@ elif st.session_state.page == "Транспорт":
 
 # ================= ПРОФЕССИОНАЛЬНЫЙ ОБЛАЧНЫЙ ДИСК ZORNET DISK =================
 elif st.session_state.page == "Диск":
-    st.markdown('<div class="gold-title">💾 ZORNET DISK</div>', unsafe_allow_html=True)
+    st.markdown('<div class="gold-title">💾 ДИСК</div>', unsafe_allow_html=True)
     
     # Инициализация сессионных переменных
     if "disk_current_path" not in st.session_state:
         st.session_state.disk_current_path = "zornet_cloud"
     
-    if "show_upload" not in st.session_state:
-        st.session_state.show_upload = False
-    
-    if "show_new_folder" not in st.session_state:
-        st.session_state.show_new_folder = False
-    
-    if "show_search" not in st.session_state:
-        st.session_state.show_search = False
+    if "disk_action" not in st.session_state:
+        st.session_state.disk_action = "view"  # view, upload, new_folder, search
     
     # Создаем корневую папку если не существует
     import os
@@ -944,6 +938,12 @@ elif st.session_state.page == "Диск":
             border-color: transparent !important;
         }
         
+        .disk-btn-active {
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+            color: white !important;
+            border-color: transparent !important;
+        }
+        
         .file-card {
             background: #f8f9fa;
             border-radius: 10px;
@@ -964,20 +964,6 @@ elif st.session_state.page == "Диск":
             padding: 15px;
             margin: 10px 0;
             border: 2px solid #ffd966;
-        }
-        
-        .drop-zone {
-            border: 3px dashed #DAA520;
-            border-radius: 12px;
-            padding: 40px;
-            text-align: center;
-            background: #fff9e6;
-            margin: 20px 0;
-            cursor: pointer;
-        }
-        
-        .drop-zone:hover {
-            background: #fff3cc;
         }
         
         .storage-bar {
@@ -1052,21 +1038,24 @@ elif st.session_state.page == "Диск":
     # ПАНЕЛЬ ИНСТРУМЕНТОВ
     st.markdown("### 🛠 Панель инструментов")
     
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
     
     with col1:
+        btn_upload_class = "disk-btn-active" if st.session_state.disk_action == "upload" else "disk-btn"
         if st.button("📤 Загрузить", key="btn_upload", use_container_width=True):
-            st.session_state.show_upload = True
+            st.session_state.disk_action = "upload"
             st.rerun()
     
     with col2:
+        btn_folder_class = "disk-btn-active" if st.session_state.disk_action == "new_folder" else "disk-btn"
         if st.button("📁 Новая папка", key="btn_new_folder", use_container_width=True):
-            st.session_state.show_new_folder = True
+            st.session_state.disk_action = "new_folder"
             st.rerun()
     
     with col3:
+        btn_search_class = "disk-btn-active" if st.session_state.disk_action == "search" else "disk-btn"
         if st.button("🔍 Поиск", key="btn_search", use_container_width=True):
-            st.session_state.show_search = True
+            st.session_state.disk_action = "search"
             st.rerun()
     
     with col4:
@@ -1076,13 +1065,19 @@ elif st.session_state.page == "Диск":
     with col5:
         view_mode = st.selectbox("Вид:", ["Сетка", "Список"], key="view_mode")
     
+    with col6:
+        if st.button("🏠 Главная", key="btn_home", use_container_width=True):
+            st.session_state.disk_current_path = "zornet_cloud"
+            st.session_state.disk_action = "view"
+            st.rerun()
+    
     # СТАТИСТИКА ХРАНИЛИЩА
     stats = get_disk_stats()
     used_gb = stats['total_size'] / (1024 * 1024 * 1024)
     used_percent = min(100, (used_gb / 1.0) * 100)  # Предполагаем 1GB лимит
     
     st.markdown(f"""
-    <div style="background: white; padding: 15px; border-radius: 10px; margin: 15px 0;">
+    <div style="background: white; padding: 15px; border-radius: 10px; margin: 15px 0; border: 1px solid #e0e0e0;">
         <h4 style="margin: 0 0 10px 0;">📊 Использование хранилища</h4>
         <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
             <span>Использовано: {format_file_size(stats['total_size'])}</span>
@@ -1099,8 +1094,8 @@ elif st.session_state.page == "Диск":
     </div>
     """, unsafe_allow_html=True)
     
-    # ЗОНА ЗАГРУЗКИ
-    if st.session_state.show_upload:
+    # РЕЖИМЫ РАБОТЫ
+    if st.session_state.disk_action == "upload":
         st.markdown("### 📤 Загрузка файлов")
         
         uploaded_files = st.file_uploader(
@@ -1115,36 +1110,31 @@ elif st.session_state.page == "Диск":
                 with open(file_path, "wb") as f:
                     f.write(uploaded_file.getbuffer())
             st.success(f"✅ Загружено {len(uploaded_files)} файлов!")
-            st.session_state.show_upload = False
+            st.session_state.disk_action = "view"
             st.rerun()
         
-        if st.button("❌ Отменить загрузку"):
-            st.session_state.show_upload = False
+        if st.button("← Назад к файлам"):
+            st.session_state.disk_action = "view"
             st.rerun()
     
-    # СОЗДАНИЕ НОВОЙ ПАПКИ
-    elif st.session_state.show_new_folder:
+    elif st.session_state.disk_action == "new_folder":
         st.markdown("### 📁 Создание новой папки")
         
         folder_name = st.text_input("Введите название папки:")
         
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("✅ Создать", type="primary", use_container_width=True):
-                if folder_name:
-                    new_folder_path = os.path.join(st.session_state.disk_current_path, folder_name)
-                    os.makedirs(new_folder_path, exist_ok=True)
-                    st.success(f"Папка '{folder_name}' создана!")
-                    st.session_state.show_new_folder = False
-                    st.rerun()
-        
-        with col2:
-            if st.button("❌ Отменить", use_container_width=True):
-                st.session_state.show_new_folder = False
+        if st.button("✅ Создать папку", type="primary"):
+            if folder_name:
+                new_folder_path = os.path.join(st.session_state.disk_current_path, folder_name)
+                os.makedirs(new_folder_path, exist_ok=True)
+                st.success(f"Папка '{folder_name}' создана!")
+                st.session_state.disk_action = "view"
                 st.rerun()
+        
+        if st.button("← Назад к файлам"):
+            st.session_state.disk_action = "view"
+            st.rerun()
     
-    # ПОИСК
-    elif st.session_state.show_search:
+    elif st.session_state.disk_action == "search":
         st.markdown("### 🔍 Поиск файлов")
         
         search_query = st.text_input("Введите название файла или папки:")
@@ -1186,15 +1176,18 @@ elif st.session_state.page == "Диск":
                 st.info("Ничего не найдено")
         
         if st.button("← Назад к файлам"):
-            st.session_state.show_search = False
+            st.session_state.disk_action = "view"
             st.rerun()
+    
+    else:
+        # ОСНОВНОЙ РЕЖИМ ПРОСМОТРА ФАЙЛОВ
+        st.markdown("### 📁 Файлы и папки")
         
-        # Быстрая загрузка через дроп зону
+        # Быстрая загрузка (всегда доступна)
         quick_upload = st.file_uploader(
-            "",
+            "Загрузить файлы (можно перетащить)",
             accept_multiple_files=True,
-            key="quick_upload",
-            label_visibility="collapsed"
+            key="quick_upload"
         )
         
         if quick_upload:
@@ -1205,9 +1198,26 @@ elif st.session_state.page == "Диск":
             st.success(f"✅ Загружено {len(quick_upload)} файлов!")
             st.rerun()
         
-        # Список файлов и папок
-        st.markdown("### 📁 Содержимое")
+        # Навигация по папкам
+        if st.session_state.disk_current_path != "zornet_cloud":
+            current_parts = st.session_state.disk_current_path.split(os.sep)
+            breadcrumb = []
+            path_so_far = ""
+            
+            for part in current_parts:
+                if part:
+                    path_so_far = os.path.join(path_so_far, part) if path_so_far else part
+                    breadcrumb.append((part, path_so_far))
+            
+            st.markdown("**Путь:** ", unsafe_allow_html=True)
+            for i, (name, path) in enumerate(breadcrumb):
+                if st.button(name, key=f"breadcrumb_{i}"):
+                    st.session_state.disk_current_path = path
+                    st.rerun()
+                if i < len(breadcrumb) - 1:
+                    st.markdown(" / ", unsafe_allow_html=True)
         
+        # Список файлов и папок
         try:
             items = os.listdir(st.session_state.disk_current_path)
         except:
@@ -1255,14 +1265,14 @@ elif st.session_state.page == "Диск":
                             with col1:
                                 with open(item_path, 'rb') as f:
                                     st.download_button(
-                                        "📥",
+                                        "📥 Скачать",
                                         f.read(),
                                         item,
                                         key=f"dl_{item}",
                                         use_container_width=True
                                     )
                             with col2:
-                                if st.button("👁️", key=f"view_{item}", use_container_width=True):
+                                if st.button("👁️ Просмотр", key=f"view_{item}", use_container_width=True):
                                     # Превью файла
                                     if item.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
                                         try:
@@ -1277,6 +1287,10 @@ elif st.session_state.page == "Диск":
                                             st.text_area("Содержимое файла", content, height=200)
                                         except:
                                             st.error("Не удалось открыть файл")
+                                    elif item.lower().endswith('.pdf'):
+                                        st.info(f"PDF файл: {item}")
+                                        with open(item_path, 'rb') as f:
+                                            st.download_button("Скачать PDF", f.read(), item)
             
             else:
                 # Режим списка
@@ -1314,12 +1328,6 @@ elif st.session_state.page == "Диск":
                                 os.remove(item_path)
                                 st.success(f"Файл '{item}' удален")
                                 st.rerun()
-        
-        # Кнопка назад если не в корневой папке
-        if st.session_state.disk_current_path != "zornet_cloud":
-            if st.button("← Назад к корневой папке"):
-                st.session_state.disk_current_path = "zornet_cloud"
-                st.rerun()
 
 # ================= СТРАНИЦА ПРОФИЛЯ =================
 elif st.session_state.page == "Профиль":
