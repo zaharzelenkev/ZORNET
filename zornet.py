@@ -1,4 +1,4 @@
-import streamlit as st
+я хочу в свой сайт ии добавить, у меня не получается, надо бесплатный полностью и умный и быстрый вот код: import streamlit as st
 import sqlite3
 import datetime
 import os
