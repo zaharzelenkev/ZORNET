@@ -588,123 +588,449 @@ elif st.session_state.page == "Новости":
             </div>
             """, unsafe_allow_html=True)
 
-# ================= СТРАНИЦА ПОГОДЫ (простая версия) =================
+# ================= СТРАНИЦА ПОГОДЫ (ГИБРИДНЫЙ ВАРИАНТ) =================
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
     
     # Вкладки
-    tab1, tab2 = st.tabs(["📍 По местоположению", "🏙️ По городу"])
+    tab1, tab2 = st.tabs(["📍 Автоматически", "🏙️ По городу"])
     
     with tab1:
-        st.subheader("Погода по вашему местоположению")
+        st.subheader("Погода в вашем местоположении")
         
-        # ПРОСТОЙ JavaScript - открывает новую вкладку с координатами
-        geo_simple = """
-        <script>
-        function getSimpleLocation() {
-            if (!navigator.geolocation) {
-                alert("Браузер не поддерживает геолокацию");
-                return;
-            }
-            
-            navigator.geolocation.getCurrentPosition(
-                function(pos) {
-                    const lat = pos.coords.latitude;
-                    const lon = pos.coords.longitude;
+        # СЕКЦИЯ 1: Автоматическое определение по IP (Python)
+        st.markdown("### 🌐 Автоматическое определение")
+        
+        if st.button("🔍 Определить мой город автоматически", type="primary", key="auto_detect"):
+            with st.spinner("Определяю ваш город..."):
+                try:
+                    # Пробуем несколько сервисов
+                    services = [
+                        ("https://ipapi.co/json/", lambda d: (d.get("city"), d.get("country_name"))),
+                        ("http://ip-api.com/json/", lambda d: (d.get("city"), d.get("country"))),
+                        ("https://api.ip.sb/geoip", lambda d: (d.get("city"), d.get("country"))),
+                    ]
                     
-                    // ПРОСТО показываем координаты и кнопку
-                    document.getElementById('coords').innerHTML = 
-                        '<div style="color: green; padding: 10px; font-size: 16px;">' +
-                        '<b>✓ Координаты получены!</b><br>' +
-                        'Широта: ' + lat.toFixed(4) + '<br>' +
-                        'Долгота: ' + lon.toFixed(4) + '<br><br>' +
-                        '<button onclick="useCoords(' + lat + ',' + lon + ')" style="' +
-                        'padding: 10px 20px; background: #28a745; color: white; ' +
-                        'border: none; border-radius: 5px; cursor: pointer;">' +
-                        '🌤️ ПОКАЗАТЬ ПОГОДУ ЗДЕСЬ</button>' +
-                        '</div>';
-                },
-                function(err) {
-                    alert("Ошибка: " + err.message);
-                }
-            );
-        }
+                    user_city = None
+                    user_country = None
+                    
+                    for url, parser in services:
+                        try:
+                            response = requests.get(url, timeout=3, headers={"User-Agent": "Mozilla/5.0"})
+                            if response.status_code == 200:
+                                data = response.json()
+                                city, country = parser(data)
+                                if city and city != "None":
+                                    user_city = city
+                                    user_country = country
+                                    break
+                        except:
+                            continue
+                    
+                    if user_city:
+                        st.success(f"📍 Ваш город: {user_city}, {user_country}")
+                        
+                        # Получаем погоду
+                        weather_data = get_weather_by_city(user_city)
+                        if weather_data:
+                            st.session_state.weather_data = weather_data
+                            st.session_state.user_city = user_city
+                            st.rerun()
+                        else:
+                            st.error(f"Не удалось получить погоду для {user_city}")
+                    else:
+                        st.warning("Не удалось определить город. Попробуйте ввести вручную.")
+                        
+                except Exception as e:
+                    st.error("Ошибка при определении города")
         
-        function useCoords(lat, lon) {
-            // Сохраняем координаты в localStorage
-            localStorage.setItem('weather_lat', lat);
-            localStorage.setItem('weather_lon', lon);
-            // Перезагружаем страницу
-            location.reload();
-        }
+        # СЕКЦИЯ 2: Геолокация через JavaScript (для тех, у кого работает)
+        st.markdown("---")
+        st.markdown("### 📍 Точное местоположение (требует разрешения)")
         
-        // При загрузке проверяем есть ли сохраненные координаты
-        window.onload = function() {
-            const savedLat = localStorage.getItem('weather_lat');
-            const savedLon = localStorage.getItem('weather_lon');
-            if (savedLat && savedLon) {
-                document.getElementById('coords').innerHTML = 
-                    '<div style="color: blue; padding: 10px;">' +
-                    'Сохраненные координаты: ' + savedLat + ', ' + savedLon +
-                    '</div>';
-            }
-        }
-        </script>
+        # Создаем уникальный ID для JavaScript
+        import uuid
+        geo_id = str(uuid.uuid4())[:8]
         
-        <div style="text-align: center;">
-            <button onclick="getSimpleLocation()" style="
-                padding: 15px 30px;
+        # JavaScript для геолокации
+        geo_js = f"""
+        <div id="geo-container-{geo_id}" style="text-align: center; padding: 20px;">
+            <button onclick="getGeo{geo_id}()" style="
+                padding: 12px 24px;
                 background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
                 color: white;
                 border: none;
-                border-radius: 10px;
-                font-size: 18px;
+                border-radius: 8px;
+                font-size: 16px;
                 font-weight: bold;
                 cursor: pointer;
-                margin: 20px 0;
+                margin: 10px 0;
             ">
-                📍 РАЗРЕШИТЬ ДОСТУП
+                📍 РАЗРЕШИТЬ ДОСТУП К ГЕОЛОКАЦИИ
             </button>
             
-            <div id="coords" style="min-height: 100px; margin: 20px 0;"></div>
+            <div id="status-{geo_id}" style="
+                min-height: 40px;
+                margin: 15px 0;
+                padding: 10px;
+                border-radius: 5px;
+                background: #f8f9fa;
+            ">
+                Нажмите кнопку для запроса доступа
+            </div>
         </div>
+        
+        <script>
+        function getGeo{geo_id}() {{
+            const statusDiv = document.getElementById('status-{geo_id}');
+            statusDiv.innerHTML = '<span style="color: #059be5;">⏳ Запрашиваю разрешение...</span>';
+            statusDiv.style.background = '#e3f2fd';
+            
+            if (!navigator.geolocation) {{
+                statusDiv.innerHTML = '<span style="color: red;">❌ Браузер не поддерживает геолокацию</span>';
+                statusDiv.style.background = '#ffebee';
+                return;
+            }}
+            
+            navigator.geolocation.getCurrentPosition(
+                // Успех
+                function(position) {{
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    
+                    statusDiv.innerHTML = '<span style="color: green;">✓ Местоположение получено! Широта: ' + 
+                                          lat.toFixed(4) + ', Долгота: ' + lon.toFixed(4) + '</span>';
+                    statusDiv.style.background = '#e8f5e9';
+                    
+                    // Отправляем координаты через форму
+                    const form = document.createElement('form');
+                    form.method = 'post';
+                    form.style.display = 'none';
+                    
+                    const latInput = document.createElement('input');
+                    latInput.type = 'hidden';
+                    latInput.name = 'lat';
+                    latInput.value = lat;
+                    
+                    const lonInput = document.createElement('input');
+                    lonInput.type = 'hidden';
+                    lonInput.name = 'lon'; 
+                    lonInput.value = lon;
+                    
+                    form.appendChild(latInput);
+                    form.appendChild(lonInput);
+                    document.body.appendChild(form);
+                    
+                    // Показываем кнопку для использования координат
+                    setTimeout(function() {{
+                        statusDiv.innerHTML += '<br><br><button onclick="useCoords{geo_id}(' + lat + ',' + lon + ')" style="' +
+                            'padding: 8px 16px; background: #4caf50; color: white; ' +
+                            'border: none; border-radius: 4px; cursor: pointer;">' +
+                            '🌤️ ПОКАЗАТЬ ПОГОДУ ЗДЕСЬ</button>';
+                    }}, 500);
+                    
+                }},
+                // Ошибка  
+                function(error) {{
+                    let errorMsg = "";
+                    if (error.code === 1) {{
+                        errorMsg = "❌ Вы отказали в доступе к местоположению";
+                    }} else if (error.code === 2) {{
+                        errorMsg = "❌ Информация о местоположении недоступна";
+                    }} else if (error.code === 3) {{
+                        errorMsg = "❌ Время запроса истекло";
+                    }} else {{
+                        errorMsg = "❌ Неизвестная ошибка";
+                    }}
+                    
+                    statusDiv.innerHTML = '<span style="color: red;">' + errorMsg + '</span>';
+                    statusDiv.style.background = '#ffebee';
+                    
+                    // Предлагаем альтернативу
+                    setTimeout(function() {{
+                        statusDiv.innerHTML += '<br><br><button onclick="manualInput{geo_id}()" style="' +
+                            'padding: 8px 16px; background: #ff9800; color: white; ' +
+                            'border: none; border-radius: 4px; cursor: pointer;">' +
+                            '✏️ ВВЕСТИ КООРДИНАТЫ ВРУЧНУЮ</button>';
+                    }}, 500);
+                }},
+                // Опции
+                {{
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }}
+            );
+        }}
+        
+        function useCoords{geo_id}(lat, lon) {{
+            // Отправляем AJAX запрос
+            fetch(window.location.href, {{
+                method: 'POST',
+                headers: {{
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                }},
+                body: 'lat=' + lat + '&lon=' + lon
+            }}).then(response => {{
+                if (response.ok) {{
+                    document.getElementById('status-{geo_id}').innerHTML = 
+                        '<span style="color: green;">✓ Загружаю погоду... страница обновится</span>';
+                    setTimeout(() => location.reload(), 1000);
+                }}
+            }});
+        }}
+        
+        function manualInput{geo_id}() {{
+            document.getElementById('status-{geo_id}').innerHTML = 
+                '<div style="background: #fff3e0; padding: 10px; border-radius: 5px;">' +
+                '<p>Введите координаты вручную:</p>' +
+                '<input type="number" id="manual-lat-{geo_id}" placeholder="Широта" step="0.0001" style="margin: 5px; padding: 5px; width: 100px;">' +
+                '<input type="number" id="manual-lon-{geo_id}" placeholder="Долгота" step="0.0001" style="margin: 5px; padding: 5px; width: 100px;">' +
+                '<br><button onclick="submitManual{geo_id}()" style="margin-top: 10px; padding: 8px 16px; background: #2196f3; color: white; border: none; border-radius: 4px; cursor: pointer;">' +
+                'Отправить</button></div>';
+        }}
+        
+        function submitManual{geo_id}() {{
+            const lat = document.getElementById('manual-lat-{geo_id}').value;
+            const lon = document.getElementById('manual-lon-{geo_id}').value;
+            if (lat && lon) {{
+                useCoords{geo_id}(lat, lon);
+            }}
+        }}
+        </script>
         """
         
-        st.components.v1.html(geo_simple, height=250)
+        # Отображаем JavaScript компонент
+        st.components.v1.html(geo_js, height=300)
         
-        # Проверяем localStorage при загрузке страницы
-        if 'geo_coords' not in st.session_state:
-            # Можно попробовать получить координаты из сессии
-            pass
+        # Обработка POST запросов от JavaScript
+        if st._runtime.is_websocket_connected():
+            try:
+                # В Streamlit Cloud нужно использовать другой способ получения POST данных
+                # Используем query parameters как альтернативу
+                query_params = st.query_params
+                
+                if 'lat' in query_params and 'lon' in query_params:
+                    lat = float(query_params['lat'][0])
+                    lon = float(query_params['lon'][0])
+                    
+                    # Получаем погоду
+                    with st.spinner("Получаю погоду для вашего местоположения..."):
+                        weather_data = get_weather_by_coords(lat, lon)
+                        
+                        if weather_data:
+                            st.session_state.weather_data = weather_data
+                            st.session_state.user_city = weather_data["current"]["city"]
+                            # Очищаем параметры
+                            st.query_params.clear()
+                            st.rerun()
+            except:
+                pass
         
-        # Кнопка для получения погоды если есть координаты в localStorage
-        if st.button("🌤️ Получить погоду по моему местоположению", type="primary"):
-            # Здесь будет загружена погода по координатам из localStorage
-            # Пока используем фиксированные координаты для демо
-            st.info("Использую демо-координаты (Минск)")
-            weather_data = get_weather_by_coords(53.9, 27.5667)
-            if weather_data:
-                st.session_state.weather_data = weather_data
-                st.session_state.user_city = "Минск"
-                st.rerun()
+        # Информация для пользователя
+        st.info("""
+        **ℹ️ Как это работает:**
+        
+        **Вариант 1 (рекомендуется):** Нажмите "Определить мой город автоматически" - определит по IP
+        **Вариант 2 (если смартфон):** Нажмите "РАЗРЕШИТЬ ДОСТУП" - запросит GPS доступ
+        **Вариант 3 (если не работает):** Введите город вручную на вкладке "По городу"
+        """)
+        
+        # Быстрые координаты
+        with st.expander("📍 Быстрые координаты (для теста)"):
+            cols = st.columns(3)
+            test_locations = [
+                ("Минск", 53.9, 27.5667),
+                ("Москва", 55.7558, 37.6173),
+                ("Варшава", 52.2297, 21.0122),
+            ]
+            
+            for idx, (city, lat, lon) in enumerate(test_locations):
+                with cols[idx]:
+                    if st.button(f"{city}", key=f"test_{city}"):
+                        weather_data = get_weather_by_coords(lat, lon)
+                        if weather_data:
+                            st.session_state.weather_data = weather_data
+                            st.session_state.user_city = city
+                            st.rerun()
     
     with tab2:
-        # Твой код для поиска по городу
-        pass
+        st.subheader("Поиск погоды по городу")
+        
+        # Поиск города
+        col_search, col_btn = st.columns([3, 1])
+        with col_search:
+            city_input = st.text_input(
+                "Введите название города",
+                placeholder="Минск, Москва, Лондон...",
+                key="city_search_field",
+                label_visibility="collapsed"
+            )
+        
+        with col_btn:
+            search_clicked = st.button("🔍 Найти", type="primary", use_container_width=True)
+        
+        if search_clicked and city_input:
+            with st.spinner(f"Ищу погоду для {city_input}..."):
+                weather_data = get_weather_by_city(city_input)
+                
+                if weather_data:
+                    st.session_state.weather_data = weather_data
+                    st.session_state.user_city = city_input
+                    st.rerun()
+                else:
+                    st.error(f"Город '{city_input}' не найден")
+        
+        # Популярные города
+        st.markdown("### 🌍 Популярные города")
+        
+        categories = {
+            "🇧🇾 Беларусь": ["Минск", "Гомель", "Витебск", "Могилёв", "Брест", "Гродно"],
+            "🇷🇺 Россия": ["Москва", "Санкт-Петербург", "Новосибирск", "Екатеринбург", "Казань"],
+            "🇪🇺 Европа": ["Лондон", "Берлин", "Париж", "Рим", "Мадрид", "Варшава"],
+            "🇺🇸 США": ["Нью-Йорк", "Лос-Анджелес", "Чикаго", "Майами", "Лас-Вегас"]
+        }
+        
+        for category, cities in categories.items():
+            st.markdown(f"**{category}**")
+            cols = st.columns(len(cities))
+            for idx, city in enumerate(cities):
+                with cols[idx]:
+                    if st.button(city, key=f"cat_{city}", use_container_width=True):
+                        with st.spinner(f"Загружаю {city}..."):
+                            weather_data = get_weather_by_city(city)
+                            if weather_data:
+                                st.session_state.weather_data = weather_data
+                                st.session_state.user_city = city
+                                st.rerun()
     
-    # Отображение погоды
+    # ===== ОТОБРАЖЕНИЕ ПОГОДЫ =====
     if st.session_state.get('weather_data'):
-        # Твой код для отображения
-        pass
-
-# Просто добавь эту кнопку:
-if st.button("📍 ПОКАЗАТЬ ПОГОДУ В МОЕМ МЕСТОПОЛОЖЕНИИ", type="primary"):
-    # Пока используем Минск как пример
-    weather_data = get_weather_by_coords(53.9, 27.5667)
-    if weather_data:
-        st.session_state.weather_data = weather_data
-        st.session_state.user_city = weather_data["current"]["city"]
-        st.rerun()
+        current = st.session_state.weather_data["current"]
+        
+        st.markdown("---")
+        
+        # Заголовок с городом
+        st.markdown(f"## 🌤️ Погода в {current['city']}, {current['country']}")
+        
+        # Основная информация
+        col_temp, col_icon = st.columns([2, 1])
+        
+        with col_temp:
+            st.markdown(f"""
+            <div style="text-align: center;">
+                <div style="font-size: 4.5rem; font-weight: 800; color: #1a1a1a; line-height: 1;">
+                    {current['temp']}°C
+                </div>
+                <div style="font-size: 1.8rem; color: #666; margin-top: 10px;">
+                    {get_weather_icon(current['icon'])} {current['description']}
+                </div>
+                <div style="font-size: 1.2rem; color: #888; margin-top: 5px;">
+                    💁 Ощущается как {current['feels_like']}°C
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col_icon:
+            st.markdown(f"""
+            <div style="text-align: center; padding-top: 20px;">
+                <div style="font-size: 6rem;">
+                    {get_weather_icon(current['icon'])}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Детали погоды
+        st.markdown("### 📊 Детали")
+        
+        details_grid = st.columns(4)
+        details = [
+            ("💧 Влажность", f"{current['humidity']}%"),
+            ("💨 Ветер", f"{current['wind_speed']} м/с"),
+            ("🧭 Направление", get_wind_direction(current['wind_deg'])),
+            ("📊 Давление", f"{current['pressure']} гПа"),
+            ("👁️ Видимость", f"{current['visibility']} км"),
+            ("☁️ Облачность", f"{current['clouds']}%"),
+            ("🌅 Восход", current['sunrise']),
+            ("🌇 Закат", current['sunset'])
+        ]
+        
+        for i in range(0, len(details), 2):
+            col1, col2 = st.columns(2)
+            with col1:
+                name, value = details[i]
+                st.markdown(f"""
+                <div style="
+                    background: #f8f9fa;
+                    padding: 15px;
+                    border-radius: 10px;
+                    margin-bottom: 10px;
+                    border-left: 4px solid #DAA520;
+                ">
+                    <div style="font-size: 0.9rem; color: #666;">{name}</div>
+                    <div style="font-size: 1.3rem; font-weight: bold; color: #1a1a1a;">{value}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            if i + 1 < len(details):
+                with col2:
+                    name, value = details[i + 1]
+                    st.markdown(f"""
+                    <div style="
+                        background: #f8f9fa;
+                        padding: 15px;
+                        border-radius: 10px;
+                        margin-bottom: 10px;
+                        border-left: 4px solid #DAA520;
+                    ">
+                        <div style="font-size: 0.9rem; color: #666;">{name}</div>
+                        <div style="font-size: 1.3rem; font-weight: bold; color: #1a1a1a;">{value}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+        
+        # Прогноз
+        if st.session_state.weather_data.get("forecast"):
+            st.markdown("### 📅 Прогноз на 5 дней")
+            
+            forecast = st.session_state.weather_data["forecast"]["list"]
+            days = {}
+            
+            for item in forecast:
+                date = item["dt_txt"].split(" ")[0]
+                if date not in days:
+                    days[date] = item
+            
+            forecast_dates = list(days.keys())[:5]
+            forecast_cols = st.columns(5)
+            
+            for idx, date in enumerate(forecast_dates):
+                with forecast_cols[idx]:
+                    day = days[date]
+                    day_name = datetime.datetime.strptime(date, "%Y-%m-%d").strftime("%a")
+                    
+                    st.markdown(f"""
+                    <div style="
+                        background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
+                        border-radius: 10px;
+                        padding: 15px;
+                        text-align: center;
+                        color: white;
+                        box-shadow: 0 4px 15px rgba(6, 147, 227, 0.3);
+                    ">
+                        <div style="font-weight: bold; font-size: 1.1rem; margin-bottom: 10px;">
+                            {day_name}
+                        </div>
+                        <div style="font-size: 2.5rem; margin: 10px 0;">
+                            {get_weather_icon(day['weather'][0]['icon'])}
+                        </div>
+                        <div style="font-size: 1.5rem; font-weight: bold;">
+                            {round(day['main']['temp'])}°C
+                        </div>
+                        <div style="font-size: 0.8rem; margin-top: 8px; opacity: 0.9;">
+                            {day['weather'][0]['description']}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
                         
 # ================= СТРАНИЦА ТРАНСПОРТА =================
 elif st.session_state.page == "Транспорт":
