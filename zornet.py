@@ -888,8 +888,6 @@ elif st.session_state.page == "Транспорт":
             with col4:
                 st.write(f"🕒 {train['time']}")
 
-# ... (весь предыдущий код до страницы Диска остается БЕЗ ИЗМЕНЕНИЙ) ...
-
 # ================= ПРОФЕССИОНАЛЬНЫЙ ОБЛАЧНЫЙ ДИСК ZORNET DISK =================
 elif st.session_state.page == "Диск":
     st.markdown('<div class="gold-title">💾 ZORNET DISK</div>', unsafe_allow_html=True)
@@ -996,14 +994,6 @@ elif st.session_state.page == "Диск":
             border-radius: 4px;
         }
     </style>
-    """, unsafe_allow_html=True)
-    
-    # Заголовок диска
-    st.markdown("""
-    <div class="disk-header">
-        <h2 style="margin: 0; font-size: 2rem;">💾 ZORNET DISK</h2>
-        <p style="margin: 5px 0 0 0; opacity: 0.9;">Профессиональное облачное хранилище</p>
-    </div>
     """, unsafe_allow_html=True)
     
     # Функции для работы с диском
@@ -1222,7 +1212,7 @@ elif st.session_state.page == "Диск":
                 file_path = os.path.join(st.session_state.disk_current_path, file.name)
                 with open(file_path, "wb") as f:
                     f.write(file.getbuffer())
-            st.success(f"✅ Быстро загружено {len(quick_upload)} файлов!")
+            st.success(f"✅ Загружено {len(quick_upload)} файлов!")
             st.rerun()
         
         # Список файлов и папок
