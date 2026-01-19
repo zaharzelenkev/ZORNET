@@ -312,31 +312,37 @@ def get_icon(file_path):
 
 def ask_hf_ai(prompt: str) -> str:
     """
-    Профессиональный ИИ-модуль на базе G4F.
-    Использует лучшие доступные модели (GPT-4o, Claude 3, Gemini) бесплатно.
+    Профессиональный ИИ-модуль. 
+    Использует только проверенных бесплатных провайдеров без API-ключей.
     """
     try:
         client = Client()
+        
+        # Мы явно указываем провайдеров, которые не просят ключи
         response = client.chat.completions.create(
-            model="gpt-4o", # Можно менять на "gpt-4", "claude-3-haiku", "gemini"
+            model="gpt-4o", 
+            provider=g4f.Provider.Blackbox, # Один из самых стабильных на сегодня
             messages=[{"role": "user", "content": prompt}],
         )
+        
         answer = response.choices[0].message.content
         if answer:
             return answer
         else:
-            return "⚠️ Ошибка: Получен пустой ответ от сервера ИИ."
+            return "⚠️ Провайдер вернул пустой ответ. Попробуйте еще раз."
 
     except Exception as e:
-        # Если GPT-4o недоступен, пробуем "быстрый" резервный вариант (Llama 3)
+        # Резервный план: если Blackbox упал, пробуем автоматический выбор из других
         try:
+            # Здесь мы исключаем Puter и другие проблемные API
             response = client.chat.completions.create(
-                model="llama-3.1-70b",
+                model="gpt-4",
+                provider=g4f.Provider.ChatGptEs, 
                 messages=[{"role": "user", "content": prompt}],
             )
             return response.choices[0].message.content
-        except:
-            return f"⚠️ Критическая ошибка нейросети: {str(e)}. Проверьте интернет-соединение."
+        except Exception as second_error:
+            return f"⚠️ Режим ожидания: Сервер перегружен. Попробуйте через минуту. (Тех. инфо: {str(second_error)})"
     
 # ================= БАЗА ДАННЫХ =================
 def init_db():
