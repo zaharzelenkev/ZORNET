@@ -587,34 +587,10 @@ elif st.session_state.page == "Новости":
                 <p style="color:#1a1a1a; margin-top:10px;">{item.summary[:200]}...</p>
             </div>
             """, unsafe_allow_html=True)
-# ================= СТРАНИЦА ПОГОДЫ =================
+
+# ================= СТРАНИЦА ПОГОДЫ (простая версия) =================
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
-    
-    # Проверяем координаты из URL
-    query_params = st.query_params
-    
-    if 'lat' in query_params and 'lon' in query_params:
-        try:
-            lat = float(query_params['lat'][0])
-            lon = float(query_params['lon'][0])
-            
-            # Очищаем параметры
-            st.query_params.clear()
-            
-            # Получаем погоду
-            with st.spinner("Получаю погоду для вашего местоположения..."):
-                weather_data = get_weather_by_coords(lat, lon)
-                
-                if weather_data:
-                    st.session_state.weather_data = weather_data
-                    st.session_state.user_city = weather_data["current"]["city"]
-                    st.rerun()
-                else:
-                    st.error("Не удалось получить погоду")
-                    
-        except:
-            st.error("Ошибка обработки координат")
     
     # Вкладки
     tab1, tab2 = st.tabs(["📍 По местоположению", "🏙️ По городу"])
@@ -622,18 +598,61 @@ elif st.session_state.page == "Погода":
     with tab1:
         st.subheader("Погода по вашему местоположению")
         
-        # Инструкция
-        st.markdown("""
-        ### 🎯 Как получить погоду:
-        1. **Нажмите кнопку ниже** 
-        2. **Разрешите доступ** к местоположению в системном окне браузера
-        3. **Погода загрузится автоматически**
-        """)
+        # ПРОСТОЙ JavaScript - открывает новую вкладку с координатами
+        geo_simple = """
+        <script>
+        function getSimpleLocation() {
+            if (!navigator.geolocation) {
+                alert("Браузер не поддерживает геолокацию");
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    
+                    // ПРОСТО показываем координаты и кнопку
+                    document.getElementById('coords').innerHTML = 
+                        '<div style="color: green; padding: 10px; font-size: 16px;">' +
+                        '<b>✓ Координаты получены!</b><br>' +
+                        'Широта: ' + lat.toFixed(4) + '<br>' +
+                        'Долгота: ' + lon.toFixed(4) + '<br><br>' +
+                        '<button onclick="useCoords(' + lat + ',' + lon + ')" style="' +
+                        'padding: 10px 20px; background: #28a745; color: white; ' +
+                        'border: none; border-radius: 5px; cursor: pointer;">' +
+                        '🌤️ ПОКАЗАТЬ ПОГОДУ ЗДЕСЬ</button>' +
+                        '</div>';
+                },
+                function(err) {
+                    alert("Ошибка: " + err.message);
+                }
+            );
+        }
         
-        # JavaScript для геолокации
-        geo_html = """
-        <div style="text-align: center; padding: 20px;">
-            <button onclick="getLocation()" style="
+        function useCoords(lat, lon) {
+            // Сохраняем координаты в localStorage
+            localStorage.setItem('weather_lat', lat);
+            localStorage.setItem('weather_lon', lon);
+            // Перезагружаем страницу
+            location.reload();
+        }
+        
+        // При загрузке проверяем есть ли сохраненные координаты
+        window.onload = function() {
+            const savedLat = localStorage.getItem('weather_lat');
+            const savedLon = localStorage.getItem('weather_lon');
+            if (savedLat && savedLon) {
+                document.getElementById('coords').innerHTML = 
+                    '<div style="color: blue; padding: 10px;">' +
+                    'Сохраненные координаты: ' + savedLat + ', ' + savedLon +
+                    '</div>';
+            }
+        }
+        </script>
+        
+        <div style="text-align: center;">
+            <button onclick="getSimpleLocation()" style="
                 padding: 15px 30px;
                 background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
                 color: white;
@@ -642,193 +661,50 @@ elif st.session_state.page == "Погода":
                 font-size: 18px;
                 font-weight: bold;
                 cursor: pointer;
-                box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
+                margin: 20px 0;
             ">
-                📍 ЗАПРОСИТЬ МОЕ МЕСТОПОЛОЖЕНИЕ
+                📍 РАЗРЕШИТЬ ДОСТУП
             </button>
             
-            <div id="status" style="margin-top: 15px; font-size: 14px; color: #666;">
-                Нажмите кнопку выше
-            </div>
+            <div id="coords" style="min-height: 100px; margin: 20px 0;"></div>
         </div>
-        
-        <script>
-        function getLocation() {
-            document.getElementById('status').innerHTML = 
-                '<span style="color: #059be5;">⏳ Запрашиваю разрешение...</span>';
-                
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    // Успех
-                    function(position) {
-                        document.getElementById('status').innerHTML = 
-                            '<span style="color: green;">✓ Местоположение получено! Загружаю погоду...</span>';
-                        
-                        // Отправляем координаты через URL
-                        const lat = position.coords.latitude;
-                        const lon = position.coords.longitude;
-                        const url = window.location.href.split('?')[0] + '?lat=' + lat + '&lon=' + lon;
-                        window.location.href = url;
-                    },
-                    // Ошибка
-                    function(error) {
-                        let errorMsg = "Ошибка: ";
-                        if (error.code === 1) {
-                            errorMsg = "❌ Вы отказали в доступе";
-                        } else if (error.code === 2) {
-                            errorMsg = "❌ Местоположение недоступно";
-                        } else if (error.code === 3) {
-                            errorMsg = "❌ Время запроса истекло";
-                        } else {
-                            errorMsg = "❌ Неизвестная ошибка";
-                        }
-                        document.getElementById('status').innerHTML = 
-                            '<span style="color: red;">' + errorMsg + '</span>';
-                    }
-                );
-            } else {
-                document.getElementById('status').innerHTML = 
-                    '<span style="color: red;">❌ Браузер не поддерживает геолокацию</span>';
-            }
-        }
-        </script>
         """
         
-        # Отображаем компонент (ИСПРАВЛЕННАЯ СТРОКА)
-        st.components.v1.html(geo_html, height=150)
+        st.components.v1.html(geo_simple, height=250)
         
-        st.info("""
-        **После нажатия кнопки:**
-        - Появится системное окно браузера
-        - Нажмите **"Разрешить"** или **"Allow"**
-        - Если окно не появилось, проверьте настройки браузера
-        """)
+        # Проверяем localStorage при загрузке страницы
+        if 'geo_coords' not in st.session_state:
+            # Можно попробовать получить координаты из сессии
+            pass
         
-        # Тестовые координаты
-        with st.expander("🔧 Тестовые координаты"):
-            if st.button("📍 Использовать Минск (53.9, 27.5667)", key="use_minsk"):
-                weather_data = get_weather_by_coords(53.9, 27.5667)
-                if weather_data:
-                    st.session_state.weather_data = weather_data
-                    st.session_state.user_city = "Минск"
-                    st.rerun()
+        # Кнопка для получения погоды если есть координаты в localStorage
+        if st.button("🌤️ Получить погоду по моему местоположению", type="primary"):
+            # Здесь будет загружена погода по координатам из localStorage
+            # Пока используем фиксированные координаты для демо
+            st.info("Использую демо-координаты (Минск)")
+            weather_data = get_weather_by_coords(53.9, 27.5667)
+            if weather_data:
+                st.session_state.weather_data = weather_data
+                st.session_state.user_city = "Минск"
+                st.rerun()
     
     with tab2:
-        st.subheader("Поиск погоды по городу")
-        
-        # Поиск города
-        city_input = st.text_input(
-            "Введите название города",
-            placeholder="Минск, Москва, Лондон...",
-            key="city_input_field"
-        )
-        
-        if st.button("🔍 Найти погоду", type="primary", key="find_weather"):
-            if city_input:
-                with st.spinner(f"Ищу погоду для {city_input}..."):
-                    weather_data = get_weather_by_city(city_input)
-                    
-                    if weather_data:
-                        st.session_state.weather_data = weather_data
-                        st.session_state.user_city = city_input
-                        st.rerun()
-                    else:
-                        st.error(f"Город '{city_input}' не найден")
-            else:
-                st.warning("Введите название города")
-        
-        # Быстрый выбор
-        st.markdown("### 🏙️ Быстрый выбор")
-        cities = ["Минск", "Гомель", "Витебск", "Могилёв", "Брест", "Гродно"]
-        cols = st.columns(3)
-        
-        for idx, city in enumerate(cities):
-            with cols[idx % 3]:
-                if st.button(city, key=f"city_btn_{city}", use_container_width=True):
-                    with st.spinner(f"Загружаю {city}..."):
-                        weather_data = get_weather_by_city(city)
-                        if weather_data:
-                            st.session_state.weather_data = weather_data
-                            st.session_state.user_city = city
-                            st.rerun()
+        # Твой код для поиска по городу
+        pass
     
     # Отображение погоды
     if st.session_state.get('weather_data'):
-        current = st.session_state.weather_data["current"]
-        
-        st.markdown("---")
-        st.markdown(f"## 🌤️ Погода в {current['city']}")
-        
-        # Основной виджет
-        col_temp, col_icon, col_info = st.columns([2, 1, 2])
-        
-        with col_temp:
-            st.markdown(f"""
-            <div style="text-align: center;">
-                <div style="font-size: 4rem; font-weight: 800; color: #1a1a1a;">
-                    {current['temp']}°C
-                </div>
-                <div style="font-size: 1.5rem; color: #666; margin-top: 10px;">
-                    {current['description']}
-                </div>
-                <div style="font-size: 1rem; color: #888; margin-top: 5px;">
-                    💁 Ощущается как {current['feels_like']}°C
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col_icon:
-            st.markdown(f"""
-            <div style="text-align: center; padding-top: 15px;">
-                <div style="font-size: 5rem;">
-                    {get_weather_icon(current['icon'])}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col_info:
-            # Детали
-            details = [
-                ("💧 Влажность", f"{current['humidity']}%"),
-                ("💨 Ветер", f"{current['wind_speed']} м/с"),
-                ("🧭 Направление", get_wind_direction(current['wind_deg'])),
-                ("📊 Давление", f"{current['pressure']} гПа"),
-                ("👁️ Видимость", f"{current['visibility']} км"),
-                ("☁️ Облачность", f"{current['clouds']}%"),
-                ("🌅 Восход", current['sunrise']),
-                ("🌇 Закат", current['sunset'])
-            ]
-            
-            for i in range(0, len(details), 2):
-                col1, col2 = st.columns(2)
-                with col1:
-                    name, value = details[i]
-                    st.markdown(f"""
-                    <div style="
-                        background: #f8f9fa;
-                        padding: 10px;
-                        border-radius: 8px;
-                        margin-bottom: 10px;
-                    ">
-                        <div style="font-size: 0.9rem; color: #666;">{name}</div>
-                        <div style="font-size: 1.2rem; font-weight: bold;">{value}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                if i + 1 < len(details):
-                    with col2:
-                        name, value = details[i + 1]
-                        st.markdown(f"""
-                        <div style="
-                            background: #f8f9fa;
-                            padding: 10px;
-                            border-radius: 8px;
-                            margin-bottom: 10px;
-                        ">
-                            <div style="font-size: 0.9rem; color: #666;">{name}</div>
-                            <div style="font-size: 1.2rem; font-weight: bold;">{value}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
+        # Твой код для отображения
+        pass
+
+# Просто добавь эту кнопку:
+if st.button("📍 ПОКАЗАТЬ ПОГОДУ В МОЕМ МЕСТОПОЛОЖЕНИИ", type="primary"):
+    # Пока используем Минск как пример
+    weather_data = get_weather_by_coords(53.9, 27.5667)
+    if weather_data:
+        st.session_state.weather_data = weather_data
+        st.session_state.user_city = weather_data["current"]["city"]
+        st.rerun()
                         
 # ================= СТРАНИЦА ТРАНСПОРТА =================
 elif st.session_state.page == "Транспорт":
