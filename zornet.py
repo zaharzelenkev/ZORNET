@@ -1,24 +1,22 @@
-import streamlit as st
-import sqlite3
 import datetime
 import os
 import pytz
 import json
 import requests
 import feedparser
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageFilter
 from pathlib import Path
 import mimetypes
 from duckduckgo_search import DDGS
-from huggingface_hub import InferenceClient
 import streamlit.components.v1 as components
 import io
 import base64
-import cv2
 import numpy as np
-import pytesseract
 from googletrans import Translator
 import pyttsx3
+import qrcode
+from pyzbar.pyzbar import decode as qr_decode
+import easyocr
 
 # ================= НАСТРОЙКИ =================
 st.set_page_config(
