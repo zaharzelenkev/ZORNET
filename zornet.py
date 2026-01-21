@@ -7,10 +7,10 @@ import json
 import requests
 import feedparser
 from PIL import Image
-import io
-import base64
 from pathlib import Path
 import mimetypes
+from duckduckgo_search import DDGS
+from huggingface_hub import InferenceClient
 import streamlit.components.v1 as components
 
 # ================= НАСТРОЙКИ =================
@@ -30,18 +30,19 @@ if "weather_data" not in st.session_state:
     st.session_state.weather_data = None
 if "user_city" not in st.session_state:
     st.session_state.user_city = None
-if "camera_mode" not in st.session_state:
-    st.session_state.camera_mode = "object"
-if "camera_result" not in st.session_state:
-    st.session_state.camera_result = None
-if "ai_tab" not in st.session_state:
-    st.session_state.ai_tab = "chat"
-if "uploaded_image" not in st.session_state:
-    st.session_state.uploaded_image = None
 
 # ================= CSS СТИЛИ =================
 st.markdown("""
 <style>
+    /* ОБЩИЙ СТИЛЬ */
+    .stApp { background-color: #ffffff; }
+
+    /* СКРЫВАЕМ ЛИШНЕЕ */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+
+    /* ГЛАВНЫЙ ЗАГОЛОВОК */
     .gold-title {
         font-family: 'Helvetica Neue', sans-serif;
         font-size: 4rem;
@@ -54,93 +55,111 @@ st.markdown("""
         text-transform: uppercase;
         margin: 10px 0 30px 0;
     }
-    
-    .ai-chat-container {
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
-        margin: 20px 0;
-        border: 2px solid #FFD700;
-        box-shadow: 0 8px 25px rgba(218, 165, 32, 0.15);
-    }
-    
-    .ai-message-user {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-        color: white;
-        padding: 12px 18px;
-        border-radius: 18px 18px 4px 18px;
-        margin-left: auto;
-        margin-bottom: 10px;
-        max-width: 80%;
-        float: right;
-        clear: both;
-    }
-    
-    .ai-message-bot {
-        background: #f8f9fa;
-        color: #1a1a1a;
-        padding: 12px 18px;
-        border-radius: 18px 18px 18px 4px;
-        margin-right: auto;
-        margin-bottom: 10px;
-        max-width: 80%;
-        border-left: 4px solid #DAA520;
-        float: left;
-        clear: both;
-    }
-    
-    .camera-container {
-        background: white;
-        border-radius: 15px;
-        padding: 25px;
-        margin: 20px 0;
-        border: 2px solid #4a90e2;
-        box-shadow: 0 8px 25px rgba(74, 144, 226, 0.15);
-    }
-    
-    .mode-btn {
-        background: #4a90e2 !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 10px !important;
-        padding: 10px !important;
-        margin: 5px !important;
-        transition: all 0.3s ease !important;
-    }
-    
-    .mode-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(74, 144, 226, 0.3) !important;
-    }
-    
-    .mode-btn.active {
-        background: #2c6cb0 !important;
-        box-shadow: inset 0 2px 5px rgba(0,0,0,0.2) !important;
-    }
-    
-    .result-card {
-        background: #f8f9fa;
-        border-radius: 12px;
-        padding: 20px;
-        margin: 15px 0;
-        border-left: 4px solid #DAA520;
-    }
-    
-    .main-btn {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-        color: white !important;
-        border: none !important;
+
+    /* КНОПКИ ГЛАВНОЙ */
+    div.stButton > button {
+        background: #f8f9fa !important;
+        border: 1px solid #dee2e6 !important;
+        color: #1a1a1a !important;
+        padding: 20px !important; 
         border-radius: 12px !important;
-        padding: 15px !important;
+        font-weight: bold !important;
+        width: 100% !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
+    }
+
+    /* ЗОЛОТАЯ КНОПКА AI */
+    .gold-btn {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+        border: none !important;
+        color: white !important;
+        border-radius: 12px !important;
+        padding: 14px 28px !important;
         font-weight: 600 !important;
         font-size: 16px !important;
-        margin: 5px 0 !important;
-        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3) !important;
     }
-    
-    .main-btn:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 20px rgba(218, 165, 32, 0.3) !important;
+
+    /* ВРЕМЯ В ЗОЛОТОЙ РАМКЕ */
+    .time-widget {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+        border-radius: 12px;
+        padding: 12px 15px;
+        text-align: center;
+        color: white;
+        font-weight: 600;
+        font-size: 16px;
+        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
+    }
+
+    /* РЕЗУЛЬТАТЫ ПОИСКА */
+    .search-result {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        border-left: 4px solid #DAA520;
+    }
+
+    /* ЧАТ AI */
+    .user-message {
+        background: #f0f0f0;
+        padding: 12px 18px;
+        border-radius: 18px;
+        max-width: 70%;
+        margin-left: auto;
+        margin-bottom: 15px;
+    }
+
+    .ai-message {
+        background: #f9f9f9;
+        padding: 12px 18px;
+        border-radius: 18px;
+        max-width: 70%;
+        margin-right: auto;
+        margin-bottom: 15px;
+        border-left: 4px solid #DAA520;
+    }
+
+    /* СТИЛИ ДЛЯ ПОГОДЫ */
+    .weather-widget {
+        background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
+        border-radius: 15px;
+        padding: 20px;
+        color: white;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(6, 147, 227, 0.3);
+    }
+
+    .weather-temp {
+        font-size: 3.5rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .weather-description {
+        font-size: 1.2rem;
+        margin-bottom: 15px;
+    }
+
+    .weather-details {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 15px;
+    }
+
+    .weather-icon {
+        font-size: 4rem;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    .forecast-day {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -151,8 +170,6 @@ with st.sidebar:
 
     pages = [
         ("🏠", "ГЛАВНАЯ", "Главная"),
-        ("🤖", "ZORNET AI", "ZORNET AI"),
-        ("📷", "УМНАЯ КАМЕРА", "Умная камера"),
         ("📰", "НОВОСТИ", "Новости"),
         ("🌤️", "ПОГОДА", "Погода"),
         ("💾", "ДИСК", "Диск"),
@@ -164,331 +181,325 @@ with st.sidebar:
             st.session_state.page = page
             st.rerun()
 
-# ================= ФУНКЦИИ УМНОЙ КАМЕРЫ =================
-def detect_objects_simple(image):
-    """Простое распознавание объектов по цветам и формам"""
-    # Конвертируем в RGB
-    rgb_image = image.convert('RGB')
-    pixels = list(rgb_image.getdata())
-    
-    # Анализ доминирующих цветов
-    color_counts = {}
-    for r, g, b in pixels[:1000]:  # Берем только первые 1000 пикселей для скорости
-        # Группируем похожие цвета
-        color_key = (r//50, g//50, b//50)
-        color_counts[color_key] = color_counts.get(color_key, 0) + 1
-    
-    # Определяем что это может быть
-    dominant_color = max(color_counts, key=color_counts.get)
-    
-    # Простая логика распознавания
-    width, height = image.size
-    aspect_ratio = width / height
-    
-    if aspect_ratio > 1.5:
-        shape = "горизонтальный объект (возможно экран или книга)"
-    elif aspect_ratio < 0.7:
-        shape = "вертикальный объект (возможно человек или здание)"
-    else:
-        shape = "квадратный объект"
-    
-    # Определение по доминирующему цвету
-    r, g, b = dominant_color
-    if g > r and g > b:
-        color_desc = "зеленый объект (возможно природа, растения)"
-    elif r > g and r > b:
-        color_desc = "красный объект"
-    elif b > r and b > g:
-        color_desc = "синий объект (возможно небо или вода)"
-    else:
-        color_desc = "нейтральный объект"
-    
-    return [f"📏 Размер: {width}x{height} пикселей",
-            f"🎨 {color_desc}",
-            f"📐 {shape}",
-            "💡 Совет: Для точного распознавания используйте четкие фото при хорошем освещении"]
 
-def extract_text_simple(image):
-    """Простейшее извлечение текста (заглушка)"""
-    return ["🔍 Режим распознавания текста",
-           "⚠️ Для работы этой функции установите библиотеку pytesseract:",
-           "pip install pytesseract",
-           "📝 И установите Tesseract OCR с русского языком"]
+# ================= ФУНКЦИИ ПОГОДЫ =================
+def get_weather_icon(condition_code):
+    """Возвращает эмодзи для погодных условий"""
+    icons = {
+        "01d": "☀️", "01n": "🌙",
+        "02d": "⛅", "02n": "⛅",
+        "03d": "☁️", "03n": "☁️",
+        "04d": "☁️", "04n": "☁️",
+        "09d": "🌧️", "09n": "🌧️",
+        "10d": "🌦️", "10n": "🌦️",
+        "11d": "⛈️", "11n": "⛈️",
+        "13d": "❄️", "13n": "❄️",
+        "50d": "🌫️", "50n": "🌫️",
+    }
+    return icons.get(condition_code, "🌡️")
 
-def translate_text_simple(text):
-    """Простой перевод через API (заглушка)"""
-    return ["🌐 Режим перевода",
-           "⚠️ Для работы этой функции установите:",
-           "pip install googletrans==4.0.0-rc1",
-           "📚 Или используйте Google Translate онлайн"]
 
-def process_camera_image(image, mode):
-    """Обработка изображения"""
-    if mode == "object":
-        return detect_objects_simple(image)
-    elif mode == "text":
-        return extract_text_simple(image)
-    elif mode == "translate":
-        return translate_text_simple("пример текста")
-    elif mode == "qr":
-        return ["📱 QR-код распознан!", 
-                "Для работы с QR-кодами установите:",
-                "pip install qrcode[pil]",
-                "pip install pyzbar",
-                "pip install pillow"]
-    return ["Выберите режим работы"]
+def get_wind_direction(degrees):
+    """Преобразует градусы в направление ветра"""
+    directions = ["С", "СВ", "В", "ЮВ", "Ю", "ЮЗ", "З", "СЗ"]
+    index = round(degrees / 45) % 8
+    return directions[index]
 
-# ================= AI ФУНКЦИИ =================
-def ask_simple_ai(prompt: str) -> str:
-    """Простой AI на основе правил"""
-    prompt_lower = prompt.lower()
-    
-    # Правила для ответов
-    if any(word in prompt_lower for word in ["привет", "здравствуй", "добрый"]):
-        return "Привет! Я ZORNET AI 🤖\nЧем могу помочь?"
-    
-    elif any(word in prompt_lower for word in ["погода", "дождь", "солнце", "температура"]):
-        return "🌤️ Погоду можно узнать на вкладке 'Погода'!\nТам точные данные для вашего города."
-    
-    elif any(word in prompt_lower for word in ["новости", "события", "происшествия"]):
-        return "📰 Новости на вкладке 'Новости' - свежие статьи из проверенных источников!"
-    
-    elif any(word in prompt_lower for word in ["время", "час", "сколько время"]):
-        current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
-        return f"🕒 Сейчас в Минске: {current_time.strftime('%H:%M:%S')}"
-    
-    elif any(word in prompt_lower for word in ["помощь", "помоги", "как пользоваться"]):
-        return """📚 ZORNET включает:
-1. 🤖 AI-помощник (это я!)
-2. 📷 Умную камеру
-3. 📰 Новости
-4. 🌤️ Погоду
-5. 💾 Облачный диск
-6. 👤 Профиль
 
-Выберите нужную вкладку в меню слева!"""
-    
-    elif any(word in prompt_lower for word in ["беларусь", "минск", "белоруссия"]):
-        return "🇧🇾 ZORNET создан в Беларуси!\nГорода: Минск, Гомель, Витебск, Брест, Гродно, Могилёв."
-    
-    else:
-        # Общий ответ
-        responses = [
-            "Интересный вопрос! Рекомендую поискать на вкладке 'Главная'.",
-            "Хороший вопрос! ZORNET постоянно развивается.",
-            "Сейчас у меня нет точного ответа, но вы можете:\n1. Использовать поиск\n2. Проверить новости\n3. Узнать погоду",
-            "🤖 Я еще учусь! Спросите о погоде, новостях или времени."
-        ]
-        import random
-        return random.choice(responses)
+def get_weather_by_coords(lat, lon):
+    """Получает погоду по координатам через OpenWeatherMap API"""
+    # ЗАМЕНИ ЭТОТ КЛЮЧ НА СВОЙ БЕСПЛАТНЫЙ КЛЮЧ С OpenWeatherMap!
+    API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"
 
-# ================= СТРАНИЦА ZORNET AI =================
-if st.session_state.page == "ZORNET AI":
-    st.markdown('<div class="gold-title">🤖 ZORNET AI</div>', unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div class="ai-chat-container">
-        <h3 style="color: #DAA520; text-align: center;">✨ Ваш персональный AI-помощник</h3>
-        <p style="text-align: center; color: #666;">Задавайте вопросы — я помогу!</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Быстрые кнопки
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("💬 Чат", use_container_width=True):
-            st.session_state.ai_tab = "chat"
-    
-    with col2:
-        if st.button("🎨 Рисовать", use_container_width=True):
-            st.session_state.ai_tab = "draw"
-    
-    with col3:
-        if st.button("📝 Текст", use_container_width=True):
-            st.session_state.ai_tab = "text"
-    
-    # ЧАТ С AI
-    if st.session_state.ai_tab == "chat":
-        st.markdown("### 💬 Чат с ZORNET AI")
-        
-        # Показ истории
-        for msg in st.session_state.ai_messages[-10:]:  # Последние 10 сообщений
-            if msg["role"] == "user":
-                st.markdown(f'<div class="ai-message-user">{msg["content"]}</div>', unsafe_allow_html=True)
-            else:
-                st.markdown(f'<div class="ai-message-bot">{msg["content"]}</div>', unsafe_allow_html=True)
-        
-        # Поле ввода
-        user_input = st.text_area("Ваше сообщение:", height=100, 
-                                  placeholder="Напишите что-нибудь...")
-        
-        col_send, col_clear = st.columns(2)
-        
-        with col_send:
-            if st.button("🚀 Отправить", type="primary", use_container_width=True):
-                if user_input.strip():
-                    # Добавляем сообщение пользователя
-                    st.session_state.ai_messages.append({"role": "user", "content": user_input})
-                    
-                    # Получаем ответ
-                    response = ask_simple_ai(user_input)
-                    st.session_state.ai_messages.append({"role": "assistant", "content": response})
-                    
-                    st.rerun()
-        
-        with col_clear:
-            if st.button("🗑️ Очистить", use_container_width=True):
-                st.session_state.ai_messages = []
+    try:
+        # Текущая погода
+        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
+        response = requests.get(url, timeout=10)
+
+        if response.status_code == 200:
+            data = response.json()
+
+            # Прогноз на 5 дней
+            forecast_url = f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
+            forecast_response = requests.get(forecast_url, timeout=10)
+            forecast_data = forecast_response.json() if forecast_response.status_code == 200 else None
+
+            return {
+                "current": {
+                    "temp": round(data["main"]["temp"]),
+                    "feels_like": round(data["main"]["feels_like"]),
+                    "humidity": data["main"]["humidity"],
+                    "pressure": data["main"]["pressure"],
+                    "description": data["weather"][0]["description"].capitalize(),
+                    "icon": data["weather"][0]["icon"],
+                    "wind_speed": data["wind"]["speed"],
+                    "wind_deg": data["wind"].get("deg", 0),
+                    "clouds": data["clouds"]["all"],
+                    "visibility": data.get("visibility", 10000) / 1000,
+                    "city": data["name"],
+                    "country": data["sys"]["country"],
+                    "sunrise": datetime.datetime.fromtimestamp(data["sys"]["sunrise"]).strftime('%H:%M'),
+                    "sunset": datetime.datetime.fromtimestamp(data["sys"]["sunset"]).strftime('%H:%M')
+                },
+                "forecast": forecast_data
+            }
+        else:
+            st.error(f"Ошибка API: {response.status_code}")
+            return None
+    except Exception as e:
+        st.error(f"Ошибка получения погоды: {e}")
+        return None
+
+
+def get_weather_by_city(city_name):
+    """Получает погоду по названию города"""
+    API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"  # Замени на свой ключ!
+
+    try:
+        # Сначала получаем координаты города
+        geocode_url = f"http://api.openweathermap.org/geo/1.0/direct?q={city_name}&limit=1&appid={API_KEY}"
+        geocode_response = requests.get(geocode_url, timeout=10)
+
+        if geocode_response.status_code == 200 and geocode_response.json():
+            city_data = geocode_response.json()[0]
+            lat = city_data["lat"]
+            lon = city_data["lon"]
+
+            return get_weather_by_coords(lat, lon)
+        else:
+            st.error("Город не найден")
+            return None
+    except Exception as e:
+        st.error(f"Ошибка: {e}")
+        return None
+
+
+# Обработчик сообщений от JavaScript
+def handle_js_messages():
+    """Обрабатывает сообщения от JavaScript компонентов"""
+    # Проверяем если есть сообщение от геолокации
+    if 'location_result' not in st.session_state:
+        # Пытаемся получить данные из query parameters (если JavaScript их отправил)
+        query_params = st.experimental_get_query_params()
+
+        if 'geolocation' in query_params:
+            try:
+                geo_data = json.loads(query_params['geolocation'][0])
+                st.session_state.location_result = geo_data
+                # Очищаем параметры
+                st.experimental_set_query_params()
                 st.rerun()
-    
-    # РИСОВАНИЕ
-    elif st.session_state.ai_tab == "draw":
-        st.markdown("### 🎨 Генератор рисунков")
-        
-        drawing_mode = st.selectbox("Выберите тип:", ["Пейзаж", "Портрет", "Абстракция", "Техника"])
-        color = st.color_picker("Выберите цвет:", "#DAA520")
-        
-        if st.button("✨ Создать рисунок", type="primary", use_container_width=True):
-            # Создаем простой рисунок
-            img = Image.new('RGB', (400, 300), color=color)
-            
-            # Добавляем простые фигуры
-            from PIL import ImageDraw
-            draw = ImageDraw.Draw(img)
-            
-            if drawing_mode == "Пейзаж":
-                draw.rectangle([0, 200, 400, 300], fill="#228B22")  # Трава
-                draw.rectangle([100, 100, 300, 200], fill="#87CEEB")  # Озеро
-                draw.polygon([(150, 50), (250, 50), (200, 10)], fill="#8B4513")  # Гора
-                
-            elif drawing_mode == "Портрет":
-                draw.ellipse([150, 50, 250, 150], fill="#FFE4B5")  # Лицо
-                draw.ellipse([170, 80, 190, 100], fill="#000000")  # Глаз 1
-                draw.ellipse([210, 80, 230, 100], fill="#000000")  # Глаз 2
-                draw.arc([180, 120, 220, 140], start=0, end=180, fill="#FF0000", width=3)  # Улыбка
-                
-            st.image(img, caption=f"Созданный рисунок: {drawing_mode}", use_column_width=True)
-            
-            # Сохранение
-            buf = io.BytesIO()
-            img.save(buf, format="PNG")
-            byte_im = buf.getvalue()
-            
-            st.download_button(
-                label="📥 Скачать рисунок",
-                data=byte_im,
-                file_name="zornet_drawing.png",
-                mime="image/png",
-                use_container_width=True
-            )
-    
-    # ГЕНЕРАТОР ТЕКСТА
-    elif st.session_state.ai_tab == "text":
-        st.markdown("### 📝 Генератор текста")
-        
-        text_type = st.selectbox("Тип текста:", 
-                                ["Приветствие", "Описание", "Сообщение", "Идея"])
-        
-        topic = st.text_input("Тема:", placeholder="О чём написать?")
-        
-        if st.button("✍️ Сгенерировать", type="primary", use_container_width=True):
-            if topic:
-                # Шаблоны текстов
-                templates = {
-                    "Приветствие": f"Добро пожаловать в тему '{topic}'! Рад вас видеть здесь.",
-                    "Описание": f"Тема '{topic}' очень интересна. Она включает различные аспекты...",
-                    "Сообщение": f"По теме '{topic}' хочу сообщить важную информацию...",
-                    "Идея": f"Идея по теме '{topic}': можно реализовать проект, который..."
-                }
-                
-                text = templates.get(text_type, f"Текст на тему '{topic}'")
-                
-                st.markdown(f"""
-                <div class="result-card">
-                    <h4>📄 Результат:</h4>
-                    <p style="margin-top: 10px;">{text}</p>
-                </div>
-                """, unsafe_allow_html=True)
+            except:
+                pass
 
-# ================= СТРАНИЦА УМНОЙ КАМЕРЫ =================
-elif st.session_state.page == "Умная камера":
-    st.markdown('<div class="gold-title">📷 УМНАЯ КАМЕРА</div>', unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div class="camera-container">
-        <h3 style="color: #4a90e2; text-align: center;">🔍 Сфотографируйте что угодно</h3>
-        <p style="text-align: center; color: #666;">Распознавание объектов и многое другое</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Режимы
-    st.markdown("### 🎯 Выберите режим")
-    
-    modes = [
-        ("🔍 Распознавание объектов", "object"),
-        ("📝 Сканирование текста", "text"),
-        ("🌐 Перевод", "translate"),
-        ("📱 QR-коды", "qr")
+
+# ================= ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ДИСКА =================
+def get_icon(file_path):
+    """Возвращает иконку для файла"""
+    ext = file_path.suffix.lower()
+    if file_path.is_dir():
+        return "📁"
+    if ext in [".jpg", ".jpeg", ".png", ".gif"]:
+        return "🖼️"
+    if ext == ".pdf":
+        return "📄"
+    if ext in [".doc", ".docx"]:
+        return "📝"
+    if ext in [".mp3", ".wav"]:
+        return "🎵"
+    if ext in [".mp4", ".avi", ".mov"]:
+        return "🎬"
+    return "📦"
+
+
+# ================= НАСТРОЙКИ AI =================
+HF_API_KEY = st.secrets.get("HF_API_KEY", "")
+CHAT_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"
+API_URL = "https://router.huggingface.co/api/chat/completions"
+
+HEADERS = {
+    "Authorization": f"Bearer {HF_API_KEY}",
+    "Content-Type": "application/json"
+} if HF_API_KEY else {}
+
+
+def ask_hf_ai(prompt: str) -> str:
+    if not HF_API_KEY:
+        return "⚠️ API ключ не настроен. Добавьте HF_API_KEY в secrets.toml"
+
+    payload = {
+        "model": CHAT_MODEL,
+        "messages": [
+            {"role": "system", "content": "Ты ZORNET AI — умный помощник. Отвечай по‑русски кратко и понятно."},
+            {"role": "user", "content": prompt}
+        ],
+        "max_new_tokens": 300,
+        "temperature": 0.7
+    }
+
+    try:
+        r = requests.post(API_URL, headers=HEADERS, json=payload, timeout=60)
+
+        if r.status_code == 503:
+            return "⏳ ZORNET AI загружается — попробуйте через несколько секунд."
+
+        if r.status_code != 200:
+            return "⚠️ ZORNET AI временно недоступен."
+
+        data = r.json()
+        text = data["choices"][0]["message"]["content"]
+        return text.strip()
+
+    except Exception:
+        return "⚠️ Ошибка соединения с ZORNET AI."
+
+
+# ================= ФУНКЦИИ ПОИСКА =================
+def search_zornet(query, num_results=5):
+    """Поиск в интернете"""
+    results = []
+
+    try:
+        with DDGS() as ddgs:
+            ddgs_results = list(ddgs.text(query, max_results=num_results, region='wt-wt'))
+
+            if ddgs_results:
+                for r in ddgs_results[:num_results]:
+                    results.append({
+                        "title": r.get("title", query),
+                        "url": r.get("href", f"https://www.google.com/search?q={query}"),
+                        "snippet": r.get("body", f"Результаты по запросу: {query}")[:180] + "...",
+                    })
+                return results
+    except Exception as e:
+        st.error(f"Ошибка поиска: {e}")
+
+    # Запасные результаты
+    fallback_results = [
+        {
+            "title": f"{query} - поиск в Google",
+            "url": f"https://www.google.com/search?q={query}",
+            "snippet": f"Нажмите для поиска '{query}' в Google."
+        },
+        {
+            "title": f"{query} в Википедии",
+            "url": f"https://ru.wikipedia.org/wiki/{query}",
+            "snippet": f"Ищите информацию о '{query}' в Википедии."
+        },
     ]
-    
-    cols = st.columns(4)
-    for idx, (name, mode) in enumerate(modes):
-        with cols[idx]:
-            is_active = st.session_state.camera_mode == mode
-            if st.button(name, 
-                        key=f"mode_{mode}",
-                        help=f"Режим: {name}",
-                        use_container_width=True):
-                st.session_state.camera_mode = mode
-                st.rerun()
-    
-    # Загрузка изображения
-    st.markdown("### 📸 Загрузите изображение")
-    
-    uploaded_file = st.file_uploader(
-        "Выберите файл",
-        type=['jpg', 'jpeg', 'png', 'bmp', 'gif'],
-        help="Поддерживаются JPG, PNG, BMP, GIF"
-    )
-    
-    if uploaded_file is not None:
-        # Открываем и показываем изображение
-        image = Image.open(uploaded_file)
-        st.image(image, caption="Загруженное изображение", use_column_width=True)
-        
-        # Сохраняем в session state
-        st.session_state.uploaded_image = image
-        
-        # Кнопка анализа
-        if st.button("🚀 Анализировать изображение", type="primary", use_container_width=True):
-            with st.spinner("Анализирую..."):
-                results = process_camera_image(image, st.session_state.camera_mode)
-                st.session_state.camera_result = results
-        
-        # Показ результатов
-        if st.session_state.camera_result:
-            st.markdown("### 📊 Результаты")
-            
-            for result in st.session_state.camera_result:
-                st.markdown(f"""
-                <div class="result-card">
-                    <p>{result}</p>
-                </div>
-                """, unsafe_allow_html=True)
-    
-    # Примеры
-    st.markdown("---")
-    st.markdown("### 💡 Примеры использования")
-    
-    with st.expander("🛒 В магазине"):
-        st.write("Сфотографируйте товар — узнайте что это")
-        
-    with st.expander("📖 В библиотеке"):
-        st.write("Сфотографируйте текст — получите информацию")
-        
-    with st.expander("🏛️ В музее"):
-        st.write("Наведите на экспонат — узнайте историю")
+
+    return fallback_results[:num_results]
+
+
+# ================= ТРАНСПОРТНЫЕ ФУНКЦИИ =================
+def get_minsk_metro():
+    return [
+        {"name": "Малиновка", "line": "1", "next": "3 мин"},
+        {"name": "Петровщина", "line": "1", "next": "5 мин"},
+        {"name": "Площадь Ленина", "line": "1", "next": "2 мин"},
+        {"name": "Институт Культуры", "line": "1", "next": "4 мин"},
+        {"name": "Молодёжная", "line": "2", "next": "6 мин"},
+    ]
+
+
+def get_bus_trams():
+    return [
+        {"number": "100", "type": "автобус", "from": "Ст.м. Каменная Горка", "to": "Аэропорт", "next": "7 мин"},
+        {"number": "1", "type": "трамвай", "from": "Тракторный завод", "to": "Серебрянка", "next": "5 мин"},
+        {"number": "3с", "type": "троллейбус", "from": "ДС Веснянка", "to": "ДС Серова", "next": "3 мин"},
+        {"number": "40", "type": "автобус", "from": "Ст.м. Уручье", "to": "Дражня", "next": "10 мин"},
+    ]
+
+
+def get_taxi_prices():
+    return [
+        {"name": "Яндекс Такси", "price": "8-12 руб", "wait": "5-7 мин"},
+        {"name": "Uber", "price": "9-13 руб", "wait": "4-6 мин"},
+        {"name": "Такси Близко", "price": "7-10 руб", "wait": "8-10 мин"},
+        {"name": "Такси Город", "price": "6-9 руб", "wait": "10-15 мин"},
+    ]
+
+
+def get_belarusian_railway():
+    return [
+        {"number": "001Б", "from": "Минск", "to": "Брест", "time": "18:00 - 21:30"},
+        {"number": "735Б", "from": "Минск", "to": "Гомель", "time": "07:30 - 11:15"},
+        {"number": "603Б", "from": "Минск", "to": "Витебск", "time": "14:20 - 18:45"},
+    ]
+
+
+# ================= БАЗА ДАННЫХ =================
+def init_db():
+    conn = sqlite3.connect("zornet.db")
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY,
+            username TEXT UNIQUE,
+            email TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def get_user_count():
+    conn = sqlite3.connect("zornet.db")
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM users")
+    count = c.fetchone()[0]
+    conn.close()
+    return count
+
+
+# ================= ДИСК ФУНКЦИИ =================
+def init_disk_db():
+    conn = sqlite3.connect("zornet_disk.db")
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            size INTEGER,
+            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def get_disk_files():
+    conn = sqlite3.connect("zornet_disk.db")
+    c = conn.cursor()
+    c.execute("SELECT name, size, uploaded_at FROM files ORDER BY uploaded_at DESC LIMIT 10")
+    files = c.fetchall()
+    conn.close()
+    return files
+
+
+def save_file_to_db(filename, size):
+    conn = sqlite3.connect("zornet_disk.db")
+    c = conn.cursor()
+    c.execute("INSERT INTO files (name, size) VALUES (?, ?)", (filename, size))
+    conn.commit()
+    conn.close()
+
+
+# ================= НОВОСТИ =================
+def get_belta_news():
+    try:
+        headers = {"User-Agent": "ZORNET/1.0"}
+        response = requests.get("https://www.belta.by/rss", headers=headers, timeout=10)
+        feed = feedparser.parse(response.content)
+        return feed.entries[:5]
+    except:
+        return [
+            {"title": "Новости Беларуси", "link": "#", "summary": "Следите за обновлениями"},
+            {"title": "Экономические новости", "link": "#", "summary": "Развитие экономики страны"},
+            {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
+        ]
+
 
 # ================= СТРАНИЦА ГЛАВНАЯ =================
 if st.session_state.page == "Главная":
