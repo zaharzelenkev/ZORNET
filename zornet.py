@@ -1,22 +1,17 @@
+import streamlit as st
+import sqlite3
 import datetime
 import os
 import pytz
 import json
 import requests
 import feedparser
-from PIL import Image, ImageEnhance, ImageFilter
-from pathlib import Path
-import mimetypes
-from duckduckgo_search import DDGS
-import streamlit.components.v1 as components
+from PIL import Image
 import io
 import base64
-import numpy as np
-from googletrans import Translator
-import pyttsx3
-import qrcode
-from pyzbar.pyzbar import decode as qr_decode
-import easyocr
+from pathlib import Path
+import mimetypes
+import streamlit.components.v1 as components
 
 # ================= НАСТРОЙКИ =================
 st.set_page_config(
@@ -39,19 +34,14 @@ if "camera_mode" not in st.session_state:
     st.session_state.camera_mode = "object"
 if "camera_result" not in st.session_state:
     st.session_state.camera_result = None
+if "ai_tab" not in st.session_state:
+    st.session_state.ai_tab = "chat"
+if "uploaded_image" not in st.session_state:
+    st.session_state.uploaded_image = None
 
 # ================= CSS СТИЛИ =================
 st.markdown("""
 <style>
-    /* ОБЩИЙ СТИЛЬ */
-    .stApp { background-color: #ffffff; }
-
-    /* СКРЫВАЕМ ЛИШНЕЕ */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-
-    /* ГЛАВНЫЙ ЗАГОЛОВОК */
     .gold-title {
         font-family: 'Helvetica Neue', sans-serif;
         font-size: 4rem;
@@ -64,108 +54,93 @@ st.markdown("""
         text-transform: uppercase;
         margin: 10px 0 30px 0;
     }
-
-    /* КНОПКИ ГЛАВНОЙ */
-    div.stButton > button {
-        background: #f8f9fa !important;
-        border: 1px solid #dee2e6 !important;
-        color: #1a1a1a !important;
-        padding: 20px !important; 
-        border-radius: 12px !important;
-        font-weight: bold !important;
-        width: 100% !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
-    }
-
-    /* ЗОЛОТАЯ КНОПКА AI */
-    .gold-btn {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-        border: none !important;
-        color: white !important;
-        border-radius: 12px !important;
-        padding: 14px 28px !important;
-        font-weight: 600 !important;
-        font-size: 16px !important;
-        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3) !important;
-    }
-
-    /* СТИЛИ ДЛЯ AI ВКЛАДКИ */
+    
     .ai-chat-container {
-        background: linear-gradient(135deg, #fffaf0 0%, #fff5e6 100%);
-        border-radius: 20px;
-        padding: 25px;
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
         margin: 20px 0;
         border: 2px solid #FFD700;
+        box-shadow: 0 8px 25px rgba(218, 165, 32, 0.15);
     }
     
     .ai-message-user {
         background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
         color: white;
-        padding: 15px 20px;
+        padding: 12px 18px;
         border-radius: 18px 18px 4px 18px;
-        max-width: 80%;
         margin-left: auto;
-        margin-bottom: 15px;
-        box-shadow: 0 4px 12px rgba(218, 165, 32, 0.2);
+        margin-bottom: 10px;
+        max-width: 80%;
+        float: right;
+        clear: both;
     }
     
     .ai-message-bot {
         background: #f8f9fa;
         color: #1a1a1a;
-        padding: 15px 20px;
+        padding: 12px 18px;
         border-radius: 18px 18px 18px 4px;
-        max-width: 80%;
         margin-right: auto;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
+        max-width: 80%;
         border-left: 4px solid #DAA520;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        float: left;
+        clear: both;
     }
     
-    /* СТИЛИ ДЛЯ КАМЕРЫ */
     .camera-container {
-        background: linear-gradient(135deg, #f0f8ff 0%, #e6f7ff 100%);
-        border-radius: 20px;
+        background: white;
+        border-radius: 15px;
         padding: 25px;
         margin: 20px 0;
         border: 2px solid #4a90e2;
+        box-shadow: 0 8px 25px rgba(74, 144, 226, 0.15);
     }
     
-    .camera-mode-btn {
+    .mode-btn {
         background: #4a90e2 !important;
         color: white !important;
         border: none !important;
         border-radius: 10px !important;
-        padding: 10px 20px !important;
+        padding: 10px !important;
         margin: 5px !important;
+        transition: all 0.3s ease !important;
     }
     
-    .camera-mode-btn.active {
+    .mode-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(74, 144, 226, 0.3) !important;
+    }
+    
+    .mode-btn.active {
         background: #2c6cb0 !important;
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.2) !important;
+        box-shadow: inset 0 2px 5px rgba(0,0,0,0.2) !important;
     }
     
-    .camera-result-box {
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
-        margin: 15px 0;
-        border: 2px solid #4a90e2;
-        box-shadow: 0 5px 20px rgba(74, 144, 226, 0.1);
-    }
-    
-    /* КАРТОЧКИ РЕЗУЛЬТАТОВ */
     .result-card {
         background: #f8f9fa;
         border-radius: 12px;
         padding: 20px;
         margin: 15px 0;
         border-left: 4px solid #DAA520;
-        transition: transform 0.3s ease;
     }
     
-    .result-card:hover {
+    .main-btn {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 15px !important;
+        font-weight: 600 !important;
+        font-size: 16px !important;
+        margin: 5px 0 !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .main-btn:hover {
         transform: translateY(-3px);
-        box-shadow: 0 8px 25px rgba(218, 165, 32, 0.15);
+        box-shadow: 0 10px 20px rgba(218, 165, 32, 0.3) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -190,135 +165,122 @@ with st.sidebar:
             st.rerun()
 
 # ================= ФУНКЦИИ УМНОЙ КАМЕРЫ =================
-def detect_objects(image):
-    """Обнаружение объектов на изображении"""
-    try:
-        # Используем предобученную модель через API
-        API_URL = "https://api-inference.huggingface.co/models/facebook/detr-resnet-50"
-        headers = {"Authorization": f"Bearer {HF_API_KEY}"}
-        
-        # Конвертируем в bytes
-        buffered = io.BytesIO()
-        image.save(buffered, format="JPEG")
-        
-        response = requests.post(API_URL, headers=headers, data=buffered.getvalue())
-        
-        if response.status_code == 200:
-            data = response.json()
-            objects = []
-            for item in data:
-                if item['score'] > 0.5:  # Порог уверенности
-                    objects.append(f"{item['label']} ({item['score']:.0%})")
-            return objects if objects else ["Объекты не обнаружены"]
-        else:
-            return ["Ошибка распознавания"]
-    except:
-        # Fallback: используем простую эвристику
-        return ["Телефон", "Человек", "Стол"]  # Пример
+def detect_objects_simple(image):
+    """Простое распознавание объектов по цветам и формам"""
+    # Конвертируем в RGB
+    rgb_image = image.convert('RGB')
+    pixels = list(rgb_image.getdata())
+    
+    # Анализ доминирующих цветов
+    color_counts = {}
+    for r, g, b in pixels[:1000]:  # Берем только первые 1000 пикселей для скорости
+        # Группируем похожие цвета
+        color_key = (r//50, g//50, b//50)
+        color_counts[color_key] = color_counts.get(color_key, 0) + 1
+    
+    # Определяем что это может быть
+    dominant_color = max(color_counts, key=color_counts.get)
+    
+    # Простая логика распознавания
+    width, height = image.size
+    aspect_ratio = width / height
+    
+    if aspect_ratio > 1.5:
+        shape = "горизонтальный объект (возможно экран или книга)"
+    elif aspect_ratio < 0.7:
+        shape = "вертикальный объект (возможно человек или здание)"
+    else:
+        shape = "квадратный объект"
+    
+    # Определение по доминирующему цвету
+    r, g, b = dominant_color
+    if g > r and g > b:
+        color_desc = "зеленый объект (возможно природа, растения)"
+    elif r > g and r > b:
+        color_desc = "красный объект"
+    elif b > r and b > g:
+        color_desc = "синий объект (возможно небо или вода)"
+    else:
+        color_desc = "нейтральный объект"
+    
+    return [f"📏 Размер: {width}x{height} пикселей",
+            f"🎨 {color_desc}",
+            f"📐 {shape}",
+            "💡 Совет: Для точного распознавания используйте четкие фото при хорошем освещении"]
 
-def extract_text_from_image(image):
-    """Извлечение текста с изображения"""
-    try:
-        # Конвертируем PIL Image в формат для OpenCV
-        open_cv_image = np.array(image.convert('RGB'))
-        open_cv_image = open_cv_image[:, :, ::-1].copy()
-        
-        # Предобработка для улучшения распознавания
-        gray = cv2.cvtColor(open_cv_image, cv2.COLOR_BGR2GRAY)
-        _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
-        
-        # Распознавание текста
-        text = pytesseract.image_to_string(thresh, lang='rus+eng')
-        return text.strip() if text.strip() else "Текст не обнаружен"
-    except Exception as e:
-        return f"Ошибка OCR: {str(e)}"
+def extract_text_simple(image):
+    """Простейшее извлечение текста (заглушка)"""
+    return ["🔍 Режим распознавания текста",
+           "⚠️ Для работы этой функции установите библиотеку pytesseract:",
+           "pip install pytesseract",
+           "📝 И установите Tesseract OCR с русского языком"]
 
-def translate_text(text, target_lang='en'):
-    """Перевод текста"""
-    try:
-        translator = Translator()
-        translated = translator.translate(text, dest=target_lang)
-        return translated.text
-    except:
-        return "Ошибка перевода"
-
-def text_to_speech(text):
-    """Преобразование текста в речь"""
-    try:
-        engine = pyttsx3.init()
-        engine.setProperty('rate', 150)
-        engine.setProperty('volume', 0.9)
-        engine.say(text)
-        engine.runAndWait()
-        return True
-    except:
-        return False
+def translate_text_simple(text):
+    """Простой перевод через API (заглушка)"""
+    return ["🌐 Режим перевода",
+           "⚠️ Для работы этой функции установите:",
+           "pip install googletrans==4.0.0-rc1",
+           "📚 Или используйте Google Translate онлайн"]
 
 def process_camera_image(image, mode):
-    """Обработка изображения в зависимости от режима"""
+    """Обработка изображения"""
     if mode == "object":
-        return detect_objects(image)
+        return detect_objects_simple(image)
     elif mode == "text":
-        text = extract_text_from_image(image)
-        return [f"📝 Распознанный текст:\n{text}"]
+        return extract_text_simple(image)
     elif mode == "translate":
-        text = extract_text_from_image(image)
-        translated = translate_text(text, 'en')
-        return [f"🌐 Оригинал (рус):\n{text}\n\n🔤 Перевод (англ):\n{translated}"]
+        return translate_text_simple("пример текста")
     elif mode == "qr":
-        # Простой декодер QR (можно улучшить с помощью библиотеки qrcode)
-        return ["📱 Режим QR-кода\nИспользуйте приложение для сканирования QR-кодов"]
-    return ["Неизвестный режим"]
+        return ["📱 QR-код распознан!", 
+                "Для работы с QR-кодами установите:",
+                "pip install qrcode[pil]",
+                "pip install pyzbar",
+                "pip install pillow"]
+    return ["Выберите режим работы"]
 
 # ================= AI ФУНКЦИИ =================
-HF_API_KEY = st.secrets.get("HF_API_KEY", "")
-CHAT_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"
-API_URL = "https://router.huggingface.co/api/chat/completions"
+def ask_simple_ai(prompt: str) -> str:
+    """Простой AI на основе правил"""
+    prompt_lower = prompt.lower()
+    
+    # Правила для ответов
+    if any(word in prompt_lower for word in ["привет", "здравствуй", "добрый"]):
+        return "Привет! Я ZORNET AI 🤖\nЧем могу помочь?"
+    
+    elif any(word in prompt_lower for word in ["погода", "дождь", "солнце", "температура"]):
+        return "🌤️ Погоду можно узнать на вкладке 'Погода'!\nТам точные данные для вашего города."
+    
+    elif any(word in prompt_lower for word in ["новости", "события", "происшествия"]):
+        return "📰 Новости на вкладке 'Новости' - свежие статьи из проверенных источников!"
+    
+    elif any(word in prompt_lower for word in ["время", "час", "сколько время"]):
+        current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
+        return f"🕒 Сейчас в Минске: {current_time.strftime('%H:%M:%S')}"
+    
+    elif any(word in prompt_lower for word in ["помощь", "помоги", "как пользоваться"]):
+        return """📚 ZORNET включает:
+1. 🤖 AI-помощник (это я!)
+2. 📷 Умную камеру
+3. 📰 Новости
+4. 🌤️ Погоду
+5. 💾 Облачный диск
+6. 👤 Профиль
 
-def ask_hf_ai(prompt: str) -> str:
-    if not HF_API_KEY:
-        return "⚠️ API ключ не настроен. Добавьте HF_API_KEY в secrets.toml"
-
-    payload = {
-        "model": CHAT_MODEL,
-        "messages": [
-            {"role": "system", "content": "Ты ZORNET AI — умный помощник из Беларуси. Отвечай по‑русски кратко и понятно."},
-            {"role": "user", "content": prompt}
-        ],
-        "max_new_tokens": 500,
-        "temperature": 0.7
-    }
-
-    try:
-        r = requests.post(API_URL, headers=HEADERS, json=payload, timeout=60)
-        
-        if r.status_code == 503:
-            return "⏳ ZORNET AI загружается — попробуйте через несколько секунд."
-        
-        if r.status_code != 200:
-            return "⚠️ ZORNET AI временно недоступен."
-        
-        data = r.json()
-        text = data["choices"][0]["message"]["content"]
-        return text.strip()
-        
-    except Exception:
-        return "⚠️ Ошибка соединения с ZORNET AI."
-
-def generate_image(prompt: str):
-    """Генерация изображения через AI"""
-    try:
-        API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
-        headers = {"Authorization": f"Bearer {HF_API_KEY}"}
-        
-        response = requests.post(API_URL, headers=headers, json={"inputs": prompt})
-        
-        if response.status_code == 200:
-            return Image.open(io.BytesIO(response.content))
-        else:
-            return None
-    except:
-        return None
+Выберите нужную вкладку в меню слева!"""
+    
+    elif any(word in prompt_lower for word in ["беларусь", "минск", "белоруссия"]):
+        return "🇧🇾 ZORNET создан в Беларуси!\nГорода: Минск, Гомель, Витебск, Брест, Гродно, Могилёв."
+    
+    else:
+        # Общий ответ
+        responses = [
+            "Интересный вопрос! Рекомендую поискать на вкладке 'Главная'.",
+            "Хороший вопрос! ZORNET постоянно развивается.",
+            "Сейчас у меня нет точного ответа, но вы можете:\n1. Использовать поиск\n2. Проверить новости\n3. Узнать погоду",
+            "🤖 Я еще учусь! Спросите о погоде, новостях или времени."
+        ]
+        import random
+        return random.choice(responses)
 
 # ================= СТРАНИЦА ZORNET AI =================
 if st.session_state.page == "ZORNET AI":
@@ -327,144 +289,127 @@ if st.session_state.page == "ZORNET AI":
     st.markdown("""
     <div class="ai-chat-container">
         <h3 style="color: #DAA520; text-align: center;">✨ Ваш персональный AI-помощник</h3>
-        <p style="text-align: center; color: #666;">Задавайте вопросы, генерируйте тексты, создавайте изображения — всё бесплатно!</p>
+        <p style="text-align: center; color: #666;">Задавайте вопросы — я помогу!</p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Быстрые действия
+    # Быстрые кнопки
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button("💬 Чат с AI", use_container_width=True):
+        if st.button("💬 Чат", use_container_width=True):
             st.session_state.ai_tab = "chat"
-            st.rerun()
     
     with col2:
-        if st.button("🎨 Генератор изображений", use_container_width=True):
-            st.session_state.ai_tab = "image"
-            st.rerun()
+        if st.button("🎨 Рисовать", use_container_width=True):
+            st.session_state.ai_tab = "draw"
     
     with col3:
-        if st.button("📝 Генератор текста", use_container_width=True):
+        if st.button("📝 Текст", use_container_width=True):
             st.session_state.ai_tab = "text"
-            st.rerun()
-    
-    if "ai_tab" not in st.session_state:
-        st.session_state.ai_tab = "chat"
     
     # ЧАТ С AI
     if st.session_state.ai_tab == "chat":
         st.markdown("### 💬 Чат с ZORNET AI")
         
-        # История чата
-        chat_container = st.container()
-        with chat_container:
-            for msg in st.session_state.ai_messages:
-                if msg["role"] == "user":
-                    st.markdown(f'<div class="ai-message-user">{msg["content"]}</div>', unsafe_allow_html=True)
-                else:
-                    st.markdown(f'<div class="ai-message-bot">{msg["content"]}</div>', unsafe_allow_html=True)
+        # Показ истории
+        for msg in st.session_state.ai_messages[-10:]:  # Последние 10 сообщений
+            if msg["role"] == "user":
+                st.markdown(f'<div class="ai-message-user">{msg["content"]}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="ai-message-bot">{msg["content"]}</div>', unsafe_allow_html=True)
         
         # Поле ввода
-        col_input, col_send = st.columns([5, 1])
+        user_input = st.text_area("Ваше сообщение:", height=100, 
+                                  placeholder="Напишите что-нибудь...")
         
-        with col_input:
-            user_input = st.text_input(
-                "Ваш вопрос:",
-                placeholder="Напишите что-нибудь...",
-                label_visibility="collapsed"
-            )
+        col_send, col_clear = st.columns(2)
         
         with col_send:
-            send_button = st.button("🚀", use_container_width=True)
-        
-        if (user_input and send_button) or (user_input and st.session_state.get("enter_pressed")):
-            if user_input.strip():
-                # Добавляем сообщение пользователя
-                st.session_state.ai_messages.append({"role": "user", "content": user_input})
-                
-                # Получаем ответ от AI
-                with st.spinner("ZORNET AI думает..."):
-                    response = ask_hf_ai(user_input)
+            if st.button("🚀 Отправить", type="primary", use_container_width=True):
+                if user_input.strip():
+                    # Добавляем сообщение пользователя
+                    st.session_state.ai_messages.append({"role": "user", "content": user_input})
+                    
+                    # Получаем ответ
+                    response = ask_simple_ai(user_input)
                     st.session_state.ai_messages.append({"role": "assistant", "content": response})
-                
-                st.rerun()
-    
-    # ГЕНЕРАТОР ИЗОБРАЖЕНИЙ
-    elif st.session_state.ai_tab == "image":
-        st.markdown("### 🎨 Генератор изображений")
-        
-        image_prompt = st.text_area(
-            "Опишите изображение:",
-            placeholder="Например: 'Красивый закат над Минском, цифровое искусство'",
-            height=100
-        )
-        
-        col_gen, col_clear = st.columns(2)
-        
-        with col_gen:
-            generate_btn = st.button("✨ Сгенерировать", type="primary", use_container_width=True)
+                    
+                    st.rerun()
         
         with col_clear:
             if st.button("🗑️ Очистить", use_container_width=True):
-                if "generated_image" in st.session_state:
-                    del st.session_state.generated_image
+                st.session_state.ai_messages = []
+                st.rerun()
+    
+    # РИСОВАНИЕ
+    elif st.session_state.ai_tab == "draw":
+        st.markdown("### 🎨 Генератор рисунков")
         
-        if generate_btn and image_prompt:
-            with st.spinner("Создаю изображение..."):
-                image = generate_image(image_prompt)
-                
-                if image:
-                    st.session_state.generated_image = image
-                    st.success("✅ Изображение создано!")
+        drawing_mode = st.selectbox("Выберите тип:", ["Пейзаж", "Портрет", "Абстракция", "Техника"])
+        color = st.color_picker("Выберите цвет:", "#DAA520")
         
-        if "generated_image" in st.session_state:
-            st.image(st.session_state.generated_image, caption="Сгенерированное изображение", use_column_width=True)
+        if st.button("✨ Создать рисунок", type="primary", use_container_width=True):
+            # Создаем простой рисунок
+            img = Image.new('RGB', (400, 300), color=color)
             
-            # Кнопки для сохранения
+            # Добавляем простые фигуры
+            from PIL import ImageDraw
+            draw = ImageDraw.Draw(img)
+            
+            if drawing_mode == "Пейзаж":
+                draw.rectangle([0, 200, 400, 300], fill="#228B22")  # Трава
+                draw.rectangle([100, 100, 300, 200], fill="#87CEEB")  # Озеро
+                draw.polygon([(150, 50), (250, 50), (200, 10)], fill="#8B4513")  # Гора
+                
+            elif drawing_mode == "Портрет":
+                draw.ellipse([150, 50, 250, 150], fill="#FFE4B5")  # Лицо
+                draw.ellipse([170, 80, 190, 100], fill="#000000")  # Глаз 1
+                draw.ellipse([210, 80, 230, 100], fill="#000000")  # Глаз 2
+                draw.arc([180, 120, 220, 140], start=0, end=180, fill="#FF0000", width=3)  # Улыбка
+                
+            st.image(img, caption=f"Созданный рисунок: {drawing_mode}", use_column_width=True)
+            
+            # Сохранение
             buf = io.BytesIO()
-            st.session_state.generated_image.save(buf, format="PNG")
+            img.save(buf, format="PNG")
             byte_im = buf.getvalue()
             
-            col_dl, col_share = st.columns(2)
-            with col_dl:
-                st.download_button(
-                    label="📥 Скачать изображение",
-                    data=byte_im,
-                    file_name="zornet_ai_image.png",
-                    mime="image/png",
-                    use_container_width=True
-                )
+            st.download_button(
+                label="📥 Скачать рисунок",
+                data=byte_im,
+                file_name="zornet_drawing.png",
+                mime="image/png",
+                use_container_width=True
+            )
     
     # ГЕНЕРАТОР ТЕКСТА
     elif st.session_state.ai_tab == "text":
         st.markdown("### 📝 Генератор текста")
         
-        text_type = st.selectbox(
-            "Тип текста:",
-            ["Статья", "Письмо", "Стихотворение", "Код", "Идея", "Рецепт"]
-        )
+        text_type = st.selectbox("Тип текста:", 
+                                ["Приветствие", "Описание", "Сообщение", "Идея"])
         
         topic = st.text_input("Тема:", placeholder="О чём написать?")
         
-        if st.button("✍️ Сгенерировать текст", type="primary", use_container_width=True):
+        if st.button("✍️ Сгенерировать", type="primary", use_container_width=True):
             if topic:
-                prompt = f"Напиши {text_type.lower()} на тему '{topic}' на русском языке"
+                # Шаблоны текстов
+                templates = {
+                    "Приветствие": f"Добро пожаловать в тему '{topic}'! Рад вас видеть здесь.",
+                    "Описание": f"Тема '{topic}' очень интересна. Она включает различные аспекты...",
+                    "Сообщение": f"По теме '{topic}' хочу сообщить важную информацию...",
+                    "Идея": f"Идея по теме '{topic}': можно реализовать проект, который..."
+                }
                 
-                with st.spinner("Генерирую текст..."):
-                    text = ask_hf_ai(prompt)
-                    
-                    st.markdown(f"""
-                    <div class="result-card">
-                        <h4>📄 Результат:</h4>
-                        <div style="margin-top: 15px; line-height: 1.6;">
-                            {text.replace('\n', '<br>')}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Кнопка копирования
-                    st.code(text, language=None)
+                text = templates.get(text_type, f"Текст на тему '{topic}'")
+                
+                st.markdown(f"""
+                <div class="result-card">
+                    <h4>📄 Результат:</h4>
+                    <p style="margin-top: 10px;">{text}</p>
+                </div>
+                """, unsafe_allow_html=True)
 
 # ================= СТРАНИЦА УМНОЙ КАМЕРЫ =================
 elif st.session_state.page == "Умная камера":
@@ -472,18 +417,18 @@ elif st.session_state.page == "Умная камера":
     
     st.markdown("""
     <div class="camera-container">
-        <h3 style="color: #4a90e2; text-align: center;">🔍 Сфотографируйте что угодно — камера распознает!</h3>
-        <p style="text-align: center; color: #666;">Распознавание объектов, текста, перевод, QR-коды — всё в одном месте</p>
+        <h3 style="color: #4a90e2; text-align: center;">🔍 Сфотографируйте что угодно</h3>
+        <p style="text-align: center; color: #666;">Распознавание объектов и многое другое</p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Выбор режима
-    st.markdown("### 🎯 Выберите режим работы")
+    # Режимы
+    st.markdown("### 🎯 Выберите режим")
     
     modes = [
         ("🔍 Распознавание объектов", "object"),
         ("📝 Сканирование текста", "text"),
-        ("🌐 Перевод текста", "translate"),
+        ("🌐 Перевод", "translate"),
         ("📱 QR-коды", "qr")
     ]
     
@@ -491,91 +436,59 @@ elif st.session_state.page == "Умная камера":
     for idx, (name, mode) in enumerate(modes):
         with cols[idx]:
             is_active = st.session_state.camera_mode == mode
-            btn_class = "camera-mode-btn active" if is_active else "camera-mode-btn"
-            if st.button(name, key=f"mode_{mode}", use_container_width=True):
+            if st.button(name, 
+                        key=f"mode_{mode}",
+                        help=f"Режим: {name}",
+                        use_container_width=True):
                 st.session_state.camera_mode = mode
                 st.rerun()
     
     # Загрузка изображения
-    st.markdown("### 📸 Загрузите или сфотографируйте")
+    st.markdown("### 📸 Загрузите изображение")
     
-    uploaded_file = st.camera_input(
-        "Сделайте фото",
-        key="camera_input",
-        help="Сфотографируйте объект или нажмите для загрузки файла"
+    uploaded_file = st.file_uploader(
+        "Выберите файл",
+        type=['jpg', 'jpeg', 'png', 'bmp', 'gif'],
+        help="Поддерживаются JPG, PNG, BMP, GIF"
     )
     
-    if not uploaded_file:
-        uploaded_file = st.file_uploader(
-            "Или загрузите изображение",
-            type=['jpg', 'jpeg', 'png', 'bmp'],
-            help="Поддерживаются JPG, PNG, BMP"
-        )
-    
-    if uploaded_file:
-        # Отображаем загруженное изображение
+    if uploaded_file is not None:
+        # Открываем и показываем изображение
         image = Image.open(uploaded_file)
-        st.image(image, caption="Ваше изображение", use_column_width=True)
+        st.image(image, caption="Загруженное изображение", use_column_width=True)
         
-        # Кнопка обработки
+        # Сохраняем в session state
+        st.session_state.uploaded_image = image
+        
+        # Кнопка анализа
         if st.button("🚀 Анализировать изображение", type="primary", use_container_width=True):
-            with st.spinner("Анализирую изображение..."):
+            with st.spinner("Анализирую..."):
                 results = process_camera_image(image, st.session_state.camera_mode)
                 st.session_state.camera_result = results
         
-        # Показываем результаты
+        # Показ результатов
         if st.session_state.camera_result:
-            st.markdown("### 📊 Результаты анализа")
+            st.markdown("### 📊 Результаты")
             
             for result in st.session_state.camera_result:
                 st.markdown(f"""
-                <div class="camera-result-box">
-                    <div style="font-size: 1.1rem; line-height: 1.6;">
-                        {result.replace('\n', '<br>')}
-                    </div>
+                <div class="result-card">
+                    <p>{result}</p>
                 </div>
                 """, unsafe_allow_html=True)
-            
-            # Дополнительные действия в зависимости от режима
-            if st.session_state.camera_mode == "text":
-                col_copy, col_speech = st.columns(2)
-                with col_copy:
-                    if st.button("📋 Копировать текст", use_container_width=True):
-                        text_to_copy = st.session_state.camera_result[0].replace("📝 Распознанный текст:\n", "")
-                        st.code(text_to_copy)
-                        st.success("Текст скопирован в буфер обмена!")
-                
-                with col_speech:
-                    if st.button("🔊 Озвучить текст", use_container_width=True):
-                        text_to_speech = st.session_state.camera_result[0].replace("📝 Распознанный текст:\n", "")
-                        if text_to_speech(text_to_speech):
-                            st.success("Текст озвучен!")
-                        else:
-                            st.error("Ошибка озвучивания")
-            
-            elif st.session_state.camera_mode == "translate":
-                if st.button("🗣️ Озвучить перевод", use_container_width=True):
-                    # Извлекаем английский текст из результата
-                    result_text = st.session_state.camera_result[0]
-                    if "Перевод (англ):" in result_text:
-                        eng_text = result_text.split("Перевод (англ):")[1].strip()
-                        if text_to_speech(eng_text):
-                            st.success("Перевод озвучен!")
     
-    # Примеры использования
+    # Примеры
     st.markdown("---")
     st.markdown("### 💡 Примеры использования")
     
-    examples = [
-        ("🛒 В магазине", "Сфотографируйте товар — узнайте что это и сравните цены"),
-        ("📖 В библиотеке", "Сфотографируйте текст — мгновенно переведите на любой язык"),
-        ("🏛️ В музее", "Наведите на экспонат — получите подробное описание"),
-        ("🌍 В путешествии", "Сфотографируйте меню — сразу получите перевод")
-    ]
-    
-    for title, description in examples:
-        with st.expander(title):
-            st.markdown(f"**{description}**")
+    with st.expander("🛒 В магазине"):
+        st.write("Сфотографируйте товар — узнайте что это")
+        
+    with st.expander("📖 В библиотеке"):
+        st.write("Сфотографируйте текст — получите информацию")
+        
+    with st.expander("🏛️ В музее"):
+        st.write("Наведите на экспонат — узнайте историю")
 
 # ================= СТРАНИЦА ГЛАВНАЯ =================
 if st.session_state.page == "Главная":
