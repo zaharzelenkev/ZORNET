@@ -1,33 +1,21 @@
-# Фаза 1: Базовые (100% работают)
-streamlit==1.29.0
-pillow==10.1.0
-requests==2.31.0
-pytz==2023.3
-
-# Фаза 2: Добавь если Фаза 1 работает
-feedparser==6.0.10
-beautifulsoup4==4.12.2
-
-# Фаза 3: Еще больше
-duckduckgo-search==6.1.0
-pandas==2.1.4
-
-# Фаза 4: Гео
-folium==0.14.0
-streamlit-folium==0.15.1
-geopy==2.4.0
-
-# Фаза 5: AI (осторожно!)
-g4f==0.1.9.2
-aiohttp==3.9.1
-nest_asyncio==1.5.8
-
-# Фаза 6: Google
-google-auth==2.23.4
-google-auth-oauthlib==1.1.0
-google-api-python-client==2.104.0
-
-# УБРАТЬ или оставить НАПОСЛЕДОК:
-# sqlite3 - это встроенная библиотека, не нужно в requirements
-# streamlit-geolocation - может не работать
-# bcrypt - может конфликтовать
+streamlit
+pillow
+requests
+feedparser
+pytz
+google-auth
+google-auth-oauthlib
+google-api-python-client
+streamlit-folium
+folium
+huggingface_hub>=0.19.0
+transformers>=4.35.0
+torch>=2.0.0
+duckduckgo-search>=6.0.0
+streamlit-geolocation
+beautifulsoup4
+g4f[all]
+curl_cffi
+nest_asyncio
+pandas
+pathlib
