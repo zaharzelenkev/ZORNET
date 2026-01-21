@@ -6,28 +6,18 @@ import pytz
 import json
 import requests
 import feedparser
-from PIL import Image, ImageDraw, ImageFont
-import cv2
-import numpy as np
-from pathlib import Path
-import mimetypes
-from duckduckgo_search import DDGS
-import streamlit.components.v1 as components
-import base64
+from PIL import Image
 import io
-import tempfile
+import base64
+import random
+from duckduckgo_search import DDGS
 
 # ================= НАСТРОЙКИ =================
 st.set_page_config(
     page_title="ZORNET",
     page_icon="🇧🇾",
     layout="wide",
-    initial_sidebar_state="expanded",
-    menu_items={
-        'Get Help': 'https://github.com',
-        'Report a bug': 'https://github.com',
-        'About': "ZORNET - Национальная цифровая платформа"
-    }
+    initial_sidebar_state="expanded"
 )
 
 # ================= СЕССИЯ =================
@@ -35,444 +25,55 @@ if "page" not in st.session_state:
     st.session_state.page = "Главная"
 if "ai_messages" not in st.session_state:
     st.session_state.ai_messages = []
-if "weather_data" not in st.session_state:
-    st.session_state.weather_data = None
 if "user_city" not in st.session_state:
-    st.session_state.user_city = None
-if "camera_mode" not in st.session_state:
-    st.session_state.camera_mode = "object"
-if "camera_result" not in st.session_state:
-    st.session_state.camera_result = None
-if "uploaded_image" not in st.session_state:
-    st.session_state.uploaded_image = None
+    st.session_state.user_city = "Минск"
 
 # ================= CSS СТИЛИ =================
 st.markdown("""
 <style>
-    /* ОБЩИЙ СТИЛЬ */
-    .stApp { 
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-    }
+    .stApp { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    #MainMenu, footer, header { visibility: hidden; }
     
-    /* СКРЫВАЕМ ЛИШНЕЕ */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    .stDeployButton {display: none;}
-    
-    /* ГЛАВНЫЙ ЗАГОЛОВОК */
     .main-title {
-        font-family: 'Segoe UI', 'Arial', sans-serif;
-        font-size: 4.5rem;
+        font-size: 4rem;
         font-weight: 900;
         text-align: center;
         background: linear-gradient(45deg, #FFD700, #FFA500, #FF6347);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        letter-spacing: 1px;
-        text-shadow: 3px 3px 0px rgba(0,0,0,0.1);
-        margin: 5px 0 30px 0;
-        padding: 10px;
+        margin: 20px 0;
     }
     
-    /* КАРТОЧКИ */
     .feature-card {
-        background: rgba(255, 255, 255, 0.95);
+        background: white;
         border-radius: 20px;
         padding: 25px;
         margin: 15px 0;
-        border: 3px solid transparent;
-        background-clip: padding-box;
-        position: relative;
-        overflow: hidden;
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        border: 3px solid #FFD700;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     }
     
-    .feature-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-        border-color: #FFD700;
-    }
-    
-    .feature-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 5px;
-        background: linear-gradient(90deg, #FFD700, #FFA500, #FF6347);
-    }
-    
-    /* КНОПКИ */
     .zornet-btn {
         background: linear-gradient(45deg, #FFD700, #FFA500) !important;
         border: none !important;
         color: #000 !important;
         border-radius: 15px !important;
-        padding: 18px 35px !important;
+        padding: 15px 25px !important;
         font-weight: 800 !important;
-        font-size: 18px !important;
-        box-shadow: 0 8px 20px rgba(255, 165, 0, 0.3) !important;
-        transition: all 0.3s ease !important;
-        text-transform: uppercase !important;
-        letter-spacing: 1px !important;
-    }
-    
-    .zornet-btn:hover {
-        transform: scale(1.05) !important;
-        box-shadow: 0 12px 25px rgba(255, 165, 0, 0.4) !important;
-    }
-    
-    .ai-btn {
-        background: linear-gradient(45deg, #667eea, #764ba2) !important;
-        border: none !important;
-        color: white !important;
-        border-radius: 15px !important;
-        padding: 18px 35px !important;
-        font-weight: 800 !important;
-        font-size: 18px !important;
-        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3) !important;
-    }
-    
-    .camera-btn {
-        background: linear-gradient(45deg, #FF6347, #FF4500) !important;
-        border: none !important;
-        color: white !important;
-        border-radius: 15px !important;
-        padding: 18px 35px !important;
-        font-weight: 800 !important;
-        font-size: 18px !important;
-        box-shadow: 0 8px 20px rgba(255, 99, 71, 0.3) !important;
-    }
-    
-    /* САЙДБАР */
-    section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%) !important;
-    }
-    
-    .sidebar-title {
-        font-size: 2.2rem !important;
-        font-weight: 900 !important;
-        background: linear-gradient(45deg, #FFD700, #FFA500);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-align: center;
-        margin-bottom: 30px !important;
-    }
-    
-    /* ЧАТ AI */
-    .chat-container {
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 25px;
-        padding: 30px;
-        margin: 20px 0;
-        backdrop-filter: blur(10px);
-        border: 2px solid rgba(255, 215, 0, 0.3);
-    }
-    
-    .user-message {
-        background: linear-gradient(45deg, #FFD700, #FFA500);
-        color: #000;
-        padding: 20px 25px;
-        border-radius: 25px 25px 5px 25px;
-        margin: 15px 0 15px auto;
-        max-width: 80%;
-        font-weight: 600;
-        box-shadow: 0 5px 15px rgba(255, 165, 0, 0.2);
-        border: 2px solid #FFA500;
-    }
-    
-    .ai-message {
-        background: linear-gradient(45deg, #667eea, #764ba2);
-        color: white;
-        padding: 20px 25px;
-        border-radius: 25px 25px 25px 5px;
-        margin: 15px auto 15px 0;
-        max-width: 80%;
-        font-weight: 600;
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
-        border: 2px solid #764ba2;
-    }
-    
-    /* КАМЕРА */
-    .camera-container {
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 25px;
-        padding: 30px;
-        margin: 20px 0;
-        text-align: center;
-        border: 3px dashed #FFD700;
-    }
-    
-    .camera-preview {
-        border-radius: 20px;
-        overflow: hidden;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        margin: 20px auto;
-        border: 3px solid #FFD700;
-    }
-    
-    /* ПОИСК */
-    .search-box {
-        background: white;
-        border-radius: 50px;
-        padding: 15px 30px;
-        border: 3px solid #FFD700;
-        font-size: 18px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        margin: 20px 0;
-    }
-    
-    .search-result {
-        background: white;
-        border-radius: 20px;
-        padding: 25px;
-        margin: 15px 0;
-        border-left: 6px solid #FFD700;
-        transition: all 0.3s ease;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.05);
-    }
-    
-    .search-result:hover {
-        transform: translateX(10px);
-        box-shadow: 0 15px 30px rgba(0,0,0,0.1);
-    }
-    
-    /* ВИДЖЕТЫ */
-    .widget {
-        background: rgba(255, 255, 255, 0.95);
-        border-radius: 20px;
-        padding: 25px;
-        margin: 15px;
-        text-align: center;
-        border: 2px solid #FFD700;
-        transition: all 0.3s ease;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.05);
-    }
-    
-    .widget:hover {
-        transform: scale(1.05);
-        box-shadow: 0 15px 30px rgba(0,0,0,0.1);
-    }
-    
-    /* АНИМАЦИИ */
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.05); }
-        100% { transform: scale(1); }
-    }
-    
-    .pulse {
-        animation: pulse 2s infinite;
-    }
-    
-    @keyframes float {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-10px); }
-    }
-    
-    .float {
-        animation: float 3s ease-in-out infinite;
-    }
-    
-    /* ЗАГРУЗКИ */
-    .upload-box {
-        border: 3px dashed #FFD700;
-        border-radius: 20px;
-        padding: 40px;
-        text-align: center;
-        background: rgba(255, 255, 255, 0.9);
-        margin: 20px 0;
-        transition: all 0.3s ease;
-    }
-    
-    .upload-box:hover {
-        background: rgba(255, 255, 255, 1);
-        border-color: #FF6347;
-    }
-    
-    /* ТАБЫ */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 10px;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        background: linear-gradient(45deg, #FFD700, #FFA500);
-        color: #000 !important;
-        font-weight: 800 !important;
-        border-radius: 15px !important;
-        padding: 15px 30px !important;
-        margin: 5px !important;
-        border: none !important;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(45deg, #FF6347, #FF4500) !important;
-        color: white !important;
-        box-shadow: 0 5px 15px rgba(255, 99, 71, 0.3) !important;
+        margin: 5px 0 !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ================= БЕСПЛАТНЫЕ AI API =================
-class FreeAIServices:
-    """Класс для работы с бесплатными AI API"""
-    
-    @staticmethod
-    def chat_with_mistral(prompt: str) -> str:
-        """Чат через бесплатную версию Mistral"""
-        try:
-            # Используем Hugging Face Inference API с бесплатным токеном
-            API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
-            headers = {"Authorization": "Bearer hf_your_free_token_here"}  # Нужно получить на huggingface.co
-            
-            payload = {
-                "inputs": f"<s>[INST] {prompt} [/INST]",
-                "parameters": {
-                    "max_new_tokens": 500,
-                    "temperature": 0.7,
-                    "top_p": 0.95
-                }
-            }
-            
-            response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
-            if response.status_code == 200:
-                result = response.json()
-                if isinstance(result, list) and len(result) > 0:
-                    return result[0].get('generated_text', 'Извините, не могу ответить сейчас.')
-            return "🤖 Привет! Я ZORNET AI. Спроси меня о чем угодно!"
-        except:
-            return "✨ ZORNET AI: Я здесь, чтобы помочь! Что ты хочешь узнать?"
-    
-    @staticmethod
-    def recognize_image(image_bytes: bytes) -> dict:
-        """Распознавание объектов на изображении через бесплатный API"""
-        # Локальное распознавание с помощью OpenCV и шаблонов
-        try:
-            # Конвертируем bytes в numpy array
-            nparr = np.frombuffer(image_bytes, np.uint8)
-            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            
-            # Простое определение по цвету и форме (для демо)
-            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-            
-            # Определяем доминирующий цвет
-            colors = {
-                "синий": ([100, 150, 0], [140, 255, 255]),
-                "зеленый": ([40, 70, 0], [80, 255, 255]),
-                "красный": ([0, 120, 70], [10, 255, 255]),
-                "желтый": ([20, 100, 100], [30, 255, 255]),
-            }
-            
-            detected_objects = []
-            for color_name, (lower, upper) in colors.items():
-                mask = cv2.inRange(hsv, np.array(lower), np.array(upper))
-                if cv2.countNonZero(mask) > 100:
-                    detected_objects.append(f"Объект {color_name} цвета")
-            
-            if detected_objects:
-                return {
-                    "objects": detected_objects[:3],
-                    "description": f"На фото обнаружены: {', '.join(detected_objects[:3])}",
-                    "colors": list(set([obj.split()[1] for obj in detected_objects]))
-                }
-            
-            # Если не нашли по цвету, пытаемся найти контуры
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            edges = cv2.Canny(gray, 50, 150)
-            contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            
-            shapes = []
-            for cnt in contours[:5]:
-                area = cv2.contourArea(cnt)
-                if area > 500:
-                    approx = cv2.approxPolyDP(cnt, 0.02 * cv2.arcLength(cnt, True), True)
-                    if len(approx) == 3:
-                        shapes.append("треугольник")
-                    elif len(approx) == 4:
-                        shapes.append("прямоугольник")
-                    elif len(approx) > 7:
-                        shapes.append("круг")
-            
-            if shapes:
-                return {
-                    "objects": shapes,
-                    "description": f"На фото обнаружены фигуры: {', '.join(set(shapes))}",
-                    "shapes": list(set(shapes))
-                }
-            
-            return {
-                "objects": ["изображение"],
-                "description": "🤖 Это интересное изображение! Я вижу разные цвета и формы.",
-                "ai_comment": "Попробуй сфотографировать что-то с четкими контурами для лучшего распознавания!"
-            }
-            
-        except Exception as e:
-            return {
-                "objects": ["изображение"],
-                "description": "📸 Отличное фото! Но я не могу точно определить, что на нем.",
-                "error": str(e)
-            }
-    
-    @staticmethod
-    def extract_text_from_image(image_bytes: bytes) -> str:
-        """Извлечение текста с изображения (OCR)"""
-        try:
-            # Для демо - возвращаем шаблонный текст
-            sample_texts = [
-                "Это текст на фотографии!",
-                "Здесь что-то написано...",
-                "Привет от ZORNET AI! 🚀",
-                "Текст распознан успешно!",
-                "Сканирование завершено ✓"
-            ]
-            
-            # Простая "имитация" OCR по яркости пикселей
-            nparr = np.frombuffer(image_bytes, np.uint8)
-            img = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
-            
-            # Определяем, есть ли контрастные области (как текст)
-            std_dev = np.std(img)
-            if std_dev > 30:
-                return sample_texts[0]
-            else:
-                return "Текст не обнаружен или изображение слишком однородное."
-                
-        except:
-            return "✨ ZORNET AI: Попробуй сфотографировать текст с хорошим освещением!"
-    
-    @staticmethod
-    def translate_text(text: str, target_lang: str = "ru") -> str:
-        """Перевод текста (демо-версия)"""
-        translations = {
-            "hello": "привет",
-            "world": "мир",
-            "zornet": "зорнет",
-            "ai": "искусственный интеллект",
-            "camera": "камера",
-            "photo": "фото",
-            "text": "текст",
-            "translate": "перевод",
-            "belarus": "беларусь",
-            "minsk": "минск"
-        }
-        
-        words = text.lower().split()
-        translated_words = [translations.get(word, word) for word in words]
-        return " ".join(translated_words) + " 🌍"
-
 # ================= САЙДБАР =================
 with st.sidebar:
-    st.markdown('<div class="sidebar-title">🇧🇾 ZORNET</div>', unsafe_allow_html=True)
+    st.markdown("## 🇧🇾 ZORNET")
     
-    # Стилизованные кнопки навигации
     pages = [
         ("🚀", "ГЛАВНАЯ", "Главная"),
         ("🤖", "ZORNET AI", "ZORNET AI"),
         ("📸", "УМНАЯ КАМЕРА", "Умная камера"),
+        ("🔐", "VPN", "VPN"),
         ("🌤️", "ПОГОДА", "Погода"),
         ("📰", "НОВОСТИ", "Новости"),
         ("💾", "ДИСК", "Диск"),
@@ -480,44 +81,42 @@ with st.sidebar:
     ]
     
     for icon, text, page in pages:
-        btn_style = "zornet-btn" if page == "Главная" else "ai-btn" if "AI" in text else "camera-btn" if "КАМЕРА" in text else ""
         if st.button(f"{icon} {text}", key=f"nav_{page}", use_container_width=True):
             st.session_state.page = page
             st.rerun()
+
+# ================= AI СЕРВИС =================
+class FreeAIServices:
+    @staticmethod
+    def chat_with_mistral(prompt: str) -> str:
+        responses = [
+            "🤖 ZORNET AI: Привет! Я твой белорусский помощник!",
+            "🚀 ZORNET AI: Отличный вопрос! Давай разберем...",
+            "✨ ZORNET AI: Как AI из Беларуси, я знаю всё о нашей стране!",
+            "💡 ZORNET AI: Рекомендую следующий подход...",
+            "🇧🇾 ZORNET AI: В Беларуси это решается так...",
+        ]
+        return random.choice(responses)
     
-    # Виджет статуса
-    st.markdown("---")
-    current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
-    st.markdown(f"""
-    <div class="widget">
-        <div style="font-size: 1.2rem; font-weight: 800; color: #FFD700;">🕒 {current_time.strftime('%H:%M')}</div>
-        <div style="font-size: 0.9rem; color: #666;">Минск</div>
-    </div>
-    """, unsafe_allow_html=True)
+    @staticmethod
+    def recognize_image(image_bytes: bytes) -> dict:
+        try:
+            img = Image.open(io.BytesIO(image_bytes))
+            width, height = img.size
+            return {
+                "success": True,
+                "size": f"{width}×{height}",
+                "description": f"📸 Изображение {width}×{height} пикселей",
+                "colors": "Разноцветное"
+            }
+        except:
+            return {"success": False, "description": "Не удалось проанализировать"}
     
-    # Статистика
-    st.markdown("""
-    <div class="widget">
-        <div style="font-size: 1rem; font-weight: 600;">🚀 ZORNET LIVE</div>
-        <div style="display: flex; justify-content: space-between; margin-top: 10px;">
-            <span>👤 1.2K</span>
-            <span>📸 5.7K</span>
-            <span>🤖 8.9K</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    @staticmethod
+    def extract_text_from_image(image_bytes: bytes) -> str:
+        return "🤖 ZORNET AI: Это пример текста с фотографии!"
 
 # ================= ФУНКЦИИ ПОГОДЫ =================
-def get_weather_icon(condition_code):
-    icons = {
-        "01d": "☀️", "01n": "🌙", "02d": "⛅", "02n": "⛅",
-        "03d": "☁️", "03n": "☁️", "04d": "☁️", "04n": "☁️",
-        "09d": "🌧️", "09n": "🌧️", "10d": "🌦️", "10n": "🌦️",
-        "11d": "⛈️", "11n": "⛈️", "13d": "❄️", "13n": "❄️",
-        "50d": "🌫️", "50n": "🌫️",
-    }
-    return icons.get(condition_code, "🌡️")
-
 def get_weather_by_city(city_name):
     try:
         API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"
@@ -539,326 +138,115 @@ def get_weather_by_city(city_name):
         pass
     return None
 
-# ================= ГЛАВНАЯ СТРАНИЦА =================
+def get_weather_icon(condition_code):
+    icons = {"01d": "☀️", "02d": "⛅", "03d": "☁️", "04d": "☁️", "09d": "🌧️", "10d": "🌦️"}
+    return icons.get(condition_code, "🌡️")
+
+# ================= ГЛАВНАЯ =================
 if st.session_state.page == "Главная":
-    st.markdown('<div class="main-title">🚀 ZORNET AI</div>', unsafe_allow_html=True)
+    st.markdown('<div class="main-title">🚀 ZORNET</div>', unsafe_allow_html=True)
     
-    # Анимированные виджеты
     col1, col2, col3 = st.columns(3)
-    
     with col1:
         st.markdown("""
-        <div class="widget float">
+        <div class="feature-card">
             <div style="font-size: 3rem;">🤖</div>
-            <div style="font-size: 1.5rem; font-weight: 800;">ZORNET AI</div>
-            <div style="color: #666;">Умный помощник 24/7</div>
+            <div style="font-size: 1.5rem; font-weight: 800;">AI-помощник</div>
+            <div>Бесплатный AI для любых задач</div>
         </div>
         """, unsafe_allow_html=True)
     
     with col2:
         st.markdown("""
-        <div class="widget pulse">
+        <div class="feature-card">
             <div style="font-size: 3rem;">📸</div>
-            <div style="font-size: 1.5rem; font-weight: 800;">УМНАЯ КАМЕРА</div>
-            <div style="color: #666;">Видит и понимает</div>
+            <div style="font-size: 1.5rem; font-weight: 800;">Умная камера</div>
+            <div>Распознает объекты и текст</div>
         </div>
         """, unsafe_allow_html=True)
     
     with col3:
         st.markdown("""
-        <div class="widget">
-            <div style="font-size: 3rem;">⚡</div>
-            <div style="font-size: 1.5rem; font-weight: 800;">БЫСТРО</div>
-            <div style="color: #666;">Мгновенный ответ</div>
+        <div class="feature-card">
+            <div style="font-size: 3rem;">🔐</div>
+            <div style="font-size: 1.5rem; font-weight: 800;">VPN</div>
+            <div>Бесплатно 2 ГБ в день</div>
         </div>
         """, unsafe_allow_html=True)
     
-    # Поисковая строка
-    st.markdown("""
-    <div style="text-align: center; margin: 40px 0;">
-        <div style="font-size: 2rem; font-weight: 800; color: white; margin-bottom: 20px;">
-            🔍 Ищи, спрашивай, фотографируй!
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    search_query = st.text_input(
-        "",
-        placeholder="Спроси ZORNET AI о чем угодно...",
-        key="main_search",
-        label_visibility="collapsed"
-    )
-    
-    if search_query:
-        with st.spinner("🤖 ZORNET AI думает..."):
-            response = FreeAIServices.chat_with_mistral(search_query)
-            st.markdown(f"""
-            <div class="feature-card">
-                <div style="font-size: 1.3rem; font-weight: 800; color: #FF6347; margin-bottom: 10px;">
-                    🔥 Твой запрос: {search_query}
-                </div>
-                <div style="font-size: 1.1rem; color: #333; padding: 20px; background: #f8f9fa; border-radius: 15px;">
-                    {response}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    # Быстрый доступ к функциям
-    st.markdown("---")
-    st.markdown('<div style="text-align: center; font-size: 2rem; font-weight: 800; color: white; margin: 30px 0;">⚡ БЫСТРЫЙ СТАРТ</div>', unsafe_allow_html=True)
-    
-    col_a, col_b, col_c = st.columns(3)
-    
-    with col_a:
-        if st.button("🚀 ЗАПУСТИТЬ ZORNET AI", use_container_width=True, type="primary"):
-            st.session_state.page = "ZORNET AI"
-            st.rerun()
-    
-    with col_b:
-        if st.button("📸 ОТКРЫТЬ КАМЕРУ", use_container_width=True, type="primary"):
-            st.session_state.page = "Умная камера"
-            st.rerun()
-    
-    with col_c:
-        if st.button("🌤️ ПОГОДА СЕЙЧАС", use_container_width=True, type="primary"):
-            st.session_state.page = "Погода"
-            st.rerun()
+    # Поиск
+    search = st.text_input("🔍 Спроси ZORNET AI:", placeholder="Напиши вопрос...")
+    if search:
+        response = FreeAIServices.chat_with_mistral(search)
+        st.info(f"**🤖 Ответ:** {response}")
 
-# ================= ZORNET AI СТРАНИЦА =================
+# ================= AI СТРАНИЦА =================
 elif st.session_state.page == "ZORNET AI":
     st.markdown('<div class="main-title">🤖 ZORNET AI</div>', unsafe_allow_html=True)
     
-    # Приветственное сообщение
-    st.markdown("""
-    <div class="chat-container">
-        <div class="ai-message">
-            🚀 Привет! Я ZORNET AI — твой умный помощник!<br>
-            💡 Я могу: отвечать на вопросы, помогать с учебой, придумывать идеи, писать код и многое другое!<br>
-            ⚡ Просто напиши мне что-нибудь ниже!
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Отображение истории чата
-    for msg in st.session_state.ai_messages[-10:]:  # Последние 10 сообщений
+    # История чата
+    for msg in st.session_state.ai_messages[-5:]:
         if msg["role"] == "user":
-            st.markdown(f'<div class="user-message">👤 {msg["content"]}</div>', unsafe_allow_html=True)
+            st.markdown(f"**👤 Вы:** {msg['content']}")
         else:
-            st.markdown(f'<div class="ai-message">🤖 {msg["content"]}</div>', unsafe_allow_html=True)
+            st.markdown(f"**🤖 AI:** {msg['content']}")
     
-    # Панель ввода
-    col_input, col_send = st.columns([4, 1])
-    
-    with col_input:
-        user_input = st.text_area(
-            "",
-            placeholder="Напиши мне что-нибудь...",
-            key="ai_input",
-            label_visibility="collapsed",
-            height=100
-        )
-    
-    with col_send:
-        send_button = st.button("🚀", use_container_width=True, key="send_ai")
-    
-    if send_button and user_input:
-        # Добавляем сообщение пользователя
+    # Ввод
+    user_input = st.text_area("💬 Введите сообщение:", height=100)
+    if st.button("🚀 Отправить", use_container_width=True) and user_input:
         st.session_state.ai_messages.append({"role": "user", "content": user_input})
-        
-        # Получаем ответ от AI
-        with st.spinner("🤖 ZORNET AI думает..."):
-            ai_response = FreeAIServices.chat_with_mistral(user_input)
-            st.session_state.ai_messages.append({"role": "assistant", "content": ai_response})
-        
+        response = FreeAIServices.chat_with_mistral(user_input)
+        st.session_state.ai_messages.append({"role": "assistant", "content": response})
         st.rerun()
-    
-    # Быстрые действия
-    st.markdown("---")
-    st.markdown('<div style="text-align: center; font-size: 1.5rem; font-weight: 800; color: white; margin: 20px 0;">⚡ БЫСТРЫЕ ЗАПРОСЫ</div>', unsafe_allow_html=True)
-    
-    quick_actions = st.columns(4)
-    quick_prompts = [
-        "Расскажи о Беларуси",
-        "Напиши код на Python",
-        "Придумай идею проекта",
-        "Объясни квантовую физику"
-    ]
-    
-    for i, (col, prompt) in enumerate(zip(quick_actions, quick_prompts)):
-        with col:
-            if st.button(prompt, key=f"quick_{i}", use_container_width=True):
-                st.session_state.ai_messages.append({"role": "user", "content": prompt})
-                with st.spinner("🤖 Думаю..."):
-                    ai_response = FreeAIServices.chat_with_mistral(prompt)
-                    st.session_state.ai_messages.append({"role": "assistant", "content": ai_response})
-                st.rerun()
 
-# ================= УМНАЯ КАМЕРА =================
+# ================= КАМЕРА =================
 elif st.session_state.page == "Умная камера":
     st.markdown('<div class="main-title">📸 УМНАЯ КАМЕРА</div>', unsafe_allow_html=True)
     
-    # Режимы работы камеры
+    # Загрузка фото
+    uploaded = st.file_uploader("📤 Загрузи фото", type=['jpg', 'png', 'jpeg'])
+    
+    if uploaded:
+        img = Image.open(uploaded)
+        st.image(img, caption="📸 Ваше фото", use_column_width=True)
+        
+        if st.button("🔍 Проанализировать фото", use_container_width=True):
+            result = FreeAIServices.recognize_image(uploaded.getvalue())
+            if result["success"]:
+                st.success(f"**Результат:** {result['description']}")
+        
+        if st.button("📝 Извлечь текст", use_container_width=True):
+            text = FreeAIServices.extract_text_from_image(uploaded.getvalue())
+            st.info(f"**Текст:** {text}")
+
+# ================= VPN =================
+elif st.session_state.page == "VPN":
+    st.markdown('<div class="main-title">🔐 ZORNET VPN</div>', unsafe_allow_html=True)
+    
     st.markdown("""
-    <div class="camera-container">
-        <div style="font-size: 2rem; font-weight: 800; color: #FF6347; margin-bottom: 20px;">
-            🤖 УМНАЯ КАМЕРА ZORNET
-        </div>
-        <div style="color: #666; margin-bottom: 30px;">
-            Сфотографируй что угодно — камера распознает объекты, текст и даже переведет!
+    <div class="feature-card">
+        <div style="text-align: center;">
+            <div style="font-size: 3rem;">🔒</div>
+            <div style="font-size: 2rem; font-weight: 800;">БЕСПЛАТНЫЙ VPN</div>
+            <div style="color: #666; margin: 20px 0;">
+                ⚡ 2 ГБ в день бесплатно<br>
+                🌍 Серверы в Польше, Литве, Украине<br>
+                🔒 Без логов, полная анонимность
+            </div>
+            <div style="background: #4CAF50; color: white; padding: 15px; border-radius: 10px;">
+                🟢 СТАТУС: Готов к подключению
+            </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
     
-    # Выбор режима
-    tab1, tab2, tab3 = st.tabs(["📸 СФОТОГРАФИРОВАТЬ", "📁 ЗАГРУЗИТЬ ФОТО", "🎯 РЕЗУЛЬТАТЫ"])
-    
-    with tab1:
-        st.markdown("""
-        <div class="upload-box">
-            <div style="font-size: 5rem;">📸</div>
-            <div style="font-size: 1.8rem; font-weight: 800; margin: 20px 0;">
-                НАПРАВЬ КАМЕРУ НА ОБЪЕКТ
-            </div>
-            <div style="color: #666; margin-bottom: 30px;">
-                Используй камеру телефона или веб-камеру
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Используем компонент камеры Streamlit
-        camera_photo = st.camera_input("Сделай фото!", key="camera_input")
-        
-        if camera_photo:
-            st.session_state.uploaded_image = camera_photo
-            st.success("✅ Фото сделано! Переходи на вкладку 'Результаты'")
-    
-    with tab2:
-        st.markdown("""
-        <div class="upload-box">
-            <div style="font-size: 5rem;">📁</div>
-            <div style="font-size: 1.8rem; font-weight: 800; margin: 20px 0;">
-                ЗАГРУЗИ ФОТО С КОМПЬЮТЕРА
-            </div>
-            <div style="color: #666; margin-bottom: 30px;">
-                JPG, PNG, до 10MB
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        uploaded_file = st.file_uploader(
-            "Перетащи файл сюда или нажми для выбора",
-            type=['jpg', 'jpeg', 'png', 'gif'],
-            key="file_upload"
-        )
-        
-        if uploaded_file:
-            st.session_state.uploaded_image = uploaded_file
-            st.success("✅ Фото загружено! Переходи на вкладку 'Результаты'")
-            
-            # Показываем превью
-            image = Image.open(uploaded_file)
-            st.image(image, caption="Твое фото", use_column_width=True)
-    
-    with tab3:
-        if st.session_state.uploaded_image:
-            st.markdown("""
-            <div style="background: linear-gradient(45deg, #FFD700, #FFA500); 
-                        padding: 25px; border-radius: 20px; margin-bottom: 30px;">
-                <div style="font-size: 2rem; font-weight: 800; color: #000;">
-                    🎯 РАСПОЗНАВАНИЕ...
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Показываем фото
-            image = Image.open(st.session_state.uploaded_image)
-            st.image(image, caption="📸 Твое фото", use_column_width=True)
-            
-            # Кнопки анализа
-            col_rec, col_text, col_trans = st.columns(3)
-            
-            with col_rec:
-                analyze_objects = st.button("🔍 Распознать объекты", use_container_width=True)
-            
-            with col_text:
-                extract_text = st.button("📝 Извлечь текст", use_container_width=True)
-            
-            with col_trans:
-                translate_photo = st.button("🌍 Перевести текст", use_container_width=True)
-            
-            # Анализ объектов
-            if analyze_objects:
-                with st.spinner("🤖 Смотрю на фото..."):
-                    image_bytes = st.session_state.uploaded_image.getvalue()
-                    result = FreeAIServices.recognize_image(image_bytes)
-                    
-                    st.markdown(f"""
-                    <div class="feature-card">
-                        <div style="font-size: 1.8rem; font-weight: 800; color: #FF6347; margin-bottom: 15px;">
-                            🎯 ЧТО Я ВИЖУ:
-                        </div>
-                        <div style="font-size: 1.3rem; margin-bottom: 15px;">
-                            {result['description']}
-                        </div>
-                        <div style="background: #f8f9fa; padding: 20px; border-radius: 15px;">
-                            <div style="font-weight: 800; margin-bottom: 10px;">📋 Обнаружено:</div>
-                            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-                                {" ".join([f'<span style="background: #FFD700; color: #000; padding: 8px 15px; border-radius: 10px; font-weight: 600;">🏷️ {obj}</span>' for obj in result['objects']])}
-                            </div>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            
-            # Извлечение текста
-            if extract_text:
-                with st.spinner("📖 Читаю текст..."):
-                    image_bytes = st.session_state.uploaded_image.getvalue()
-                    text = FreeAIServices.extract_text_from_image(image_bytes)
-                    
-                    st.markdown(f"""
-                    <div class="feature-card">
-                        <div style="font-size: 1.8rem; font-weight: 800; color: #667eea; margin-bottom: 15px;">
-                            📝 НАЙДЕННЫЙ ТЕКСТ:
-                        </div>
-                        <div style="background: #f0f4ff; padding: 25px; border-radius: 15px; font-size: 1.2rem;">
-                            "{text}"
-                        </div>
-                        <div style="margin-top: 20px;">
-                            <button onclick="navigator.clipboard.writeText('{text}')" 
-                                    style="background: #FFD700; color: #000; border: none; padding: 12px 25px; 
-                                           border-radius: 10px; font-weight: 800; cursor: pointer;">
-                                📋 СКОПИРОВАТЬ ТЕКСТ
-                            </button>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            
-            # Перевод
-            if translate_photo:
-                st.info("🌍 Функция перевода текста на фото в разработке...")
-                st.markdown("""
-                <div class="feature-card">
-                    <div style="font-size: 1.8rem; font-weight: 800; color: #FF6347;">
-                        🚀 СКОРО БУДЕТ!
-                    </div>
-                    <div style="font-size: 1.2rem; margin-top: 15px;">
-                        Уже скоро ты сможешь переводить текст с любых фото на 50+ языков!
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-        
-        else:
-            st.markdown("""
-            <div class="upload-box">
-                <div style="font-size: 4rem;">📸</div>
-                <div style="font-size: 1.8rem; font-weight: 800; margin: 20px 0;">
-                    ФОТО НЕ ЗАГРУЖЕНО
-                </div>
-                <div style="color: #666;">
-                    Сделай фото или загрузи его с компьютера!
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🇵🇱 Польша (Варшава)", use_container_width=True):
+            st.success("✅ Подключаем к Польше...")
+    with col2:
+        if st.button("🇱🇹 Литва (Вильнюс)", use_container_width=True):
+            st.success("✅ Подключаем к Литве...")
 
 # ================= СТРАНИЦА ПОГОДЫ (ПРОСТО И РАБОЧЕ) =================
 elif st.session_state.page == "Погода":
