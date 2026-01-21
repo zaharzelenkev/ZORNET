@@ -860,21 +860,6 @@ elif st.session_state.page == "Умная камера":
             </div>
             """, unsafe_allow_html=True)
 
-# ================= ФУТЕР =================
-st.markdown("""
-<div style="text-align: center; color: white; margin-top: 50px; padding: 30px;">
-    <div style="font-size: 2rem; font-weight: 800; margin-bottom: 20px;">
-        🇧🇾 СДЕЛАНО В БЕЛАРУСИ
-    </div>
-    <div style="font-size: 1.2rem; opacity: 0.8;">
-        ZORNET AI · Умная камера · Погода · Новости · Диск · Профиль
-    </div>
-    <div style="margin-top: 20px; font-size: 0.9rem; opacity: 0.6;">
-        🚀 Версия 2.0 · Все функции БЕСПЛАТНЫ
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
 # ================= СТРАНИЦА ПОГОДЫ (ПРОСТО И РАБОЧЕ) =================
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
@@ -2005,6 +1990,21 @@ elif st.session_state.page == "Профиль":
         st.markdown('<div class="profile-container">', unsafe_allow_html=True)
         
         st.markdown('</div>', unsafe_allow_html=True)
+
+# ================= ФУТЕР =================
+st.markdown("""
+<div style="text-align: center; color: white; margin-top: 50px; padding: 30px;">
+    <div style="font-size: 2rem; font-weight: 800; margin-bottom: 20px;">
+        🇧🇾 СДЕЛАНО В БЕЛАРУСИ
+    </div>
+    <div style="font-size: 1.2rem; opacity: 0.8;">
+        ZORNET AI · Умная камера · Погода · Новости · Диск · Профиль
+    </div>
+    <div style="margin-top: 20px; font-size: 0.9rem; opacity: 0.6;">
+        🚀 Версия 2.0 · Все функции БЕСПЛАТНЫ
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # ================= ИНИЦИАЛИЗАЦИЯ =================
 if __name__ == "__main__":
