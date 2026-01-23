@@ -764,6 +764,897 @@ elif st.session_state.page == "Погода":
                 st.session_state.user_city = city
                 st.rerun()
 
+# ================= БАЗА ДАННЫХ ТРАНСПОРТА =================
+def init_transport_db():
+    """Инициализация базы данных транспорта"""
+    conn = sqlite3.connect("zornet_transport.db")
+    c = conn.cursor()
+    
+    # Пользовательские отчеты
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS transport_reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            route TEXT NOT NULL,
+            vehicle_type TEXT,
+            message TEXT NOT NULL,
+            user_name TEXT,
+            location TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            upvotes INTEGER DEFAULT 0,
+            downvotes INTEGER DEFAULT 0,
+            verified BOOLEAN DEFAULT 0
+        )
+    """)
+    
+    # Маршруты
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS transport_routes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            number TEXT NOT NULL,
+            vehicle_type TEXT NOT NULL,
+            from_city TEXT NOT NULL,
+            to_city TEXT NOT NULL,
+            schedule TEXT,
+            price TEXT,
+            duration TEXT,
+            operator TEXT,
+            notes TEXT
+        )
+    """)
+    
+    # Попутчики
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS carpool_rides (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            from_city TEXT NOT NULL,
+            to_city TEXT NOT NULL,
+            date DATE NOT NULL,
+            time TIME NOT NULL,
+            seats INTEGER,
+            price TEXT,
+            driver_name TEXT,
+            driver_rating REAL DEFAULT 5.0,
+            contact TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # Остановки и станции
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS transport_stops (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            city TEXT NOT NULL,
+            latitude REAL,
+            longitude REAL,
+            type TEXT, -- 'metro', 'bus', 'tram', 'trolley', 'train'
+            lines TEXT -- JSON массив маршрутов
+        )
+    """)
+    
+    # Инициализация данных если таблицы пустые
+    c.execute("SELECT COUNT(*) FROM transport_routes")
+    if c.fetchone()[0] == 0:
+        # Добавляем базовые маршруты
+        base_routes = [
+            # Минский транспорт
+            ("100", "автобус", "Минск", "Аэропорт", "05:30-00:30 каждые 10-15 мин", "3.50 BYN", "40 мин", "Минсктранс", "Экспресс в аэропорт"),
+            ("1", "трамвай", "Минск", "Минск", "05:00-01:00 каждые 7-10 мин", "0.90 BYN", "", "Минсктранс", "Тракторный завод - Серебрянка"),
+            ("3с", "троллейбус", "Минск", "Минск", "05:30-00:30 каждые 8-12 мин", "0.90 BYN", "", "Минсктранс", "ДС Веснянка - ДС Серова"),
+            ("40", "автобус", "Минск", "Минск", "06:00-23:00 каждые 10-20 мин", "0.90 BYN", "", "Минсктранс", "Ст.м. Уручье - Дражня"),
+            
+            # Междугородние маршруты
+            ("735Б", "автобус", "Минск", "Гомель", "07:30, 09:00, 12:00, 15:00, 18:00, 21:00", "15-20 BYN", "4 ч", "Гомельавтотранс", "Центральный автовокзал"),
+            ("001Б", "поезд", "Минск", "Брест", "06:00, 12:00, 18:00, 22:00", "25-35 BYN", "3.5 ч", "БЖД", "Электропоезд/поезд"),
+            ("603Б", "маршрутка", "Минск", "Витебск", "каждые 2 часа 07:00-21:00", "12-18 BYN", "3 ч", "Витебскавтотранс", "Отправление от ст.м. Уручье"),
+            
+            # Популярные направления
+            ("101", "автобус", "Минск", "Молодечно", "каждые 30 мин 06:00-22:00", "5-7 BYN", "1 ч", "Минсктранс", "Ст.м. Каменная Горка"),
+            ("Минск-Гродно", "автобус", "Минск", "Гродно", "08:00, 10:30, 14:00, 17:30, 20:00", "15-22 BYN", "4 ч", "Гродноавтотранс", "Центральный автовокзал"),
+            ("Минск-Могилев", "автобус", "Минск", "Могилев", "07:00, 09:30, 13:00, 16:30, 19:00", "12-18 BYN", "3.5 ч", "Могилевавтотранс", ""),
+        ]
+        
+        for route in base_routes:
+            c.execute("""
+                INSERT INTO transport_routes 
+                (number, vehicle_type, from_city, to_city, schedule, price, duration, operator, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, route)
+    
+    # Инициализация остановок
+    c.execute("SELECT COUNT(*) FROM transport_stops")
+    if c.fetchone()[0] == 0:
+        stops = [
+            ("Площадь Ленина", "Минск", 53.893009, 27.567444, "metro", '["1", "2"]'),
+            ("Каменная Горка", "Минск", 53.905532, 27.447341, "metro", '["1"]'),
+            ("Могилевская", "Минск", 53.867829, 27.487830, "metro", '["2"]'),
+            ("Центральный автовокзал", "Минск", 53.890800, 27.550800, "bus", '["100", "735Б", "101", "Минск-Гродно", "Минск-Могилев"]'),
+            ("Автовокзал Восточный", "Минск", 53.9500, 27.6500, "bus", '["603Б"]'),
+            ("Железнодорожный вокзал", "Минск", 53.890278, 27.550278, "train", '["001Б"]'),
+            ("Аэропорт Минск-2", "Минск", 53.882, 28.030, "airport", '["100"]'),
+        ]
+        
+        for stop in stops:
+            c.execute("""
+                INSERT INTO transport_stops (name, city, latitude, longitude, type, lines)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, stop)
+    
+    conn.commit()
+    conn.close()
+
+# ================= API ИНТЕГРАЦИИ =================
+def get_minsk_transport_api():
+    """Получение данных транспорта Минска"""
+    try:
+        # В реальности здесь будет API Минсктранса
+        # Временно возвращаем статические данные
+        return {
+            "metro": {
+                "line1": {"status": "работает", "delay": 0, "stations": 15},
+                "line2": {"status": "работает", "delay": 2, "stations": 14}
+            },
+            "update_time": datetime.datetime.now().strftime("%H:%M")
+        }
+    except:
+        return None
+
+def get_belarusian_railway_schedule(from_city, to_city, date=None):
+    """Расписание БЖД"""
+    if date is None:
+        date = datetime.date.today().strftime("%Y-%m-%d")
+    
+    # В реальности здесь API БЖД
+    trains = [
+        {"number": "001Б", "type": "поезд", "from": "Минск", "to": "Брест", 
+         "departure": "18:00", "arrival": "21:30", "duration": "3ч 30м", 
+         "price": "25-35 BYN", "available": True},
+        {"number": "735Б", "type": "электропоезд", "from": "Минск", "to": "Гомель",
+         "departure": "07:30", "arrival": "11:15", "duration": "3ч 45м",
+         "price": "15-25 BYN", "available": True},
+        {"number": "603Б", "type": "поезд", "from": "Минск", "to": "Витебск",
+         "departure": "14:20", "arrival": "18:45", "duration": "4ч 25м",
+         "price": "20-30 BYN", "available": True},
+    ]
+    
+    return [t for t in trains if t["from"] == from_city and t["to"] == to_city]
+
+# ================= ФУНКЦИИ РАБОТЫ С БАЗОЙ =================
+def add_transport_report(route, message, user_name, vehicle_type=None, location=None):
+    """Добавление пользовательского отчета"""
+    conn = sqlite3.connect("zornet_transport.db")
+    c = conn.cursor()
+    
+    c.execute("""
+        INSERT INTO transport_reports (route, vehicle_type, message, user_name, location)
+        VALUES (?, ?, ?, ?, ?)
+    """, (route, vehicle_type, message, user_name, location))
+    
+    conn.commit()
+    conn.close()
+    return True
+
+def get_transport_reports(limit=10, route_filter=None):
+    """Получение пользовательских отчетов"""
+    conn = sqlite3.connect("zornet_transport.db")
+    c = conn.cursor()
+    
+    if route_filter:
+        c.execute("""
+            SELECT route, vehicle_type, message, user_name, location, 
+                   timestamp, upvotes, downvotes, verified
+            FROM transport_reports 
+            WHERE route LIKE ? 
+            ORDER BY timestamp DESC 
+            LIMIT ?
+        """, (f'%{route_filter}%', limit))
+    else:
+        c.execute("""
+            SELECT route, vehicle_type, message, user_name, location, 
+                   timestamp, upvotes, downvotes, verified
+            FROM transport_reports 
+            ORDER BY timestamp DESC 
+            LIMIT ?
+        """, (limit,))
+    
+    reports = c.fetchall()
+    conn.close()
+    
+    return [{
+        "route": r[0],
+        "vehicle_type": r[1],
+        "message": r[2],
+        "user_name": r[3],
+        "location": r[4],
+        "timestamp": r[5],
+        "upvotes": r[6],
+        "downvotes": r[7],
+        "verified": r[8],
+        "rating": r[6] - r[7]
+    } for r in reports]
+
+def search_routes(from_city, to_city, vehicle_type=None):
+    """Поиск маршрутов"""
+    conn = sqlite3.connect("zornet_transport.db")
+    c = conn.cursor()
+    
+    if vehicle_type:
+        c.execute("""
+            SELECT number, vehicle_type, from_city, to_city, 
+                   schedule, price, duration, operator, notes
+            FROM transport_routes 
+            WHERE from_city = ? AND to_city = ? AND vehicle_type = ?
+            ORDER BY vehicle_type, number
+        """, (from_city, to_city, vehicle_type))
+    else:
+        c.execute("""
+            SELECT number, vehicle_type, from_city, to_city, 
+                   schedule, price, duration, operator, notes
+            FROM transport_routes 
+            WHERE from_city = ? AND to_city = ?
+            ORDER BY vehicle_type, number
+        """, (from_city, to_city))
+    
+    routes = c.fetchall()
+    conn.close()
+    
+    return [{
+        "number": r[0],
+        "vehicle_type": r[1],
+        "from_city": r[2],
+        "to_city": r[3],
+        "schedule": r[4],
+        "price": r[5],
+        "duration": r[6],
+        "operator": r[7],
+        "notes": r[8]
+    } for r in routes]
+
+def add_carpool_ride(from_city, to_city, date, time, seats, price, driver_name, contact):
+    """Добавление поездки попутчиков"""
+    conn = sqlite3.connect("zornet_transport.db")
+    c = conn.cursor()
+    
+    c.execute("""
+        INSERT INTO carpool_rides 
+        (from_city, to_city, date, time, seats, price, driver_name, contact)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (from_city, to_city, date, time, seats, price, driver_name, contact))
+    
+    conn.commit()
+    conn.close()
+    return True
+
+def get_carpool_rides(from_city=None, to_city=None, date=None):
+    """Поиск попутчиков"""
+    conn = sqlite3.connect("zornet_transport.db")
+    c = conn.cursor()
+    
+    query = "SELECT * FROM carpool_rides WHERE 1=1"
+    params = []
+    
+    if from_city:
+        query += " AND from_city = ?"
+        params.append(from_city)
+    if to_city:
+        query += " AND to_city = ?"
+        params.append(to_city)
+    if date:
+        query += " AND date = ?"
+        params.append(date)
+    
+    query += " ORDER BY date, time"
+    
+    c.execute(query, params)
+    rides = c.fetchall()
+    conn.close()
+    
+    return rides
+
+def get_transport_stops(city=None, stop_type=None):
+    """Получение остановок"""
+    conn = sqlite3.connect("zornet_transport.db")
+    c = conn.cursor()
+    
+    query = "SELECT * FROM transport_stops WHERE 1=1"
+    params = []
+    
+    if city:
+        query += " AND city = ?"
+        params.append(city)
+    if stop_type:
+        query += " AND type = ?"
+        params.append(stop_type)
+    
+    c.execute(query, params)
+    stops = c.fetchall()
+    conn.close()
+    
+    return [{
+        "id": s[0],
+        "name": s[1],
+        "city": s[2],
+        "latitude": s[3],
+        "longitude": s[4],
+        "type": s[5],
+        "lines": json.loads(s[6]) if s[6] else []
+    } for s in stops]
+
+def vote_report(report_id, vote_type):
+    """Голосование за отчет"""
+    conn = sqlite3.connect("zornet_transport.db")
+    c = conn.cursor()
+    
+    if vote_type == "up":
+        c.execute("UPDATE transport_reports SET upvotes = upvotes + 1 WHERE id = ?", (report_id,))
+    else:
+        c.execute("UPDATE transport_reports SET downvotes = downvotes + 1 WHERE id = ?", (report_id,))
+    
+    conn.commit()
+    conn.close()
+    return True
+
+# ================= ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =================
+def calculate_route_map(start, end):
+    """Генерация HTML карты с маршрутом"""
+    # В реальном проекте здесь будет интеграция с Яндекс.Картами или OpenStreetMap
+    map_html = f"""
+    <div id="map" style="width: 100%; height: 400px; border-radius: 10px; margin: 20px 0;"></div>
+    <script>
+        // Здесь будет код инициализации карты с маршрутом от {start} до {end}
+        document.getElementById('map').innerHTML = `
+            <div style="width: 100%; height: 100%; background: #f0f0f0; 
+                        display: flex; align-items: center; justify-content: center;
+                        border-radius: 10px; color: #666;">
+                <div style="text-align: center;">
+                    <h3>Маршрут: {start} → {end}</h3>
+                    <p>Карта маршрута (в реальном проекте будет интеграция с картами)</p>
+                    <p>🔄 Расчёт оптимального пути...</p>
+                </div>
+            </div>
+        `;
+    </script>
+    """
+    return map_html
+
+def get_vehicle_icon(vehicle_type):
+    """Получение иконки для типа транспорта"""
+    icons = {
+        "автобус": "🚌",
+        "троллейбус": "🚎",
+        "трамвай": "🚋",
+        "метро": "🚇",
+        "поезд": "🚆",
+        "электропоезд": "🚈",
+        "маршрутка": "🚐",
+        "такси": "🚕",
+        "автомобиль": "🚗"
+    }
+    return icons.get(vehicle_type, "🚊")
+
+# ================= СТРАНИЦА ТРАНСПОРТА =================
+elif st.session_state.page == "Транспорт":
+    # Инициализация БД транспорта
+    init_transport_db()
+    
+    st.markdown('<div class="gold-title">🚌 ТРАНСПОРТ БЕЛАРУСИ</div>', unsafe_allow_html=True)
+    
+    # Кастомные стили для транспорта
+    st.markdown("""
+    <style>
+    .transport-header {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    .transport-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin: 15px 0;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        border: 1px solid #e0e0e0;
+        transition: all 0.3s ease;
+    }
+    .transport-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 30px rgba(218, 165, 32, 0.15);
+        border-color: #DAA520;
+    }
+    .route-number {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #DAA520;
+        margin-right: 10px;
+    }
+    .report-card {
+        background: #f8f9fa;
+        border-left: 4px solid #DAA520;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 10px 0;
+    }
+    .vote-btn {
+        background: none;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        padding: 5px 15px;
+        margin: 0 5px;
+        cursor: pointer;
+    }
+    .vote-btn:hover {
+        background: #f0f0f0;
+    }
+    .upvote {
+        color: #4CAF50;
+    }
+    .downvote {
+        color: #F44336;
+    }
+    .carpool-card {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        border: 1px solid #90caf9;
+        border-radius: 10px;
+        padding: 15px;
+        margin: 10px 0;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Заголовок с живыми данными
+    transport_status = get_minsk_transport_api()
+    if transport_status:
+        update_time = transport_status.get("update_time", "N/A")
+        st.markdown(f"""
+        <div class="transport-header">
+            <h2 style="margin: 0;">🚍 Транспортная система Беларуси</h2>
+            <p style="margin: 5px 0 0 0; opacity: 0.9;">
+                <span class="live-indicator"></span> Живые данные • Обновлено: {update_time}
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Вкладки
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "🔍 Поиск маршрутов", 
+        "🗺️ Карта и навигация", 
+        "👥 Попутчики",
+        "📢 Народные отчеты",
+        "📊 Расписания"
+    ])
+    
+    with tab1:
+        st.markdown("### 🔍 Поиск маршрутов по Беларуси")
+        
+        col_from, col_to, col_type = st.columns([2, 2, 1])
+        
+        with col_from:
+            cities = ["Минск", "Гомель", "Витебск", "Могилев", "Брест", "Гродно", 
+                     "Барановичи", "Бобруйск", "Молодечно", "Жодино", "Солигорск"]
+            from_city = st.selectbox("Откуда", cities, index=0)
+        
+        with col_to:
+            to_city = st.selectbox("Куда", cities, index=1)
+        
+        with col_type:
+            vehicle_types = ["Любой", "автобус", "поезд", "маршрутка", "троллейбус", "трамвай"]
+            selected_type = st.selectbox("Тип", vehicle_types)
+        
+        if st.button("🔍 Найти маршруты", type="primary", use_container_width=True):
+            if from_city and to_city:
+                with st.spinner("Ищем маршруты..."):
+                    # Поиск в базе данных
+                    vehicle_filter = selected_type if selected_type != "Любой" else None
+                    routes = search_routes(from_city, to_city, vehicle_filter)
+                    
+                    # Поиск в БЖД для междугородних поездов
+                    if from_city != to_city:
+                        trains = get_belarusian_railway_schedule(from_city, to_city)
+                        routes.extend(trains)
+                    
+                    if routes:
+                        st.markdown(f"### 📋 Найдено {len(routes)} маршрутов")
+                        
+                        for route in routes:
+                            icon = get_vehicle_icon(route.get("vehicle_type", ""))
+                            
+                            with st.expander(f"{icon} **{route.get('number', 'Рейс')}**: {from_city} → {to_city}", expanded=True):
+                                col_info, col_action = st.columns([3, 1])
+                                
+                                with col_info:
+                                    st.markdown(f"""
+                                    **Тип:** {route.get('vehicle_type', 'Транспорт')}
+                                    - **Расписание:** {route.get('schedule', 'Не указано')}
+                                    - **Время в пути:** {route.get('duration', 'Не указано')}
+                                    - **Стоимость:** {route.get('price', 'Уточняйте')}
+                                    - **Перевозчик:** {route.get('operator', 'Не указан')}
+                                    """)
+                                    
+                                    if route.get('notes'):
+                                        st.info(f"ℹ️ {route.get('notes')}")
+                                
+                                with col_action:
+                                    if st.button("📋 Детали", key=f"details_{route.get('number')}"):
+                                        st.session_state.selected_route = route
+                                        st.rerun()
+                    else:
+                        st.warning(f"Маршруты из {from_city} в {to_city} не найдены.")
+                        
+                        # Предложение добавить маршрут
+                        if st.button("➕ Добавить этот маршрут в базу"):
+                            st.session_state.show_add_route = True
+                            st.rerun()
+        
+        # Быстрые маршруты
+        st.markdown("---")
+        st.markdown("### 🚀 Популярные направления")
+        
+        popular_pairs = [
+            ("Минск", "Брест"),
+            ("Минск", "Гомель"),
+            ("Минск", "Витебск"),
+            ("Минск", "Гродно"),
+            ("Минск", "Могилев"),
+            ("Гомель", "Минск"),
+            ("Брест", "Минск")
+        ]
+        
+        cols = st.columns(4)
+        for idx, (fr, to) in enumerate(popular_pairs[:8]):
+            with cols[idx % 4]:
+                if st.button(f"{fr} → {to}", key=f"quick_{fr}_{to}", use_container_width=True):
+                    st.session_state.quick_from = fr
+                    st.session_state.quick_to = to
+                    st.rerun()
+    
+    with tab2:
+        st.markdown("### 🗺️ Интерактивная карта транспорта")
+        
+        # Выбор города для карты
+        selected_city = st.selectbox("Выберите город", 
+                                    ["Минск", "Гомель", "Витебск", "Могилев", "Брест", "Гродно"])
+        
+        # Получение остановок для выбранного города
+        stops = get_transport_stops(city=selected_city)
+        
+        if stops:
+            # Отображение остановок
+            st.markdown(f"### 🚏 Остановки в {selected_city}")
+            
+            # Фильтр по типу
+            stop_types = list(set([stop["type"] for stop in stops]))
+            selected_stop_type = st.multiselect("Типы остановок", stop_types, default=stop_types)
+            
+            filtered_stops = [s for s in stops if s["type"] in selected_stop_type]
+            
+            for stop in filtered_stops:
+                stop_icon = {
+                    "metro": "🚇",
+                    "bus": "🚌",
+                    "train": "🚆",
+                    "tram": "🚋",
+                    "trolley": "🚎",
+                    "airport": "✈️"
+                }.get(stop["type"], "📍")
+                
+                with st.expander(f"{stop_icon} **{stop['name']}** ({stop['type']})"):
+                    col1, col2 = st.columns([3, 1])
+                    
+                    with col1:
+                        st.markdown(f"""
+                        **Город:** {stop['city']}
+                        **Координаты:** {stop['latitude']:.4f}, {stop['longitude']:.4f}
+                        """)
+                        
+                        if stop['lines']:
+                            lines_text = ", ".join(stop['lines'])
+                            st.markdown(f"**Маршруты:** {lines_text}")
+                    
+                    with col2:
+                        if st.button("🗺️ На карте", key=f"map_{stop['id']}"):
+                            # Здесь будет открытие карты с маркером
+                            st.info(f"Показать {stop['name']} на карте")
+        
+        # Построение маршрута
+        st.markdown("---")
+        st.markdown("### 🧭 Построить маршрут")
+        
+        col_start, col_end = st.columns(2)
+        with col_start:
+            route_start = st.text_input("Начальная точка", placeholder="Улица, дом, остановка")
+        with col_end:
+            route_end = st.text_input("Конечная точка", placeholder="Улица, дом, остановка")
+        
+        if st.button("🗺️ Построить маршрут", type="primary"):
+            if route_start and route_end:
+                # Генерация карты с маршрутом
+                map_html = calculate_route_map(route_start, route_end)
+                components.html(map_html, height=450)
+                
+                # Альтернативные маршруты
+                st.markdown("### 🚌 Варианты проезда")
+                
+                # Симуляция расчета маршрутов
+                options = [
+                    {"type": "🚍 Общественный транспорт", "time": "45 мин", "transfers": 1, "cost": "1.8 BYN"},
+                    {"type": "🚕 Такси", "time": "25 мин", "transfers": 0, "cost": "8-12 BYN"},
+                    {"type": "🚗 Автомобиль", "time": "30 мин", "transfers": 0, "cost": "≈5 BYN (бензин)"},
+                    {"type": "🚲 Велосипед", "time": "40 мин", "transfers": 0, "cost": "Бесплатно"},
+                ]
+                
+                for opt in options:
+                    st.markdown(f"""
+                    <div class="transport-card">
+                        <h4>{opt['type']} - {opt['time']}</h4>
+                        <p>💰 Стоимость: {opt['cost']}</p>
+                        <p>🔄 Пересадки: {opt['transfers']}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+    
+    with tab3:
+        st.markdown("### 👥 Сервис попутчиков")
+        
+        # Вкладки внутри раздела
+        subtab1, subtab2 = st.tabs(["🔍 Найти попутчиков", "➕ Предложить поездку"])
+        
+        with subtab1:
+            st.markdown("#### Найти попутчика")
+            
+            col_fr, col_to, col_date = st.columns(3)
+            with col_fr:
+                cp_from = st.selectbox("Откуда", cities, key="cpool_from")
+            with col_to:
+                cp_to = st.selectbox("Куда", cities, key="cpool_to")
+            with col_date:
+                cp_date = st.date_input("Дата", datetime.date.today())
+            
+            if st.button("🔍 Найти поездки", type="primary"):
+                rides = get_carpool_rides(cp_from, cp_to, cp_date.strftime("%Y-%m-%d"))
+                
+                if rides:
+                    st.markdown(f"#### 🚗 Найдено {len(rides)} поездок")
+                    
+                    for ride in rides:
+                        st.markdown(f"""
+                        <div class="carpool-card">
+                            <h4>{ride[1]} → {ride[2]}</h4>
+                            <p>📅 {ride[3]} в {ride[4]}</p>
+                            <p>💺 Мест: {ride[5]}</p>
+                            <p>💰 {ride[6]}</p>
+                            <p>👤 Водитель: {ride[7]}</p>
+                            <button style="
+                                background: linear-gradient(135deg, #4CAF50, #2E7D32);
+                                color: white;
+                                border: none;
+                                padding: 8px 20px;
+                                border-radius: 6px;
+                                margin-top: 10px;
+                                cursor: pointer;
+                            ">📞 Связаться</button>
+                        </div>
+                        """, unsafe_allow_html=True)
+                else:
+                    st.info("Поездок на эту дату не найдено.")
+        
+        with subtab2:
+            st.markdown("#### Предложить поездку")
+            
+            with st.form("carpool_form"):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    offer_from = st.selectbox("Откуда", cities, key="offer_from")
+                    offer_date = st.date_input("Дата поездки", datetime.date.today())
+                    offer_seats = st.number_input("Свободных мест", 1, 8, 1)
+                
+                with col2:
+                    offer_to = st.selectbox("Куда", cities, key="offer_to")
+                    offer_time = st.time_input("Время отправления", datetime.time(10, 0))
+                    offer_price = st.text_input("Цена (BYN)", "10")
+                
+                driver_name = st.text_input("Ваше имя")
+                driver_contact = st.text_input("Контакт (телефон или Telegram)")
+                
+                submitted = st.form_submit_button("🚗 Опубликовать поездку")
+                
+                if submitted:
+                    if all([driver_name, driver_contact]):
+                        add_carpool_ride(
+                            offer_from, offer_to, 
+                            offer_date.strftime("%Y-%m-%d"),
+                            offer_time.strftime("%H:%M"),
+                            offer_seats, offer_price,
+                            driver_name, driver_contact
+                        )
+                        st.success("✅ Поездка добавлена! Теперь её увидят другие пользователи.")
+                    else:
+                        st.error("Заполните все обязательные поля")
+    
+    with tab4:
+        st.markdown("### 📢 Народные отчеты о транспорте")
+        
+        # Фильтры
+        col_filter, col_refresh = st.columns([3, 1])
+        with col_filter:
+            report_filter = st.text_input("Фильтр по маршруту", placeholder="Номер маршрута или остановка")
+        with col_refresh:
+            if st.button("🔄 Обновить", use_container_width=True):
+                st.rerun()
+        
+        # Форма добавления отчета
+        with st.expander("➕ Добавить отчет", expanded=False):
+            with st.form("report_form"):
+                col_r1, col_r2 = st.columns(2)
+                
+                with col_r1:
+                    rep_route = st.text_input("Маршрут*", placeholder="100, 3с, Метро и т.д.")
+                    rep_location = st.text_input("Место", placeholder="Остановка, улица")
+                
+                with col_r2:
+                    rep_type = st.selectbox("Тип транспорта", 
+                                          ["автобус", "троллейбус", "трамвай", "метро", "поезд", "маршрутка", "другое"])
+                    rep_user = st.text_input("Ваше имя", value="Аноним")
+                
+                rep_message = st.text_area("Сообщение*", 
+                                         placeholder="Опишите ситуацию: задержка, поломка, переполненность и т.д.",
+                                         height=100)
+                
+                submitted = st.form_submit_button("📢 Опубликовать отчет")
+                
+                if submitted:
+                    if rep_route and rep_message:
+                        add_transport_report(rep_route, rep_message, rep_user, rep_type, rep_location)
+                        st.success("✅ Отчет добавлен!")
+                        st.rerun()
+                    else:
+                        st.error("Заполните обязательные поля (маршрут и сообщение)")
+        
+        # Отображение отчетов
+        reports = get_transport_reports(limit=20, route_filter=report_filter if report_filter else None)
+        
+        if reports:
+            for report in reports:
+                icon = get_vehicle_icon(report.get("vehicle_type", ""))
+                time_ago = datetime.datetime.now() - datetime.datetime.strptime(report["timestamp"], "%Y-%m-%d %H:%M:%S")
+                minutes = int(time_ago.total_seconds() / 60)
+                
+                if minutes < 60:
+                    time_text = f"{minutes} мин назад"
+                else:
+                    hours = minutes // 60
+                    time_text = f"{hours} ч назад"
+                
+                st.markdown(f"""
+                <div class="report-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <span style="font-weight: bold; font-size: 1.1rem;">
+                                {icon} {report['route']} 
+                                {f"({report['vehicle_type']})" if report['vehicle_type'] else ""}
+                            </span>
+                            {f"<span style='background: #e3f2fd; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; margin-left: 10px;'>📍 {report['location']}</span>" if report['location'] else ""}
+                        </div>
+                        <span style="color: #666; font-size: 0.9rem;">{time_text}</span>
+                    </div>
+                    <p style="margin: 10px 0;">{report['message']}</p>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <span style="color: #666; font-size: 0.9rem;">
+                                👤 {report['user_name']} 
+                                {f"<span style='color: #4CAF50;'>(✓ проверено)</span>" if report['verified'] else ""}
+                            </span>
+                        </div>
+                        <div>
+                            <span style="margin-right: 15px;">
+                                <button class="vote-btn upvote" onclick="voteUp({report.get('id', 0)})">
+                                    👍 {report['upvotes']}
+                                </button>
+                                <button class="vote-btn downvote" onclick="voteDown({report.get('id', 0)})">
+                                    👎 {report['downvotes']}
+                                </button>
+                            </span>
+                            <span style="color: { '#4CAF50' if report['rating'] > 0 else '#F44336' if report['rating'] < 0 else '#666' }">
+                                {report['rating']:+d}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("Пока нет отчетов. Будьте первым!")
+    
+    with tab5:
+        st.markdown("### 📊 Расписания транспорта")
+        
+        # Выбор города для расписания
+        schedule_city = st.selectbox("Выберите город для расписания", cities)
+        
+        if schedule_city == "Минск":
+            st.markdown("#### 🚍 Автобусы Минска")
+            
+            # Популярные маршруты Минска
+            minsk_routes = [
+                {"number": "100", "route": "Аэропорт - Центр", "interval": "10-15 мин", "time": "05:30-00:30"},
+                {"number": "1", "route": "Тракторный - Серебрянка", "interval": "7-10 мин", "time": "05:00-01:00"},
+                {"number": "40", "route": "Уручье - Дражня", "interval": "10-20 мин", "time": "06:00-23:00"},
+                {"number": "3с", "route": "Веснянка - Серова", "interval": "8-12 мин", "time": "05:30-00:30"},
+                {"number": "101", "route": "Минск - Молодечно", "interval": "30 мин", "time": "06:00-22:00"},
+            ]
+            
+            for route in minsk_routes:
+                st.markdown(f"""
+                <div class="transport-card">
+                    <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                        <span class="route-number">{route['number']}</span>
+                        <span style="font-weight: bold;">{route['route']}</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                        <div>
+                            <div style="color: #666; font-size: 0.9rem;">Интервал</div>
+                            <div style="font-weight: bold;">{route['interval']}</div>
+                        </div>
+                        <div>
+                            <div style="color: #666; font-size: 0.9rem;">Время работы</div>
+                            <div style="font-weight: bold;">{route['time']}</div>
+                        </div>
+                        <div>
+                            <div style="color: #666; font-size: 0.9rem;">Стоимость</div>
+                            <div style="font-weight: bold;">0.90 BYN</div>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        # Расписание междугородних автобусов
+        st.markdown("---")
+        st.markdown("#### 🚌 Междугородние автобусы")
+        
+        intercity_schedule = [
+            {"from": "Минск", "to": "Гомель", "times": ["07:30", "09:00", "12:00", "15:00", "18:00", "21:00"]},
+            {"from": "Минск", "to": "Брест", "times": ["06:00", "08:30", "11:00", "14:00", "17:00", "20:00"]},
+            {"from": "Минск", "to": "Витебск", "times": ["07:00", "10:00", "13:00", "16:00", "19:00"]},
+            {"from": "Минск", "to": "Гродно", "times": ["08:00", "10:30", "14:00", "17:30", "20:00"]},
+            {"from": "Минск", "to": "Могилев", "times": ["07:00", "09:30", "13:00", "16:30", "19:00"]},
+        ]
+        
+        for schedule in intercity_schedule:
+            times_str = ", ".join(schedule['times'])
+            st.markdown(f"""
+            <div style="background: white; padding: 15px; border-radius: 10px; margin: 10px 0; border: 1px solid #e0e0e0;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h4 style="margin: 0;">{schedule['from']} → {schedule['to']}</h4>
+                        <p style="margin: 5px 0 0 0; color: #666;">Отправления: {times_str}</p>
+                    </div>
+                    <span style="background: #DAA520; color: white; padding: 5px 15px; border-radius: 20px;">
+                        от 12 BYN
+                    </span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+# ================= ДОБАВЛЕНИЕ КНОПКИ В САЙДБАР =================
+# В секции сайдбара добавьте кнопку транспорта:
+
+with st.sidebar:
+    st.markdown("<h3 style='color:#DAA520;'>🇧🇾 ZORNET</h3>", unsafe_allow_html=True)
+
+    pages = [
+        ("🏠", "ГЛАВНАЯ", "Главная"),
+        ("🚌", "ТРАНСПОРТ", "Транспорт"),  # ДОБАВЛЕНА ЭТА СТРОКА
+        ("📰", "НОВОСТИ", "Новости"),
+        ("🌤️", "ПОГОДА", "Погода"),
+        ("💾", "ДИСК", "Диск"),
+        ("👤", "ПРОФИЛЬ", "Профиль"),
+    ]
+
+    for i, (icon, text, page) in enumerate(pages):
+        if st.button(f"{icon} {text}", key=f"nav_{i}_{page}", use_container_width=True):
+            st.session_state.page = page
+            st.rerun()
 # ================= ПРОФЕССИОНАЛЬНЫЙ ОБЛАЧНЫЙ ДИСК ZORNET DISK =================
 elif st.session_state.page == "Диск":
     st.markdown('<div class="gold-title">💾 ДИСК</div>', unsafe_allow_html=True)
