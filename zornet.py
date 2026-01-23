@@ -500,7 +500,6 @@ def get_belta_news():
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
 
-
 # ================= СТРАНИЦА ГЛАВНАЯ =================
 if st.session_state.page == "Главная":
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
@@ -522,26 +521,49 @@ if st.session_state.page == "Главная":
 
     st.markdown("---")
 
-    search_query = st.text_input(
-        "",
-        placeholder="Поиск в интернете...",
-        key="main_search",
-        label_visibility="collapsed"
-    )
+    # Создаем форму для обработки Enter
+    with st.form(key="search_form"):
+        search_query = st.text_input(
+            "",
+            placeholder="Поиск в интернете... Нажмите Enter для поиска в Google",
+            key="main_search",
+            label_visibility="collapsed"
+        )
+        submitted = st.form_submit_button("🔍 Искать в ZORNET", use_container_width=True)
 
-    if search_query:
-        st.markdown(f"### 🔍 Результаты поиска: **{search_query}**")
-        with st.spinner("Ищу информацию..."):
-            results = search_zornet(search_query, num_results=5)
+    # Если форма отправлена (Enter или кнопка)
+    if submitted and search_query:
+        # Кодируем запрос для URL
+        encoded_query = requests.utils.quote(search_query)
+        google_url = f"https://www.google.com/search?q={encoded_query}"
+        
+        # Показываем сообщение и кнопку
+        st.success(f"Запрос: '{search_query}'")
+        st.markdown(f"""
+        <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+            <h3>🔍 Результаты поиска</h3>
+            <p>Нажмите кнопку ниже для поиска в Google</p>
+            <a href="{google_url}" target="_blank" 
+               style="padding: 12px 24px; background: #4285F4; color: white; 
+                      border-radius: 8px; text-decoration: none; font-size: 16px; 
+                      display: inline-block; margin: 10px;">
+               🔍 Поиск в Google
+            </a>
+            <p style="color: #666; margin-top: 15px;">
+                Или посмотрите результаты поиска в ZORNET ниже:
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Также показываем результаты через ZORNET
+        with st.spinner("Ищу информацию в ZORNET..."):
+            results = search_zornet(search_query, num_results=3)
             if results:
                 for idx, result in enumerate(results):
                     st.markdown(f"""
                     <div class="search-result">
                         <div style="font-weight: 600; color: #1a1a1a; font-size: 16px;">
                             {idx + 1}. {result['title']}
-                        </div>
-                        <div style="color: #1a73e8; font-size: 13px; margin: 5px 0;">
-                            {result['url'][:60]}...
                         </div>
                         <div style="color: #555; font-size: 14px;">
                             {result['snippet']}
@@ -555,8 +577,6 @@ if st.session_state.page == "Главная":
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
-            else:
-                st.info("По вашему запросу ничего не найдено.")
 
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
