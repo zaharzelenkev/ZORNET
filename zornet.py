@@ -547,21 +547,6 @@ if st.session_state.page == "Главная":
         
         # Используем компоненты для выполнения JavaScript
         components.html(open_google_js, height=0)
-        
-        # Показываем сообщение и кнопку
-        st.success(f"✅ Запрос: '{search_query}'")
-        st.markdown(f"""
-        <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px; margin: 20px 0;">
-            <h3>🔍 Результаты поиска</h3>
-            <p>Google поиск открыт в новой вкладке</p>
-            <a href="{google_url}" target="_blank" 
-               style="padding: 12px 24px; background: #4285F4; color: white; 
-                      border-radius: 8px; text-decoration: none; font-size: 16px; 
-                      display: inline-block; margin: 10px;">
-               🔍 Открыть Google поиск
-            </a>
-        </div>
-        """, unsafe_allow_html=True)
                 
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
