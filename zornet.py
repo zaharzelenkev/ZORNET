@@ -12,6 +12,7 @@ import mimetypes
 from duckduckgo_search import DDGS
 from huggingface_hub import InferenceClient
 import streamlit.components.v1 as components
+from urllib.parse import quote
 
 # ================= НАСТРОЙКИ =================
 st.set_page_config(
@@ -577,6 +578,39 @@ if st.session_state.page == "Главная":
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
+
+with st.form(key="search_form"):
+        search_query = st.text_input(
+            "",
+            placeholder="Поиск в интернете... Нажмите Enter для поиска в Google",
+            key="main_search",
+            label_visibility="collapsed"
+        )
+        submitted = st.form_submit_button("🔍 Искать", use_container_width=True)
+
+    if submitted and search_query:
+        # Создаем JavaScript для открытия Google
+        google_search_url = f"https://www.google.com/search?q={quote(search_query)}"
+        
+        # HTML с JavaScript для открытия новой вкладки
+        html_code = f"""
+        <script>
+            // Открываем Google в новой вкладке
+            window.open("{google_search_url}", "_blank");
+            
+            // Также можно показать сообщение
+            window.parent.document.querySelector('.stAlert').style.display = 'block';
+        </script>
+        <div style="padding: 10px; background: #e8f5e8; border-radius: 5px; margin: 10px 0;">
+            ✅ Google поиск открыт в новой вкладке для запроса: <b>{search_query}</b>
+        </div>
+        """
+        
+        # Исполняем JavaScript
+        components.html(html_code, height=100)
+        
+        # Показываем сообщение в Streamlit
+        st.info(f"🔍 Google поиск открыт в новой вкладке для: **{search_query}**")
 
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
