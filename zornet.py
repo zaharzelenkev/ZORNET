@@ -538,33 +538,44 @@ if st.session_state.page == "Главная":
         encoded_query = requests.utils.quote(search_query)
         google_url = f"https://www.google.com/search?q={encoded_query}"
         
+        # HTML/JavaScript для открытия Google в новой вкладке
+        open_google_js = f"""
+        <script>
+            window.open("{google_url}", "_blank");
+        </script>
+        """
+        
+        # Используем компоненты для выполнения JavaScript
+        components.html(open_google_js, height=0)
+        
         # Показываем сообщение и кнопку
-        st.success(f"Запрос: '{search_query}'")
+        st.success(f"✅ Запрос: '{search_query}'")
         st.markdown(f"""
-        <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+        <div style="text-align: center; padding: 20px; background: #f8f9fa; border-radius: 10px; margin: 20px 0;">
             <h3>🔍 Результаты поиска</h3>
-            <p>Нажмите кнопку ниже для поиска в Google</p>
+            <p>Google поиск открыт в новой вкладке</p>
             <a href="{google_url}" target="_blank" 
                style="padding: 12px 24px; background: #4285F4; color: white; 
                       border-radius: 8px; text-decoration: none; font-size: 16px; 
                       display: inline-block; margin: 10px;">
-               🔍 Поиск в Google
+               🔍 Открыть Google поиск
             </a>
-            <p style="color: #666; margin-top: 15px;">
-                Или посмотрите результаты поиска в ZORNET ниже:
-            </p>
         </div>
         """, unsafe_allow_html=True)
         
         # Также показываем результаты через ZORNET
+        st.markdown(f"### 📊 Результаты поиска ZORNET: **{search_query}**")
         with st.spinner("Ищу информацию в ZORNET..."):
-            results = search_zornet(search_query, num_results=3)
+            results = search_zornet(search_query, num_results=5)
             if results:
                 for idx, result in enumerate(results):
                     st.markdown(f"""
                     <div class="search-result">
                         <div style="font-weight: 600; color: #1a1a1a; font-size: 16px;">
                             {idx + 1}. {result['title']}
+                        </div>
+                        <div style="color: #1a73e8; font-size: 13px; margin: 5px 0;">
+                            {result['url'][:60]}...
                         </div>
                         <div style="color: #555; font-size: 14px;">
                             {result['snippet']}
@@ -575,43 +586,17 @@ if st.session_state.page == "Главная":
                                       border-radius: 6px; text-decoration: none; font-size: 12px;">
                                 Перейти на сайт
                             </a>
+                            <a href="{google_url}" target="_blank"
+                               style="padding: 6px 12px; background: #4285F4; color: white; 
+                                      border-radius: 6px; text-decoration: none; font-size: 12px; margin-left: 5px;">
+                                🔍 Поиск в Google
+                            </a>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
-
-with st.form(key="search_form"):
-        search_query = st.text_input(
-            "",
-            placeholder="Поиск в интернете... Нажмите Enter для поиска в Google",
-            key="main_search",
-            label_visibility="collapsed"
-        )
-        submitted = st.form_submit_button("🔍 Искать", use_container_width=True)
-
-    if submitted and search_query:
-        # Создаем JavaScript для открытия Google
-        google_search_url = f"https://www.google.com/search?q={quote(search_query)}"
-        
-        # HTML с JavaScript для открытия новой вкладки
-        html_code = f"""
-        <script>
-            // Открываем Google в новой вкладке
-            window.open("{google_search_url}", "_blank");
-            
-            // Также можно показать сообщение
-            window.parent.document.querySelector('.stAlert').style.display = 'block';
-        </script>
-        <div style="padding: 10px; background: #e8f5e8; border-radius: 5px; margin: 10px 0;">
-            ✅ Google поиск открыт в новой вкладке для запроса: <b>{search_query}</b>
-        </div>
-        """
-        
-        # Исполняем JavaScript
-        components.html(html_code, height=100)
-        
-        # Показываем сообщение в Streamlit
-        st.info(f"🔍 Google поиск открыт в новой вкладке для: **{search_query}**")
-
+            else:
+                st.info("По вашему запросу ничего не найдено.")
+                
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
     st.markdown('<div class="gold-title">📰 НОВОСТИ</div>', unsafe_allow_html=True)
