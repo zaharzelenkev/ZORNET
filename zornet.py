@@ -526,7 +526,7 @@ if st.session_state.page == "Главная":
     with st.form(key="search_form"):
         search_query = st.text_input(
             "",
-            placeholder="Поиск в интернете... Нажмите Enter для поиска в Google",
+            placeholder="Поиск в интернете",
             key="main_search",
             label_visibility="collapsed"
         )
@@ -562,40 +562,6 @@ if st.session_state.page == "Главная":
             </a>
         </div>
         """, unsafe_allow_html=True)
-        
-        # Также показываем результаты через ZORNET
-        st.markdown(f"### 📊 Результаты поиска ZORNET: **{search_query}**")
-        with st.spinner("Ищу информацию в ZORNET..."):
-            results = search_zornet(search_query, num_results=5)
-            if results:
-                for idx, result in enumerate(results):
-                    st.markdown(f"""
-                    <div class="search-result">
-                        <div style="font-weight: 600; color: #1a1a1a; font-size: 16px;">
-                            {idx + 1}. {result['title']}
-                        </div>
-                        <div style="color: #1a73e8; font-size: 13px; margin: 5px 0;">
-                            {result['url'][:60]}...
-                        </div>
-                        <div style="color: #555; font-size: 14px;">
-                            {result['snippet']}
-                        </div>
-                        <div style="margin-top: 10px;">
-                            <a href="{result['url']}" target="_blank" 
-                               style="padding: 6px 12px; background: #DAA520; color: white; 
-                                      border-radius: 6px; text-decoration: none; font-size: 12px;">
-                                Перейти на сайт
-                            </a>
-                            <a href="{google_url}" target="_blank"
-                               style="padding: 6px 12px; background: #4285F4; color: white; 
-                                      border-radius: 6px; text-decoration: none; font-size: 12px; margin-left: 5px;">
-                                🔍 Поиск в Google
-                            </a>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.info("По вашему запросу ничего не найдено.")
                 
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
