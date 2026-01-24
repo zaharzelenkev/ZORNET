@@ -522,17 +522,22 @@ def get_weather_by_city(city_name):
 
 # ================= ФУНКЦИИ ZORNET AI =================
 def ask_deepseek_ai(prompt: str) -> str:
+    """AI через DeepSeek API (бесплатно 1000 запросов/день)"""
+    
+    if not DEEPSEEK_API_KEY:
+        return "⚠️ Добавьте DEEPSEEK_API_KEY в secrets.toml"
+    
     try:
         API_URL = "https://api.deepseek.com/chat/completions"
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {DEEPSEEK_API_KEY}"  # Получить на platform.deepseek.com/api
+            "Authorization": f"Bearer {DEEPSEEK_API_KEY}"
         }
         
         data = {
             "model": "deepseek-chat",
             "messages": [
-                {"role": "system", "content": "Ты ZORNET AI — умный помощник..."},
+                {"role": "system", "content": "Ты ZORNET AI — умный помощник из Беларуси. Отвечай кратко и понятно по-русски."},
                 {"role": "user", "content": prompt}
             ],
             "max_tokens": 500,
@@ -543,12 +548,13 @@ def ask_deepseek_ai(prompt: str) -> str:
         
         if response.status_code == 200:
             return response.json()["choices"][0]["message"]["content"]
+        elif response.status_code == 429:
+            return "⚠️ Достигнут лимит запросов. Попробуйте позже."
         else:
-            return "AI временно недоступен"
+            return f"🤖 AI временно недоступен. Код ошибки: {response.status_code}"
             
-    except:
-        # Fallback на простые ответы
-        return f"🤖 ZORNET AI: Я обработал ваш запрос: '{prompt}'"
+    except Exception as e:
+        return f"🤖 Ошибка соединения: {str(e)}"
 
 # ================= ФУНКЦИИ УМНОЙ КАМЕРЫ =================
 def detect_objects_simple(image):
