@@ -502,35 +502,77 @@ def get_belta_news():
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
 
-# А в главной странице:
+# ================= СТРАНИЦА ГЛАВНАЯ =================
 if st.session_state.page == "Главная":
-    # ... предыдущий код ...
-    
+    st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
+
+    current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", use_container_width=True)
+    with col2:
+        if st.button("⛅ Погода", use_container_width=True):
+            st.session_state.page = "Погода"
+            st.rerun()
+    with col3:
+        st.button("💵 3.20\nBYN/USD", use_container_width=True)
+    with col4:
+        if st.button("🤖 ZORNET AI", use_container_width=True):
+            st.session_state.page = "ZORNET AI"
+            st.rerun()
+
+    st.markdown("---")
+
+    # Создаем форму для обработки Enter
     with st.form(key="search_form"):
         search_query = st.text_input(
             "",
-            placeholder="Поиск в интернете...",
+            placeholder="Поиск в интернете... Нажмите Enter для поиска в Google",
             key="main_search",
             label_visibility="collapsed"
         )
-        submitted = st.form_submit_button("🔍 Искать", use_container_width=True)
+        submitted = st.form_submit_button("🔍 Искать в ZORNET", use_container_width=True)
 
+    # Если форма отправлена (Enter или кнопка)
     if submitted and search_query:
-        # Создаем JavaScript для открытия Google
-        google_search_url = f"https://www.google.com/search?q={quote(search_query)}"
+        # Кодируем запрос для URL
+        encoded_query = requests.utils.quote(search_query)
+        google_url = f"https://www.google.com/search?q={encoded_query}"
         
-        # HTML с JavaScript для открытия новой вкладки
-        html_code = f"""
-        <script>
-            // Открываем Google в новой вкладке
-            window.open("{google_search_url}", "_blank");
+        # РЕДИРЕКТ НА GOOGLE В ТОЙ ЖЕ ВКЛАДКЕ
+        st.markdown(f'<meta http-equiv="refresh" content="0;url={google_url}">', unsafe_allow_html=True)
         
-        # Исполняем JavaScript
-        components.html(html_code, height=100)
+        # Альтернативный способ через JavaScript
+        js_code = f"""
+        <script type="text/javascript">
+            window.location.href = "{google_url}";
+        </script>
+        """
+        components.html(js_code, height=0)
         
-        # Показываем сообщение в Streamlit
-        st.info(f"🔍 Google поиск открыт в новой вкладке для: **{search_query}**")
-
+        # Кнопка на случай если JavaScript не сработал
+        st.markdown(f"""
+        <div style="text-align: center; padding: 50px;">
+            <h3>🔍 Открываю Google поиск...</h3>
+            <p>Если не произошло автоматического перенаправления, нажмите кнопку:</p>
+            <a href="{google_url}" style="text-decoration: none;">
+                <button style="
+                    padding: 15px 30px;
+                    background: linear-gradient(135deg, #4285F4, #0d47a1);
+                    color: white;
+                    border: none;
+                    border-radius: 10px;
+                    font-size: 18px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    margin-top: 20px;
+                ">
+                    🔍 Перейти в Google
+                </button>
+            </a>
+        </div>
+        """, unsafe_allow_html=True)
+        
         # Быстрые ссылки на популярные сайты
         st.markdown("### ⚡ Быстрый поиск на:")
         
@@ -583,6 +625,8 @@ if st.session_state.page == "Главная":
                 </div>
             </a>
             """, unsafe_allow_html=True)
+            
+            st.stop()
 
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
