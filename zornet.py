@@ -521,61 +521,33 @@ if st.session_state.page == "Главная":
 
     st.markdown("---")
 
-    # Поисковая строка
+    # Простой поиск
     search_query = st.text_input(
         "",
-        placeholder="Поиск в интернете...",
+        placeholder="Введите запрос для поиска в Google...",
         key="main_search",
         label_visibility="collapsed"
     )
-
-    # Кнопка для открытия Google поиска
-    if search_query:
-        google_search_url = f"https://www.google.com/search?q={requests.utils.quote(search_query)}"
+    
+    # Всегда видимая кнопка поиска
+    if st.button("🔍 Искать в Google", 
+                 type="primary", 
+                 use_container_width=True,
+                 disabled=not search_query):
         
-        # Создаем контейнер для кнопки
-        st.markdown(f"""
-        <div style="text-align: center; margin: 15px 0;">
-            <a href="{google_search_url}" target="_blank" 
-               style="display: inline-block; 
-                      padding: 15px 40px; 
-                      background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%); 
-                      color: white; 
-                      border-radius: 10px; 
-                      text-decoration: none; 
-                      font-weight: 700;
-                      font-size: 16px;
-                      box-shadow: 0 4px 20px rgba(218, 165, 32, 0.4);
-                      transition: all 0.3s ease;
-                      border: none;
-                      cursor: pointer;">
-                🔍 Искать в Google
-            </a>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Добавляем JavaScript для немедленного открытия при клике
-        components.html(f"""
-        <script>
-        function openSearch() {{
-            window.open("{google_search_url}", "_blank");
-            return false;
-        }}
-        
-        // Добавляем обработчик клика на ссылку
-        document.addEventListener('DOMContentLoaded', function() {{
-            const link = document.querySelector('a[href="{google_search_url}"]');
-            if (link) {{
-                link.addEventListener('click', function(e) {{
-                    e.preventDefault();
-                    window.open("{google_search_url}", "_blank");
-                }});
-            }}
-        }});
-        </script>
-        """, height=0)
-
-    # Если есть поисковый запрос, показываем результаты
+        if search_query:
+            # Создаем URL для Google
+            google_search_url = f"https://www.google.com/search?q={requests.utils.quote(search_query)}"
+            
+            # Открываем Google в текущей вкладке
+            js_code = f"""
+            <script>
+                window.open("{google_search_url}", "_self");
+            </script>
+            """
+            components.html(js_code, height=0)
+    
+    # Показываем локальные результаты если есть запрос
     if search_query:
         st.markdown(f"### 🔍 Результаты поиска Zornet: **{search_query}**")
         with st.spinner("Ищу информацию..."):
@@ -596,7 +568,7 @@ if st.session_state.page == "Главная":
                         <div style="margin-top: 10px;">
                             <a href="{result['url']}" target="_blank" 
                                style="padding: 6px 12px; background: #DAA520; color: white; 
-                                      border-radius: 6px; text-decoration: none; font-size: 12px;">
+                                      text-decoration: none; font-size: 12px; border-radius: 6px;">
                                 Перейти на сайт
                             </a>
                         </div>
