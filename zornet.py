@@ -526,7 +526,8 @@ if st.session_state.page == "Главная":
         html_code = f"""
         <script>
             // Открываем Google в новой вкладке
-            window.open("{google_search_url}", "_blank");
+            window.open("{google_search_url}", "_blank")
+        """
         
         # Исполняем JavaScript
         components.html(html_code, height=100)
