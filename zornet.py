@@ -565,30 +565,6 @@ GOOGLE_SEARCH_HTML = """
 </div>
 """
 
-# ================= СТРАНИЦА НОВОСТЕЙ =================
-elif st.session_state.page == "Новости":
-    st.markdown('<div class="gold-title">📰 НОВОСТИ</div>', unsafe_allow_html=True)
-
-    with st.spinner("Загружаю новости..."):
-        news = get_belta_news()
-
-        for item in news:
-            st.markdown(f"""
-            <div style="
-                background: #f8f9fa;
-                border-left: 4px solid #DAA520;
-                padding: 15px;
-                margin-bottom: 15px;
-                border-radius: 8px;
-            ">
-                <a href="{item.link}" target="_blank" 
-                   style="color:#DAA520; font-size:1.2rem; font-weight:bold; text-decoration:none;">
-                    {item.title}
-                </a>
-                <p style="color:#1a1a1a; margin-top:10px;">{item.summary[:200]}...</p>
-            </div>
-            """, unsafe_allow_html=True)
-
 # ================= СТРАНИЦА ПОГОДЫ (ПРОСТО И РАБОЧЕ) =================
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
