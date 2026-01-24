@@ -500,80 +500,119 @@ def get_belta_news():
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
 
-# 1. ОБЯЗАТЕЛЬНО ОПРЕДЕЛЯЕМ ПЕРЕМЕННУЮ ПОИСКА ЗДЕСЬ
-GOOGLE_SEARCH_HTML = """
-<div style="display: flex; justify-content: center; width: 100%; margin: 10px 0;">
-    <form action="https://www.google.com/search" method="get" target="_top" style="width: 100%; max-width: 600px; text-align: center;">
-        <input type="text" name="q" placeholder="🔍 Поиск в Google..." required 
-            style="width: 100%; padding: 16px 20px; font-size: 18px; border: 2px solid #DAA520; border-radius: 30px; outline: none; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 90%;">
-        <button type="submit" 
-            style="margin-top: 15px; background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%); color: white; border: none; padding: 12px 40px; border-radius: 25px; font-size: 16px; font-weight: 700; cursor: pointer; text-transform: uppercase;">
-            ИСКАТЬ
-        </button>
-    </form>
-</div>
-"""
-
-# ================= ГЛАВНАЯ СТРАНИЦА =================
+# ================= СТРАНИЦА ГЛАВНАЯ =================
 if st.session_state.page == "Главная":
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
-    
-    # Виджеты сверху
-    col1, col2, col3, col4 = st.columns(4)
+
     current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
-    
-    with col1: st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", key="btn_t")
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", use_container_width=True)
     with col2:
-        if st.button("⛅ Погода", key="btn_w", use_container_width=True):
+        if st.button("⛅ Погода", use_container_width=True):
             st.session_state.page = "Погода"
             st.rerun()
-    with col3: st.button("💵 3.20\nBYN/USD", key="btn_r")
+    with col3:
+        st.button("💵 3.20\nBYN/USD", use_container_width=True)
     with col4:
-        if st.button("🤖 AI ЧАТ", key="btn_ai", use_container_width=True):
+        if st.button("🤖 ZORNET AI", use_container_width=True):
             st.session_state.page = "ZORNET AI"
             st.rerun()
 
     st.markdown("---")
-    
-    # ПОИСК (теперь переменная точно определена вверху)
-    components.html(GOOGLE_SEARCH_HTML, height=180)
 
-    # РАЗДЕЛЫ (которые всегда будут работать)
-    st.markdown("### 📌 Быстрый переход")
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        if st.button("📰 Новости", key="nav_news", use_container_width=True):
-            st.session_state.page = "Новости"
-            st.rerun()
-    with c2:
-        if st.button("💾 Диск", key="nav_disk", use_container_width=True):
-            st.session_state.page = "Диск"
-            st.rerun()
-    with c3:
-        if st.button("👤 Профиль", key="nav_prof", use_container_width=True):
-            st.session_state.page = "Профиль"
-            st.rerun()
-
-# ================= СТРАНИЦА ПРОФИЛЯ =================
-elif st.session_state.page == "Профиль":
-    st.markdown('<div class="gold-title">👤 МОЙ ПРОФИЛЬ</div>', unsafe_allow_html=True)
+    # --- ИНТЕГРАЦИЯ GOOGLE ПОИСКА (ЧЕРЕЗ IFRAME) ---
+    # Мы используем components.html, чтобы создать изолированный HTML-блок.
+    # target="_top" — это ключ к успеху. Он заставляет ссылку открываться в текущем окне браузера,
+    # полностью замещая сайт ZORNET, и Streamlit не может этому помешать.
     
-    # Поиск и в профиле
-    components.html(GOOGLE_SEARCH_HTML, height=180)
-    
-    st.markdown("---")
-    # Кнопка возврата (чтобы не застрять)
-    if st.button("← На главную", key="back_home"):
-        st.session_state.page = "Главная"
-        st.rerun()
+    components.html("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: transparent;
+            font-family: 'Helvetica Neue', sans-serif;
+            display: flex;
+            justify-content: center;
+        }
+        
+        /* Контейнер формы */
+        .search-container {
+            width: 100%;
+            max-width: 600px;
+            padding: 10px;
+            box-sizing: border-box; /* Важно для мобильных */
+            text-align: center;
+        }
 
-    col_left, col_right = st.columns([1, 2])
-    with col_left:
-        st.image("https://via.placeholder.com/150/DAA520/FFFFFF?text=USER", width=150)
-    with col_right:
-        st.subheader("Настройки аккаунта")
-        st.text_input("Имя пользователя", value="Гость ZORNET")
-        st.button("Сохранить изменения")
+        /* Поле ввода */
+        input[type="text"] {
+            width: 100%;
+            padding: 18px 25px;
+            font-size: 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 30px;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            background-color: #ffffff;
+            color: #333;
+            box-sizing: border-box; /* Чтобы padding не ломал ширину */
+            -webkit-appearance: none; /* Убирает стили iOS */
+        }
+
+        input[type="text"]:focus {
+            border-color: #DAA520;
+            box-shadow: 0 0 15px rgba(218, 165, 32, 0.2);
+        }
+
+        /* Кнопка */
+        button {
+            margin-top: 20px;
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            -webkit-appearance: none; /* Убирает стили iOS */
+            width: 100%; /* На мобильных кнопка будет широкой */
+            max-width: 250px; /* На ПК не шире 250px */
+        }
+
+        button:hover {
+            transform: scale(1.03);
+            box-shadow: 0 6px 20px rgba(218, 165, 32, 0.6);
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+    </style>
+    </head>
+    <body>
+    
+        <div class="search-container">
+            <form action="https://www.google.com/search" method="get" target="_top">
+                <input type="text" name="q" placeholder="🔍 Введите запрос" required autocomplete="off">
+                <br>
+                <button type="submit">Поиск</button>
+            </form>
+        </div>
+
+    </body>
+    </html>
+    """, height=220) # Высота фрейма, чтобы влезла тень и кнопка
 
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
@@ -790,7 +829,6 @@ elif st.session_state.page == "Погода":
                 # При нажатии на кнопку города, ищем погоду для него
                 st.session_state.user_city = city
                 st.rerun()
-    st.title("🌤️ Прогноз погоды")
 
 # ================= ПРОФЕССИОНАЛЬНЫЙ ОБЛАЧНЫЙ ДИСК ZORNET DISK =================
 elif st.session_state.page == "Диск":
