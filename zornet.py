@@ -12,6 +12,7 @@ import mimetypes
 from duckduckgo_search import DDGS
 from huggingface_hub import InferenceClient
 import streamlit.components.v1 as components
+from urllib.parse import quote
 
 # ================= НАСТРОЙКИ =================
 st.set_page_config(
@@ -501,9 +502,6 @@ def get_belta_news():
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
 
-# В начале импортов добавьте:
-from urllib.parse import quote
-
 # А в главной странице:
 if st.session_state.page == "Главная":
     # ... предыдущий код ...
@@ -511,7 +509,7 @@ if st.session_state.page == "Главная":
     with st.form(key="search_form"):
         search_query = st.text_input(
             "",
-            placeholder="Поиск в интернете... Нажмите Enter для поиска в Google",
+            placeholder="Поиск в интернете...",
             key="main_search",
             label_visibility="collapsed"
         )
@@ -526,14 +524,6 @@ if st.session_state.page == "Главная":
         <script>
             // Открываем Google в новой вкладке
             window.open("{google_search_url}", "_blank");
-            
-            // Также можно показать сообщение
-            window.parent.document.querySelector('.stAlert').style.display = 'block';
-        </script>
-        <div style="padding: 10px; background: #e8f5e8; border-radius: 5px; margin: 10px 0;">
-            ✅ Google поиск открыт в новой вкладке для запроса: <b>{search_query}</b>
-        </div>
-        """
         
         # Исполняем JavaScript
         components.html(html_code, height=100)
