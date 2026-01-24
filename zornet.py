@@ -537,17 +537,38 @@ if st.session_state.page == "Главная":
         encoded_query = requests.utils.quote(search_query)
         google_url = f"https://www.google.com/search?q={encoded_query}"
         
-        # Перенаправляем в Google в той же вкладке
+        # РЕДИРЕКТ НА GOOGLE В ТОЙ ЖЕ ВКЛАДКЕ
+        st.markdown(f'<meta http-equiv="refresh" content="0;url={google_url}">', unsafe_allow_html=True)
+        
+        # Альтернативный способ через JavaScript
         js_code = f"""
-        <script>
+        <script type="text/javascript">
             window.location.href = "{google_url}";
         </script>
         """
-        components.html(js_code, height=0, width=0)
+        components.html(js_code, height=0)
         
-        # Показываем сообщение о перенаправлении
-        st.info("Перенаправление в Google... Если не сработало, нажмите кнопку ниже:")
-        st.markdown(f'<a href="{google_url}" target="_self"><button style="padding:10px 20px;background:#4285F4;color:white;border:none;border-radius:5px;cursor:pointer;">🔍 Открыть Google</button></a>', unsafe_allow_html=True)
+        # Кнопка на случай если JavaScript не сработал
+        st.markdown(f"""
+        <div style="text-align: center; padding: 50px;">
+            <h3>🔍 Открываю Google поиск...</h3>
+            <p>Если не произошло автоматического перенаправления, нажмите кнопку:</p>
+            <a href="{google_url}" style="text-decoration: none;">
+                <button style="
+                    padding: 15px 30px;
+                    background: linear-gradient(135deg, #4285F4, #0d47a1);
+                    color: white;
+                    border: none;
+                    border-radius: 10px;
+                    font-size: 18px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    margin-top: 20px;
+                ">
+                    🔍 Перейти в Google
+                </button>
+            </a>
+        </div>
+        """, unsafe_allow_html=True)
         
-        # Останавливаем дальнейшее выполнение
         st.stop()
