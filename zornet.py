@@ -626,10 +626,6 @@ elif st.session_state.page == "Новости":
             </div>
             """, unsafe_allow_html=True)
 
-# ================= СТРАНИЦА ПОГОДЫ (ПРОСТО И РАБОЧЕ) =================
-elif st.session_state.page == "Погода":
-    st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
-
 # ================= СТРАНИЦА ПОГОДЫ =================
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
