@@ -355,44 +355,6 @@ def ask_hf_ai(prompt: str) -> str:
     except Exception:
         return "⚠️ Ошибка соединения с ZORNET AI."
 
-
-# ================= ФУНКЦИИ ПОИСКА =================
-def search_zornet(query, num_results=5):
-    """Поиск в интернете"""
-    results = []
-
-    try:
-        with DDGS() as ddgs:
-            ddgs_results = list(ddgs.text(query, max_results=num_results, region='wt-wt'))
-
-            if ddgs_results:
-                for r in ddgs_results[:num_results]:
-                    results.append({
-                        "title": r.get("title", query),
-                        "url": r.get("href", f"https://www.google.com/search?q={query}"),
-                        "snippet": r.get("body", f"Результаты по запросу: {query}")[:180] + "...",
-                    })
-                return results
-    except Exception as e:
-        st.error(f"Ошибка поиска: {e}")
-
-    # Запасные результаты
-    fallback_results = [
-        {
-            "title": f"{query} - поиск в Google",
-            "url": f"https://www.google.com/search?q={query}",
-            "snippet": f"Нажмите для поиска '{query}' в Google."
-        },
-        {
-            "title": f"{query} в Википедии",
-            "url": f"https://ru.wikipedia.org/wiki/{query}",
-            "snippet": f"Ищите информацию о '{query}' в Википедии."
-        },
-    ]
-
-    return fallback_results[:num_results]
-
-
 # ================= ТРАНСПОРТНЫЕ ФУНКЦИИ =================
 def get_minsk_metro():
     return [
@@ -523,11 +485,11 @@ if st.session_state.page == "Главная":
 
     st.markdown("---")
     
-    # Используем форму для обработки Enter
-    with st.form("google_search_form"):
-        col_input, col_btn = st.columns([5, 1])
+    # Используем форму для поиска
+    with st.form("search_form", clear_on_submit=True):
+        col1, col2 = st.columns([5, 1])
         
-        with col_input:
+        with col1:
             search_query = st.text_input(
                 "",
                 placeholder="Введите запрос и нажмите Enter...",
@@ -535,18 +497,18 @@ if st.session_state.page == "Главная":
                 label_visibility="collapsed"
             )
         
-        with col_btn:
-            # CSS для кнопки
+        with col2:
+            # Стиль для кнопки
             st.markdown("""
             <style>
-            div[data-testid="stFormSubmitButton"] button {
-                height: 46px !important;
-                margin-top: 0px !important;
+            .stButton button {
+                height: 54px !important;
+                margin-top: 1px !important;
             }
             </style>
             """, unsafe_allow_html=True)
             
-            search_clicked = st.form_submit_button("🔍")
+            search_clicked = st.form_submit_button("🔍", type="primary")
     
     # Если поиск выполнен
     if search_clicked and search_query:
@@ -554,30 +516,43 @@ if st.session_state.page == "Главная":
         encoded_query = search_query.replace(' ', '+')
         google_url = f"https://www.google.com/search?q={encoded_query}"
         
-        # Создаем HTML страницу с редиректом на Google
-        redirect_html = f"""
+        # Создаем HTML с JavaScript, который откроет Google
+        html_code = f"""
         <!DOCTYPE html>
         <html>
         <head>
-            <meta http-equiv="refresh" content="0; url={google_url}">
-            <title>Переход на Google</title>
+            <title>Открытие Google</title>
         </head>
-        <body style="background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
-            <div style="text-align: center; padding: 40px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                <div style="font-size: 48px; margin-bottom: 20px;">🔍</div>
-                <h2 style="color: #333;">Переход на Google</h2>
-                <p style="color: #666; margin-bottom: 20px;">Запрос: <strong>{search_query}</strong></p>
-                <p style="color: #888; margin-bottom: 30px;">Вы будете перенаправлены через 0 секунд...</p>
-                <a href="{google_url}" style="display: inline-block; padding: 10px 20px; background: #4285f4; color: white; text-decoration: none; border-radius: 5px;">
-                    Перейти сейчас
-                </a>
-            </div>
+        <body>
+            <script>
+                // Открываем Google в этой же вкладке
+                window.location.href = "{google_url}";
+                
+                // На случай если location.href не сработал
+                setTimeout(function() {{
+                    window.open("{google_url}", "_self");
+                }}, 100);
+            </script>
+            
+            <noscript>
+                <meta http-equiv="refresh" content="0; url={google_url}">
+                <p>Если перенаправление не произошло, <a href="{google_url}">нажмите здесь</a>.</p>
+            </noscript>
         </body>
         </html>
         """
         
-        # Показываем HTML с редиректом
-        components.html(redirect_html, height=600)
+        # Вставляем HTML с JavaScript
+        components.html(html_code, height=0, width=0)
+        
+        # Показываем сообщение
+        st.markdown(f"""
+        <div style="text-align: center; padding: 40px;">
+            <div style="font-size: 48px; margin-bottom: 20px;">🔍</div>
+            <h2>Открываю Google...</h2>
+            <p><strong>Запрос:</strong> {search_query}</p>
+        </div>
+        """, unsafe_allow_html=True)
 
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
