@@ -503,32 +503,6 @@ def get_belta_news():
         ]
 
 # ================= СТРАНИЦА ГЛАВНАЯ =================
-# Добавьте после импортов или в начало главной страницы
-def add_search_enter_handler():
-    """Добавляет обработчик Enter для поиска"""
-    components.html("""
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const input = document.querySelector('input[placeholder="Поиск в интернете..."]');
-        if (input) {
-            input.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    // Находим и нажимаем кнопку поиска
-                    const buttons = document.querySelectorAll('button');
-                    for (let btn of buttons) {
-                        if (btn.textContent.includes('🔍') || btn.innerHTML.includes('🔍')) {
-                            btn.click();
-                            break;
-                        }
-                    }
-                }
-            });
-        }
-    });
-    </script>
-    """, height=0)
-
-# Вызовите эту функцию на главной странице
 if st.session_state.page == "Главная":
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
 
@@ -549,137 +523,61 @@ if st.session_state.page == "Главная":
 
     st.markdown("---")
     
-    # Создаем контейнер для поиска с кнопкой
-    col_search, col_btn = st.columns([6, 1])
-    
-    with col_search:
-        search_query = st.text_input(
-            "",
-            placeholder="Поиск в интернете...",
-            key="main_search",
-            label_visibility="collapsed",
-            on_change=None  # Это будет обрабатываться отдельно
-        )
-    
-    with col_btn:
-        search_clicked = st.button("🔍", use_container_width=True, key="search_button")
-    
-    # Проверяем, был ли выполнен поиск (по кнопке или Enter)
-    search_performed = False
-    
-    if search_query:
-        # Если нажата кнопка поиска
-        if search_clicked:
-            search_performed = True
-            st.session_state.last_search = search_query
-        # Если нажат Enter в поле ввода (имитируем через session state)
-        elif 'last_search' in st.session_state and st.session_state.last_search != search_query:
-            # Это новый поиск при вводе
-            search_performed = True
-            st.session_state.last_search = search_query
-    
-    if search_query and search_performed:
-        # Создаем Google-ссылку
-        google_url = f"https://www.google.com/search?q={search_query.replace(' ', '+')}"
+    # Используем форму для обработки Enter
+    with st.form("google_search_form"):
+        col_input, col_btn = st.columns([5, 1])
         
-        st.markdown(f"### 🔍 Результаты поиска: **{search_query}**")
+        with col_input:
+            search_query = st.text_input(
+                "",
+                placeholder="Введите запрос и нажмите Enter...",
+                key="main_search",
+                label_visibility="collapsed"
+            )
         
-        # Кнопка для открытия Google в новой вкладке
-        st.markdown(f"""
-        <div style="text-align: center; margin: 30px 0;">
-            <a href="{google_url}" target="_blank" 
-               style="display: inline-block; padding: 15px 40px; 
-                      background: linear-gradient(135deg, #4285f4, #34a853); 
-                      color: white; text-decoration: none; border-radius: 50px; 
-                      font-weight: bold; font-size: 18px; 
-                      box-shadow: 0 4px 15px rgba(66, 133, 244, 0.3);">
-               🔍 Открыть результаты в Google
-            </a>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Также показываем локальные результаты (как было раньше)
-        st.markdown("### 📌 Локальные результаты ZORNET:")
-        
-        with st.spinner("Ищу информацию..."):
-            results = search_zornet(search_query, num_results=5)
-            if results:
-                for idx, result in enumerate(results):
-                    st.markdown(f"""
-                    <div class="search-result">
-                        <div style="font-weight: 600; color: #1a1a1a; font-size: 16px;">
-                            {idx + 1}. {result['title']}
-                        </div>
-                        <div style="color: #1a73e8; font-size: 13px; margin: 5px 0;">
-                            {result['url'][:60]}...
-                        </div>
-                        <div style="color: #555; font-size: 14px;">
-                            {result['snippet']}
-                        </div>
-                        <div style="margin-top: 10px;">
-                            <a href="{result['url']}" target="_blank" 
-                               style="padding: 6px 12px; background: #DAA520; color: white; 
-                                      border-radius: 6px; text-decoration: none; font-size: 12px;">
-                                Перейти на сайт
-                            </a>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.info("По вашему запросу ничего не найдено в локальном поиске.")
-        
-        # Быстрые ссылки на популярные сайты
-        st.markdown("### ⚡ Быстрый поиск на:")
-        
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.markdown(f"""
-            <a href="https://www.youtube.com/results?search_query={search_query.replace(' ', '+')}" 
-               target="_blank" style="text-decoration: none;">
-                <div style="text-align: center; padding: 15px; background: #ff0000; 
-                           color: white; border-radius: 10px; margin: 5px;">
-                    <div style="font-size: 2rem;">▶️</div>
-                    <div style="font-weight: bold;">YouTube</div>
-                </div>
-            </a>
+        with col_btn:
+            # CSS для кнопки
+            st.markdown("""
+            <style>
+            div[data-testid="stFormSubmitButton"] button {
+                height: 46px !important;
+                margin-top: 0px !important;
+            }
+            </style>
             """, unsafe_allow_html=True)
+            
+            search_clicked = st.form_submit_button("🔍")
+    
+    # Если поиск выполнен
+    if search_clicked and search_query:
+        # Кодируем запрос для URL
+        encoded_query = search_query.replace(' ', '+')
+        google_url = f"https://www.google.com/search?q={encoded_query}"
         
-        with col2:
-            st.markdown(f"""
-            <a href="https://ru.wikipedia.org/wiki/{search_query}" 
-               target="_blank" style="text-decoration: none;">
-                <div style="text-align: center; padding: 15px; background: #f8f9fa; 
-                           color: #333; border-radius: 10px; margin: 5px; border: 1px solid #ddd;">
-                    <div style="font-size: 2rem;">📚</div>
-                    <div style="font-weight: bold;">Википедия</div>
-                </div>
-            </a>
-            """, unsafe_allow_html=True)
+        # Создаем HTML страницу с редиректом на Google
+        redirect_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta http-equiv="refresh" content="0; url={google_url}">
+            <title>Переход на Google</title>
+        </head>
+        <body style="background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+            <div style="text-align: center; padding: 40px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <div style="font-size: 48px; margin-bottom: 20px;">🔍</div>
+                <h2 style="color: #333;">Переход на Google</h2>
+                <p style="color: #666; margin-bottom: 20px;">Запрос: <strong>{search_query}</strong></p>
+                <p style="color: #888; margin-bottom: 30px;">Вы будете перенаправлены через 0 секунд...</p>
+                <a href="{google_url}" style="display: inline-block; padding: 10px 20px; background: #4285f4; color: white; text-decoration: none; border-radius: 5px;">
+                    Перейти сейчас
+                </a>
+            </div>
+        </body>
+        </html>
+        """
         
-        with col3:
-            st.markdown(f"""
-            <a href="https://www.amazon.com/s?k={search_query.replace(' ', '+')}" 
-               target="_blank" style="text-decoration: none;">
-                <div style="text-align: center; padding: 15px; background: #ff9900; 
-                           color: white; border-radius: 10px; margin: 5px;">
-                    <div style="font-size: 2rem;">🛒</div>
-                    <div style="font-weight: bold;">Amazon</div>
-                </div>
-            </a>
-            """, unsafe_allow_html=True)
-        
-        with col4:
-            st.markdown(f"""
-            <a href="https://news.google.com/search?q={search_query.replace(' ', '+')}&hl=ru" 
-               target="_blank" style="text-decoration: none;">
-                <div style="text-align: center; padding: 15px; background: #4285f4; 
-                           color: white; border-radius: 10px; margin: 5px;">
-                    <div style="font-size: 2rem;">📰</div>
-                    <div style="font-weight: bold;">Новости</div>
-                </div>
-            </a>
-            """, unsafe_allow_html=True)
+        # Показываем HTML с редиректом
+        components.html(redirect_html, height=600)
 
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
