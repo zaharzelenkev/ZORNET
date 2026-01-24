@@ -236,6 +236,21 @@ def get_weather_icon(condition_code):
 def get_weather_by_city(city_name):
     API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"
     try:
+        
+        # Геокодинг
+        geo_url = f"http://api.openweathermap.org/geo/1.0/direct?q={city_name}&limit=1&appid={API_KEY}"
+        geo_res = requests.get(geo_url, timeout=10).json()
+        if not geo_res: return None
+        
+        lat, lon = geo_res[0]["lat"], geo_res[0]["lon"]
+        
+        # Текущая погода
+        curr_url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
+        curr_data = requests.get(curr_url, timeout=10).json()
+        
+        # Прогноз
+        fore_url = f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
+        fore_data = requests.get(fore_url, timeout=10).json()
         url = f"https://api.openweathermap.org/data/2.5/weather?q={city_name}&appid={API_KEY}&units=metric&lang=ru"
         r = requests.get(url, timeout=10)
         if r.status_code == 200:
@@ -756,6 +771,78 @@ if st.session_state.page == "Погода":
     if bc2.button("Гродно", use_container_width=True): st.session_state.user_city = "Гродно"; st.rerun()
     if bc3.button("Брест", use_container_width=True): st.session_state.user_city = "Брест"; st.rerun()
     if bc4.button("Гомель", use_container_width=True): st.session_state.user_city = "Гомель"; st.rerun()
+
+# ================= СТРАНИЦА ПОГОДЫ =================
+elif st.session_state.page == "Погода":
+    st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
+
+    # Поиск внутри погоды
+    with st.container():
+        col_s1, col_s2 = st.columns([4, 1])
+        with col_s1:
+            city_in = st.text_input("Город", value=st.session_state.user_city, label_visibility="collapsed", placeholder="Введите город...")
+        with col_s2:
+            if st.button("Поиск", type="primary", use_container_width=True):
+                st.session_state.user_city = city_in
+                st.rerun()
+
+    data = get_weather_by_city(st.session_state.user_city)
+    
+    if data:
+        curr = data["current"]
+        st.markdown(f"### 📍 {curr['city']}, {curr['country']}")
+        
+        # Основной блок
+        m1, m2 = st.columns([2, 1])
+        with m1:
+            st.markdown(f"""
+            <div class="weather-card">
+                <div style="font-size: 4.5rem; font-weight: 800; color: #1a1a1a;">{curr['temp']}°C</div>
+                <div style="font-size: 1.6rem; color: #DAA520; font-weight: 600;">{get_weather_icon(curr['icon'])} {curr['description']}</div>
+                <div style="color: #666; margin-top: 10px;">Ощущается как <b>{curr['feels_like']}°C</b></div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with m2:
+            st.markdown(f"""
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 20px; height: 100%;">
+                <p>💧 Влажность: <b>{curr['humidity']}%</b></p>
+                <p>💨 Ветер: <b>{curr['wind_speed']} м/с</b></p>
+                <p>🧭 Направление: <b>{get_wind_direction(curr['wind_deg'])}</b></p>
+                <p>👁️ Видимость: <b>{curr['visibility']} км</b></p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Прогноз на 5 дней (Восстановлено!)
+        if data.get("forecast"):
+            st.markdown("#### 📅 Прогноз на ближайшие дни")
+            f_cols = st.columns(5)
+            # Фильтруем прогноз, чтобы брать данные на 12:00 каждого дня
+            forecast_items = [item for item in data["forecast"]["list"] if "12:00:00" in item["dt_txt"]][:5]
+            
+            for idx, item in enumerate(forecast_items):
+                with f_cols[idx]:
+                    day_name = datetime.datetime.strptime(item["dt_txt"], "%Y-%m-%d %H:%M:%S").strftime("%a")
+                    st.markdown(f"""
+                    <div style="background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%); 
+                        padding: 15px; border-radius: 15px; text-align: center; color: white;">
+                        <div style="font-weight: bold;">{day_name}</div>
+                        <div style="font-size: 2rem;">{get_weather_icon(item['weather'][0]['icon'])}</div>
+                        <div style="font-size: 1.2rem; font-weight: bold;">{round(item['main']['temp'])}°C</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+        # Города Беларуси (Восстановлено!)
+        st.markdown("---")
+        st.markdown("### 🇧🇾 Быстрый выбор")
+        bel_cities = ["Минск", "Гродно", "Брест", "Гомель", "Витебск", "Могилев", "Солигорск", "Лида"]
+        b_cols = st.columns(4)
+        for i, city in enumerate(bel_cities):
+            if b_cols[i % 4].button(city, use_container_width=True):
+                st.session_state.user_city = city
+                st.rerun()
+    else:
+        st.error("Город не найден. Попробуйте еще раз.")
 
 # ================= ПРОФЕССИОНАЛЬНЫЙ ОБЛАЧНЫЙ ДИСК ZORNET DISK =================
 elif st.session_state.page == "Диск":
