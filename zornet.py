@@ -500,7 +500,6 @@ def get_belta_news():
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
 
-
 # ================= СТРАНИЦА ГЛАВНАЯ =================
 if st.session_state.page == "Главная":
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
@@ -522,6 +521,7 @@ if st.session_state.page == "Главная":
 
     st.markdown("---")
 
+    # Поисковая строка
     search_query = st.text_input(
         "",
         placeholder="Поиск в интернете...",
@@ -529,8 +529,55 @@ if st.session_state.page == "Главная":
         label_visibility="collapsed"
     )
 
+    # Кнопка для открытия Google поиска
     if search_query:
-        st.markdown(f"### 🔍 Результаты поиска: **{search_query}**")
+        google_search_url = f"https://www.google.com/search?q={requests.utils.quote(search_query)}"
+        
+        # Создаем контейнер для кнопки
+        st.markdown(f"""
+        <div style="text-align: center; margin: 15px 0;">
+            <a href="{google_search_url}" target="_blank" 
+               style="display: inline-block; 
+                      padding: 15px 40px; 
+                      background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%); 
+                      color: white; 
+                      border-radius: 10px; 
+                      text-decoration: none; 
+                      font-weight: 700;
+                      font-size: 16px;
+                      box-shadow: 0 4px 20px rgba(218, 165, 32, 0.4);
+                      transition: all 0.3s ease;
+                      border: none;
+                      cursor: pointer;">
+                🔍 Искать в Google
+            </a>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Добавляем JavaScript для немедленного открытия при клике
+        components.html(f"""
+        <script>
+        function openSearch() {{
+            window.open("{google_search_url}", "_blank");
+            return false;
+        }}
+        
+        // Добавляем обработчик клика на ссылку
+        document.addEventListener('DOMContentLoaded', function() {{
+            const link = document.querySelector('a[href="{google_search_url}"]');
+            if (link) {{
+                link.addEventListener('click', function(e) {{
+                    e.preventDefault();
+                    window.open("{google_search_url}", "_blank");
+                }});
+            }}
+        }});
+        </script>
+        """, height=0)
+
+    # Если есть поисковый запрос, показываем результаты
+    if search_query:
+        st.markdown(f"### 🔍 Результаты поиска Zornet: **{search_query}**")
         with st.spinner("Ищу информацию..."):
             results = search_zornet(search_query, num_results=5)
             if results:
