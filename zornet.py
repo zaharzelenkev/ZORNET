@@ -628,7 +628,7 @@ if st.session_state.page == "ZORNET AI":
             if st.button("🚀 Отправить", type="primary", use_container_width=True):
                 if user_input.strip():
                     st.session_state.ai_messages.append({"role": "user", "content": user_input})
-                    response = ask_hf_ai(user_input)
+                    response = ask_deepseek_ai(user_input)
                     st.session_state.ai_messages.append({"role": "assistant", "content": response})
                     st.rerun()
         
