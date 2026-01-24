@@ -498,16 +498,6 @@ if st.session_state.page == "Главная":
             )
         
         with col2:
-            # Стиль для кнопки
-            st.markdown("""
-            <style>
-            .stButton button {
-                height: 54px !important;
-                margin-top: 1px !important;
-            }
-            </style>
-            """, unsafe_allow_html=True)
-            
             search_clicked = st.form_submit_button("🔍", type="primary")
     
     # Если поиск выполнен
@@ -526,12 +516,7 @@ if st.session_state.page == "Главная":
         <body>
             <script>
                 // Открываем Google в этой же вкладке
-                window.location.href = "{google_url}";
-                
-                // На случай если location.href не сработал
-                setTimeout(function() {{
-                    window.open("{google_url}", "_self");
-                }}, 100);
+                window.open("{google_url}", "_self");
             </script>
             
             <noscript>
@@ -553,7 +538,7 @@ if st.session_state.page == "Главная":
             <p><strong>Запрос:</strong> {search_query}</p>
         </div>
         """, unsafe_allow_html=True)
-
+        
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
     st.markdown('<div class="gold-title">📰 НОВОСТИ</div>', unsafe_allow_html=True)
