@@ -26,14 +26,11 @@ st.set_page_config(
 )
 
 # ================= API КЛЮЧИ =================
-# Для Google Search API (получи бесплатно на https://programmablesearchengine.google.com/)
-GOOGLE_API_KEY = "AIzaSyDDy7BqnhQVVUhAVRZdymgW_FcE4tfK5NY"  # Вставь свой ключ здесь
-GOOGLE_CSE_ID = "61fec01c978324396" # Вставь свой Search Engine ID здесь
-
-# Для Hugging Face AI
+GOOGLE_API_KEY = "AIzaSyDDy7BqnhQVVUhAVRZdymgW_FcE4tfK5NY"  # Получи на https://console.cloud.google.com/
+GOOGLE_CSE_ID = "<script async src="https://cse.google.com/cse.js?cx=61fec01c978324396">
+</script>
+<div class="gcse-search"></div>"   # Получи на https://programmablesearchengine.google.com/
 HF_API_KEY = st.secrets.get("HF_API_KEY", "")
-
-# Для погоды
 OPENWEATHER_API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"
 
 # ================= СЕССИЯ =================
