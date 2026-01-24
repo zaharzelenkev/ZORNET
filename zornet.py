@@ -61,6 +61,23 @@ st.markdown("""
     footer {visibility: hidden;}
     header {background: transparent;} /* Сделали прозрачным вместо hidden, чтобы кнопка меню была доступна */
 
+/* Кнопка-подсказка, если сайдбар закрыт */
+.st-emotion-cache-hp888a {
+    left: 10px !important;
+    color: #DAA520 !important;
+}
+
+/* Принудительно показываем кнопку развертывания, даже если хедер скрыт */
+[data-testid="stSidebarCollapseButton"] {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 10000;
+    background-color: #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 2px 10px rgba(218, 165, 32, 0.4);
+}
+
     /* КНОПКА ДЛЯ ВЫДВИЖЕНИЯ МЕНЮ (Floating Button) */
     .menu-toggle {
         position: fixed;
@@ -613,85 +630,79 @@ elif st.session_state.page == "Новости":
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
 
-# Тот самый золотой поиск, но теперь для города!
-    # Он перезагрузит страницу с ?search_city=город в URL
-    golden_search_bar("🔍 Введите город (напр. Гродно)", "search_city", is_google=False)
+# ================= СТРАНИЦА ПОГОДЫ =================
+elif st.session_state.page == "Погода":
+    st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
 
-    weather = get_weather_by_city(st.session_state.user_city)
-    
-    if weather:
-        curr = weather["current"]
-        st.markdown(f"### Погода: {curr['city']}, {curr['country']}")
-        
-        col_t, col_i = st.columns(2)
-        with col_t:
-            st.markdown(f"<h1 style='font-size: 5rem;'>{curr['temp']}°C</h1>", unsafe_allow_html=True)
-            st.write(f"**{curr['description']}**")
-        with col_i:
-            st.markdown(f"<div style='font-size: 6rem; text-align: center;'>{get_weather_icon(curr['icon'])}</div>", unsafe_allow_html=True)
-            
-        c1, c2 = st.columns(2)
-        c1.metric("💧 Влажность", f"{curr['humidity']}%")
-        c2.metric("💨 Ветер", f"{curr['wind_speed']} м/с")
-    else:
-        st.error("Город не найден. Попробуйте еще раз.")
-        
-    # По умолчанию показываем Минск
-    default_city = "Минск"
+    # 1. Тот же дизайн поиска, что и на главной
+    # Используем query_params, чтобы "поймать" город из HTML-формы
+    search_params = st.query_params
+    if "city_search" in search_params:
+        st.session_state.user_city = search_params["city_search"]
+        # Очищаем параметры, чтобы не искать один и тот же город вечно
+        st.query_params.clear()
 
-    # Поисковая строка
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        city_input = st.text_input(
-            "🔍 Введите ваш город",
-            placeholder="Например: Минск, Гомель, Брест...",
-            key="weather_city_input"
-        )
+    components.html("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        body { margin: 0; padding: 0; background-color: transparent; font-family: 'Helvetica Neue', sans-serif; display: flex; justify-content: center; }
+        .search-container { width: 100%; max-width: 600px; padding: 10px; text-align: center; }
+        input[type="text"] {
+            width: 100%; padding: 18px 25px; font-size: 18px; border: 2px solid #e0e0e0;
+            border-radius: 30px; outline: none; transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05); background-color: #ffffff; color: #333; box-sizing: border-box;
+        }
+        input[type="text"]:focus { border-color: #DAA520; box-shadow: 0 0 15px rgba(218, 165, 32, 0.2); }
+        button {
+            margin-top: 20px; background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+            color: white; border: none; padding: 14px 40px; border-radius: 25px;
+            font-size: 16px; font-weight: 700; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4); transition: transform 0.2s;
+            text-transform: uppercase; letter-spacing: 1px; width: 100%; max-width: 250px;
+        }
+        button:hover { transform: scale(1.03); }
+    </style>
+    </head>
+    <body>
+        <div class="search-container">
+            <form action="/" method="get" target="_top">
+                <input type="text" name="city_search" placeholder="🔍 Введите город для прогноза" required autocomplete="off">
+                <br>
+                <button type="submit">Найти</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    """, height=200)
 
-    with col2:
-        search_clicked = st.button("Найти", type="primary", use_container_width=True)
+    # 2. Логика получения данных
+    city_to_show = st.session_state.get('user_city', 'Минск')
 
-    # Определяем какой город показывать
-    city_to_show = default_city
-    if search_clicked and city_input:
-        city_to_show = city_input
-    elif 'user_city' in st.session_state:
-        city_to_show = st.session_state.user_city
-
-    # Получаем погоду для города
     with st.spinner(f"Получаю погоду для {city_to_show}..."):
         weather_data = get_weather_by_city(city_to_show)
 
-        if not weather_data:
-            # Если город не найден, показываем Минск
-            st.error(f"Город '{city_to_show}' не найден. Показываю погоду в Минске.")
-            weather_data = get_weather_by_city(default_city)
-            city_to_show = default_city
-
         if weather_data:
             current = weather_data["current"]
+            
+            # ИСПОЛЬЗУЕМ .get() ЧТОБЫ ИЗБЕЖАТЬ KeyError
+            temp = current.get('temp', '--')
+            feels_like = current.get('feels_like', temp) # Если нет 'feels_like', берем обычную температуру
+            description = current.get('description', 'Нет данных')
 
-            # Сохраняем город в сессии
-            st.session_state.user_city = city_to_show
-            st.session_state.weather_data = weather_data
+            st.markdown(f"### 🌤️ Погода в {current.get('city', city_to_show)}")
 
-            # Показываем город
-            st.markdown(f"### 🌤️ Погода в {current['city']}, {current['country']}")
-
-            # Основная информация
             col_temp, col_icon = st.columns([2, 1])
-
             with col_temp:
                 st.markdown(f"""
                 <div style="text-align: center;">
-                    <div style="font-size: 4rem; font-weight: 800; color: #1a1a1a;">
-                        {current['temp']}°C
-                    </div>
+                    <div style="font-size: 4rem; font-weight: 800; color: #1a1a1a;">{temp}°C</div>
                     <div style="font-size: 1.5rem; color: #666; margin-top: 10px;">
-                        {get_weather_icon(current['icon'])} {current['description']}
+                        {get_weather_icon(current.get('icon', ''))} {description}
                     </div>
                     <div style="font-size: 1rem; color: #888; margin-top: 5px;">
-                        💁 Ощущается как {current['feels_like']}°C
+                        💁 Ощущается как {feels_like}°C
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
