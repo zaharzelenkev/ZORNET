@@ -56,6 +56,27 @@ st.markdown("""
         margin: 10px 0 30px 0;
     }
 
+/* СКРЫВАЕМ ЛИШНЕЕ, НО ОСТАВЛЯЕМ ВОЗМОЖНОСТЬ ОТКРЫТЬ САЙДБАР */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {background: transparent;} /* Сделали прозрачным вместо hidden, чтобы кнопка меню была доступна */
+
+    /* КНОПКА ДЛЯ ВЫДВИЖЕНИЯ МЕНЮ (Floating Button) */
+    .menu-toggle {
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        z-index: 999999;
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        font-size: 20px;
+    }
+    
     /* КНОПКИ ГЛАВНОЙ */
     div.stButton > button {
         background: #f8f9fa !important;
@@ -164,6 +185,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Кнопка открытия меню (визуальная подсказка)
+if st.button("☰", key="sidebar_trigger"):
+    # В Streamlit нет прямого API для программного открытия, 
+    # но нажатие на кнопку вызывает перезапуск, а sidebar_state по умолчанию expanded
+    st.rerun()
+
 # ================= САЙДБАР =================
 with st.sidebar:
     st.markdown("<h3 style='color:#DAA520;'>🇧🇾 ZORNET</h3>", unsafe_allow_html=True)
@@ -181,117 +208,61 @@ with st.sidebar:
             st.session_state.page = page
             st.rerun()
 
-
 # ================= ФУНКЦИИ ПОГОДЫ =================
 def get_weather_icon(condition_code):
-    """Возвращает эмодзи для погодных условий"""
-    icons = {
-        "01d": "☀️", "01n": "🌙",
-        "02d": "⛅", "02n": "⛅",
-        "03d": "☁️", "03n": "☁️",
-        "04d": "☁️", "04n": "☁️",
-        "09d": "🌧️", "09n": "🌧️",
-        "10d": "🌦️", "10n": "🌦️",
-        "11d": "⛈️", "11n": "⛈️",
-        "13d": "❄️", "13n": "❄️",
-        "50d": "🌫️", "50n": "🌫️",
-    }
+    icons = {"01d": "☀️", "01n": "🌙", "02d": "⛅", "02n": "⛅", "03d": "☁️", "03n": "☁️", "04d": "☁️", "04n": "☁️", "09d": "🌧️", "09n": "🌧️", "10d": "🌦️", "10n": "🌦️", "11d": "⛈️", "11n": "⛈️", "13d": "❄️", "13n": "❄️", "50d": "🌫️", "50n": "🌫️"}
     return icons.get(condition_code, "🌡️")
 
-
-def get_wind_direction(degrees):
-    """Преобразует градусы в направление ветра"""
-    directions = ["С", "СВ", "В", "ЮВ", "Ю", "ЮЗ", "З", "СЗ"]
-    index = round(degrees / 45) % 8
-    return directions[index]
-
-
-def get_weather_by_coords(lat, lon):
-    """Получает погоду по координатам через OpenWeatherMap API"""
-    # ЗАМЕНИ ЭТОТ КЛЮЧ НА СВОЙ БЕСПЛАТНЫЙ КЛЮЧ С OpenWeatherMap!
+def get_weather_by_city(city_name):
     API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"
-
     try:
-        # Текущая погода
-        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
-        response = requests.get(url, timeout=10)
-
-        if response.status_code == 200:
-            data = response.json()
-
-            # Прогноз на 5 дней
-            forecast_url = f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
-            forecast_response = requests.get(forecast_url, timeout=10)
-            forecast_data = forecast_response.json() if forecast_response.status_code == 200 else None
-
+        url = f"https://api.openweathermap.org/data/2.5/weather?q={city_name}&appid={API_KEY}&units=metric&lang=ru"
+        r = requests.get(url, timeout=10)
+        if r.status_code == 200:
+            data = r.json()
             return {
                 "current": {
                     "temp": round(data["main"]["temp"]),
-                    "feels_like": round(data["main"]["feels_like"]),
-                    "humidity": data["main"]["humidity"],
-                    "pressure": data["main"]["pressure"],
                     "description": data["weather"][0]["description"].capitalize(),
                     "icon": data["weather"][0]["icon"],
-                    "wind_speed": data["wind"]["speed"],
-                    "wind_deg": data["wind"].get("deg", 0),
-                    "clouds": data["clouds"]["all"],
-                    "visibility": data.get("visibility", 10000) / 1000,
                     "city": data["name"],
                     "country": data["sys"]["country"],
-                    "sunrise": datetime.datetime.fromtimestamp(data["sys"]["sunrise"]).strftime('%H:%M'),
-                    "sunset": datetime.datetime.fromtimestamp(data["sys"]["sunset"]).strftime('%H:%M')
-                },
-                "forecast": forecast_data
+                    "humidity": data["main"]["humidity"],
+                    "wind_speed": data["wind"]["speed"]
+                }
             }
-        else:
-            st.error(f"Ошибка API: {response.status_code}")
-            return None
-    except Exception as e:
-        st.error(f"Ошибка получения погоды: {e}")
         return None
+    except: return None
 
-
-def get_weather_by_city(city_name):
-    """Получает погоду по названию города"""
-    API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"  # Замени на свой ключ!
-
-    try:
-        # Сначала получаем координаты города
-        geocode_url = f"http://api.openweathermap.org/geo/1.0/direct?q={city_name}&limit=1&appid={API_KEY}"
-        geocode_response = requests.get(geocode_url, timeout=10)
-
-        if geocode_response.status_code == 200 and geocode_response.json():
-            city_data = geocode_response.json()[0]
-            lat = city_data["lat"]
-            lon = city_data["lon"]
-
-            return get_weather_by_coords(lat, lon)
-        else:
-            st.error("Город не найден")
-            return None
-    except Exception as e:
-        st.error(f"Ошибка: {e}")
-        return None
-
-
-# Обработчик сообщений от JavaScript
-def handle_js_messages():
-    """Обрабатывает сообщения от JavaScript компонентов"""
-    # Проверяем если есть сообщение от геолокации
-    if 'location_result' not in st.session_state:
-        # Пытаемся получить данные из query parameters (если JavaScript их отправил)
-        query_params = st.experimental_get_query_params()
-
-        if 'geolocation' in query_params:
-            try:
-                geo_data = json.loads(query_params['geolocation'][0])
-                st.session_state.location_result = geo_data
-                # Очищаем параметры
-                st.experimental_set_query_params()
-                st.rerun()
-            except:
-                pass
-
+# ================= КОМПОНЕНТ ПОИСКА (ЗОЛОТОЙ) =================
+def golden_search_bar(placeholder="Поиск...", target_param="q", is_google=True):
+    # Если это для погоды, форма будет отправлять параметр в URL самого приложения
+    action_url = "https://www.google.com/search" if is_google else ""
+    target_attr = 'target="_top"' if is_google else ""
+    
+    components.html(f"""
+    <style>
+        .search-container {{ text-align: center; font-family: sans-serif; }}
+        input[type="text"] {{
+            width: 100%; max-width: 600px; padding: 15px 25px;
+            font-size: 18px; border: 2px solid #e0e0e0; border-radius: 30px;
+            outline: none; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }}
+        input[type="text"]:focus {{ border-color: #DAA520; }}
+        button {{
+            margin-top: 15px; background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+            color: white; border: none; padding: 12px 40px; border-radius: 25px;
+            font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
+        }}
+    </style>
+    <div class="search-container">
+        <form action="{action_url}" method="get" {target_attr}>
+            <input type="text" name="{target_param}" placeholder="{placeholder}" required autocomplete="off">
+            <br>
+            <button type="submit">Найти</button>
+        </form>
+    </div>
+    """, height=150)
 
 # ================= ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ДИСКА =================
 def get_icon(file_path):
@@ -642,6 +613,29 @@ elif st.session_state.page == "Новости":
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
 
+# Тот самый золотой поиск, но теперь для города!
+    # Он перезагрузит страницу с ?search_city=город в URL
+    golden_search_bar("🔍 Введите город (напр. Гродно)", "search_city", is_google=False)
+
+    weather = get_weather_by_city(st.session_state.user_city)
+    
+    if weather:
+        curr = weather["current"]
+        st.markdown(f"### Погода: {curr['city']}, {curr['country']}")
+        
+        col_t, col_i = st.columns(2)
+        with col_t:
+            st.markdown(f"<h1 style='font-size: 5rem;'>{curr['temp']}°C</h1>", unsafe_allow_html=True)
+            st.write(f"**{curr['description']}**")
+        with col_i:
+            st.markdown(f"<div style='font-size: 6rem; text-align: center;'>{get_weather_icon(curr['icon'])}</div>", unsafe_allow_html=True)
+            
+        c1, c2 = st.columns(2)
+        c1.metric("💧 Влажность", f"{curr['humidity']}%")
+        c2.metric("💨 Ветер", f"{curr['wind_speed']} м/с")
+    else:
+        st.error("Город не найден. Попробуйте еще раз.")
+        
     # По умолчанию показываем Минск
     default_city = "Минск"
 
