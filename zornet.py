@@ -12,7 +12,6 @@ import mimetypes
 from duckduckgo_search import DDGS
 from huggingface_hub import InferenceClient
 import streamlit.components.v1 as components
-from urllib.parse import quote
 
 # ================= НАСТРОЙКИ =================
 st.set_page_config(
@@ -31,8 +30,6 @@ if "weather_data" not in st.session_state:
     st.session_state.weather_data = None
 if "user_city" not in st.session_state:
     st.session_state.user_city = None
-if "last_search" not in st.session_state:
-    st.session_state.last_search = ""
 
 # ================= CSS СТИЛИ =================
 st.markdown("""
@@ -393,6 +390,7 @@ def search_zornet(query, num_results=5):
 
     return fallback_results[:num_results]
 
+
 # ================= ТРАНСПОРТНЫЕ ФУНКЦИИ =================
 def get_minsk_metro():
     return [
@@ -502,94 +500,63 @@ def get_belta_news():
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
 
-# А в главной странице:
-if st.session_state.page == "Главная":
-    # ... предыдущий код ...
-    
-    with st.form(key="search_form"):
-        search_query = st.text_input(
-            "",
-            placeholder="Поиск в интернете... Нажмите Enter для поиска в Google",
-            key="main_search",
-            label_visibility="collapsed"
-        )
-        submitted = st.form_submit_button("🔍 Искать", use_container_width=True)
 
-    if submitted and search_query:
-        # Создаем JavaScript для открытия Google
-        google_search_url = f"https://www.google.com/search?q={quote(search_query)}"
-        
-        # HTML с JavaScript для открытия новой вкладки
-        html_code = f"""
-        <script>
-            // Открываем Google в новой вкладке
-            window.open("{google_search_url}", "_blank");
-            
-            // Также можно показать сообщение
-            window.parent.document.querySelector('.stAlert').style.display = 'block';
-        </script>
-        <div style="padding: 10px; background: #e8f5e8; border-radius: 5px; margin: 10px 0;">
-            ✅ Google поиск открыт в новой вкладке для запроса: <b>{search_query}</b>
-        </div>
-        """
-        
-        # Исполняем JavaScript
-        components.html(html_code, height=100)
-        
-        # Быстрые ссылки на популярные сайты
-        st.markdown("### ⚡ Быстрый поиск на:")
-        
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.markdown(f"""
-            <a href="https://www.youtube.com/results?search_query={search_query.replace(' ', '+')}" 
-               target="_blank" style="text-decoration: none;">
-                <div style="text-align: center; padding: 15px; background: #ff0000; 
-                           color: white; border-radius: 10px; margin: 5px;">
-                    <div style="font-size: 2rem;">▶️</div>
-                    <div style="font-weight: bold;">YouTube</div>
-                </div>
-            </a>
-            """, unsafe_allow_html=True)
-        
-        with col2:
-            st.markdown(f"""
-            <a href="https://ru.wikipedia.org/wiki/{search_query}" 
-               target="_blank" style="text-decoration: none;">
-                <div style="text-align: center; padding: 15px; background: #f8f9fa; 
-                           color: #333; border-radius: 10px; margin: 5px; border: 1px solid #ddd;">
-                    <div style="font-size: 2rem;">📚</div>
-                    <div style="font-weight: bold;">Википедия</div>
-                </div>
-            </a>
-            """, unsafe_allow_html=True)
-        
-        with col3:
-            st.markdown(f"""
-            <a href="https://www.amazon.com/s?k={search_query.replace(' ', '+')}" 
-               target="_blank" style="text-decoration: none;">
-                <div style="text-align: center; padding: 15px; background: #ff9900; 
-                           color: white; border-radius: 10px; margin: 5px;">
-                    <div style="font-size: 2rem;">🛒</div>
-                    <div style="font-weight: bold;">Amazon</div>
-                </div>
-            </a>
-            """, unsafe_allow_html=True)
-        
-        with col4:
-            st.markdown(f"""
-            <a href="https://news.google.com/search?q={search_query.replace(' ', '+')}&hl=ru" 
-               target="_blank" style="text-decoration: none;">
-                <div style="text-align: center; padding: 15px; background: #4285f4; 
-                           color: white; border-radius: 10px; margin: 5px;">
-                    <div style="font-size: 2rem;">📰</div>
-                    <div style="font-weight: bold;">Новости</div>
-                </div>
-            </a>
-            """, unsafe_allow_html=True)
-            
-            st.stop()
+# ================= СТРАНИЦА ГЛАВНАЯ =================
+if st.session_state.page == "Главная":
+    st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
+
+    current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", use_container_width=True)
+    with col2:
+        if st.button("⛅ Погода", use_container_width=True):
+            st.session_state.page = "Погода"
+            st.rerun()
+    with col3:
+        st.button("💵 3.20\nBYN/USD", use_container_width=True)
+    with col4:
+        if st.button("🤖 ZORNET AI", use_container_width=True):
+            st.session_state.page = "ZORNET AI"
+            st.rerun()
+
+    st.markdown("---")
+
+    search_query = st.text_input(
+        "",
+        placeholder="Поиск в интернете...",
+        key="main_search",
+        label_visibility="collapsed"
+    )
+
+    if search_query:
+        st.markdown(f"### 🔍 Результаты поиска: **{search_query}**")
+        with st.spinner("Ищу информацию..."):
+            results = search_zornet(search_query, num_results=5)
+            if results:
+                for idx, result in enumerate(results):
+                    st.markdown(f"""
+                    <div class="search-result">
+                        <div style="font-weight: 600; color: #1a1a1a; font-size: 16px;">
+                            {idx + 1}. {result['title']}
+                        </div>
+                        <div style="color: #1a73e8; font-size: 13px; margin: 5px 0;">
+                            {result['url'][:60]}...
+                        </div>
+                        <div style="color: #555; font-size: 14px;">
+                            {result['snippet']}
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <a href="{result['url']}" target="_blank" 
+                               style="padding: 6px 12px; background: #DAA520; color: white; 
+                                      border-radius: 6px; text-decoration: none; font-size: 12px;">
+                                Перейти на сайт
+                            </a>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.info("По вашему запросу ничего не найдено.")
 
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
