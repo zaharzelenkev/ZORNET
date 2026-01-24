@@ -30,6 +30,8 @@ if "weather_data" not in st.session_state:
     st.session_state.weather_data = None
 if "user_city" not in st.session_state:
     st.session_state.user_city = None
+    if "last_search" not in st.session_state:
+    st.session_state.last_search = ""
 
 # ================= CSS СТИЛИ =================
 st.markdown("""
@@ -390,7 +392,6 @@ def search_zornet(query, num_results=5):
 
     return fallback_results[:num_results]
 
-
 # ================= ТРАНСПОРТНЫЕ ФУНКЦИИ =================
 def get_minsk_metro():
     return [
@@ -500,7 +501,6 @@ def get_belta_news():
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
 
-
 # ================= СТРАНИЦА ГЛАВНАЯ =================
 if st.session_state.page == "Главная":
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
@@ -521,25 +521,59 @@ if st.session_state.page == "Главная":
             st.rerun()
 
     st.markdown("---")
-
-    search_query = st.text_input(
-        "",
-        placeholder="Поиск в интернете...",
-        key="main_search",
-        label_visibility="collapsed"
-    )
-if search_query:
-    if st.button("🔎 Искать в ZORNET", use_container_width=True):
-        components.html(
-            f"""
-            <script>
-                window.location.href = "https://www.google.com/search?q={search_query}";
-            </script>
-            """,
-            height=0
+    
+    # Создаем контейнер для поиска с кнопкой
+    col_search, col_btn = st.columns([6, 1])
+    
+    with col_search:
+        search_query = st.text_input(
+            "",
+            placeholder="Поиск в интернете...",
+            key="main_search",
+            label_visibility="collapsed",
+            on_change=None  # Это будет обрабатываться отдельно
         )
+    
+    with col_btn:
+        search_clicked = st.button("🔍", use_container_width=True, key="search_button")
+    
+    # Проверяем, был ли выполнен поиск (по кнопке или Enter)
+    search_performed = False
+    
     if search_query:
+        # Если нажата кнопка поиска
+        if search_clicked:
+            search_performed = True
+            st.session_state.last_search = search_query
+        # Если нажат Enter в поле ввода (имитируем через session state)
+        elif 'last_search' in st.session_state and st.session_state.last_search != search_query:
+            # Это новый поиск при вводе
+            search_performed = True
+            st.session_state.last_search = search_query
+    
+    if search_query and search_performed:
+        # Создаем Google-ссылку
+        google_url = f"https://www.google.com/search?q={search_query.replace(' ', '+')}"
+        
         st.markdown(f"### 🔍 Результаты поиска: **{search_query}**")
+        
+        # Кнопка для открытия Google в новой вкладке
+        st.markdown(f"""
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="{google_url}" target="_blank" 
+               style="display: inline-block; padding: 15px 40px; 
+                      background: linear-gradient(135deg, #4285f4, #34a853); 
+                      color: white; text-decoration: none; border-radius: 50px; 
+                      font-weight: bold; font-size: 18px; 
+                      box-shadow: 0 4px 15px rgba(66, 133, 244, 0.3);">
+               🔍 Открыть результаты в Google
+            </a>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Также показываем локальные результаты (как было раньше)
+        st.markdown("### 📌 Локальные результаты ZORNET:")
+        
         with st.spinner("Ищу информацию..."):
             results = search_zornet(search_query, num_results=5)
             if results:
@@ -565,7 +599,60 @@ if search_query:
                     </div>
                     """, unsafe_allow_html=True)
             else:
-                st.info("По вашему запросу ничего не найдено.")
+                st.info("По вашему запросу ничего не найдено в локальном поиске.")
+        
+        # Быстрые ссылки на популярные сайты
+        st.markdown("### ⚡ Быстрый поиск на:")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.markdown(f"""
+            <a href="https://www.youtube.com/results?search_query={search_query.replace(' ', '+')}" 
+               target="_blank" style="text-decoration: none;">
+                <div style="text-align: center; padding: 15px; background: #ff0000; 
+                           color: white; border-radius: 10px; margin: 5px;">
+                    <div style="font-size: 2rem;">▶️</div>
+                    <div style="font-weight: bold;">YouTube</div>
+                </div>
+            </a>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown(f"""
+            <a href="https://ru.wikipedia.org/wiki/{search_query}" 
+               target="_blank" style="text-decoration: none;">
+                <div style="text-align: center; padding: 15px; background: #f8f9fa; 
+                           color: #333; border-radius: 10px; margin: 5px; border: 1px solid #ddd;">
+                    <div style="font-size: 2rem;">📚</div>
+                    <div style="font-weight: bold;">Википедия</div>
+                </div>
+            </a>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            st.markdown(f"""
+            <a href="https://www.amazon.com/s?k={search_query.replace(' ', '+')}" 
+               target="_blank" style="text-decoration: none;">
+                <div style="text-align: center; padding: 15px; background: #ff9900; 
+                           color: white; border-radius: 10px; margin: 5px;">
+                    <div style="font-size: 2rem;">🛒</div>
+                    <div style="font-weight: bold;">Amazon</div>
+                </div>
+            </a>
+            """, unsafe_allow_html=True)
+        
+        with col4:
+            st.markdown(f"""
+            <a href="https://news.google.com/search?q={search_query.replace(' ', '+')}&hl=ru" 
+               target="_blank" style="text-decoration: none;">
+                <div style="text-align: center; padding: 15px; background: #4285f4; 
+                           color: white; border-radius: 10px; margin: 5px;">
+                    <div style="font-size: 2rem;">📰</div>
+                    <div style="font-weight: bold;">Новости</div>
+                </div>
+            </a>
+            """, unsafe_allow_html=True)
 
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
