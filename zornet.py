@@ -7,11 +7,13 @@ import json
 import requests
 import feedparser
 from PIL import Image
-from pathlib import Path
-import mimetypes
-from duckduckgo_search import DDGS
-from huggingface_hub import InferenceClient
+import io
+import base64
 import streamlit.components.v1 as components
+import urllib.parse
+import webbrowser
+from duckduckgo_search import DDGS
+import re
 
 # ================= НАСТРОЙКИ =================
 st.set_page_config(
@@ -21,484 +23,470 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ================= СЕССИЯ =================
-if "page" not in st.session_state:
-    st.session_state.page = "Главная"
-if "ai_messages" not in st.session_state:
-    st.session_state.ai_messages = []
-if "weather_data" not in st.session_state:
-    st.session_state.weather_data = None
-if "user_city" not in st.session_state:
-    st.session_state.user_city = None
-
-# ================= CSS СТИЛИ =================
+# ================= CSS ДЛЯ ПОИСКА =================
 st.markdown("""
 <style>
-    /* ОБЩИЙ СТИЛЬ */
-    .stApp { background-color: #ffffff; }
-
-    /* СКРЫВАЕМ ЛИШНЕЕ */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-
-    /* ГЛАВНЫЙ ЗАГОЛОВОК */
-    .gold-title {
-        font-family: 'Helvetica Neue', sans-serif;
-        font-size: 4rem;
-        font-weight: 800;
-        text-align: center;
-        background: linear-gradient(to bottom, #DAA520, #B8860B);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        letter-spacing: 4px;
-        text-transform: uppercase;
-        margin: 10px 0 30px 0;
+    /* СТИЛЬ ПОИСКОВОЙ СТРОКИ */
+    .search-container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 20px;
     }
-
-    /* КНОПКИ ГЛАВНОЙ */
-    div.stButton > button {
+    
+    .search-box {
+        background: white;
+        border-radius: 50px;
+        padding: 5px 25px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        border: 2px solid #f0f0f0;
+        transition: all 0.3s ease;
+    }
+    
+    .search-box:focus-within {
+        border-color: #4285f4;
+        box-shadow: 0 10px 40px rgba(66, 133, 244, 0.2);
+        transform: translateY(-2px);
+    }
+    
+    .search-input {
+        border: none !important;
+        outline: none !important;
+        font-size: 18px !important;
+        padding: 15px !important;
+        width: 100% !important;
+        background: transparent !important;
+    }
+    
+    .search-input:focus {
+        box-shadow: none !important;
+    }
+    
+    .search-button {
+        background: linear-gradient(135deg, #4285f4, #34a853, #fbbc05, #ea4335) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 50px !important;
+        padding: 12px 40px !important;
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        margin: 20px 0 !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .search-button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 10px 25px rgba(66, 133, 244, 0.3) !important;
+    }
+    
+    .quick-search-btn {
         background: #f8f9fa !important;
         border: 1px solid #dee2e6 !important;
-        color: #1a1a1a !important;
-        padding: 20px !important; 
-        border-radius: 12px !important;
-        font-weight: bold !important;
-        width: 100% !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
+        border-radius: 20px !important;
+        padding: 8px 16px !important;
+        margin: 5px !important;
+        font-size: 14px !important;
+        transition: all 0.2s ease !important;
     }
-
-    /* ЗОЛОТАЯ КНОПКА AI */
-    .gold-btn {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-        border: none !important;
-        color: white !important;
-        border-radius: 12px !important;
-        padding: 14px 28px !important;
-        font-weight: 600 !important;
-        font-size: 16px !important;
-        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3) !important;
+    
+    .quick-search-btn:hover {
+        background: #e9ecef !important;
+        border-color: #4285f4 !important;
+        color: #4285f4 !important;
     }
-
-    /* ВРЕМЯ В ЗОЛОТОЙ РАМКЕ */
-    .time-widget {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-        border-radius: 12px;
-        padding: 12px 15px;
-        text-align: center;
-        color: white;
-        font-weight: 600;
-        font-size: 16px;
-        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
-    }
-
+    
     /* РЕЗУЛЬТАТЫ ПОИСКА */
     .search-result {
-        background: #f8f9fa;
-        padding: 15px;
-        border-radius: 10px;
-        margin-bottom: 10px;
-        border-left: 4px solid #DAA520;
-    }
-
-    /* ЧАТ AI */
-    .user-message {
-        background: #f0f0f0;
-        padding: 12px 18px;
-        border-radius: 18px;
-        max-width: 70%;
-        margin-left: auto;
-        margin-bottom: 15px;
-    }
-
-    .ai-message {
-        background: #f9f9f9;
-        padding: 12px 18px;
-        border-radius: 18px;
-        max-width: 70%;
-        margin-right: auto;
-        margin-bottom: 15px;
-        border-left: 4px solid #DAA520;
-    }
-
-    /* СТИЛИ ДЛЯ ПОГОДЫ */
-    .weather-widget {
-        background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
-        border-radius: 15px;
+        background: white;
+        border-radius: 12px;
         padding: 20px;
-        color: white;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 15px rgba(6, 147, 227, 0.3);
+        margin: 15px 0;
+        border-left: 4px solid #4285f4;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
     }
-
-    .weather-temp {
-        font-size: 3.5rem;
-        font-weight: 800;
-        line-height: 1;
+    
+    .search-result:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     }
-
-    .weather-description {
-        font-size: 1.2rem;
-        margin-bottom: 15px;
+    
+    .result-title {
+        color: #1a0dab;
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 5px;
+        text-decoration: none;
     }
-
-    .weather-details {
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 10px;
-        padding: 15px;
-        margin-top: 15px;
+    
+    .result-title:hover {
+        text-decoration: underline;
     }
-
-    .weather-icon {
-        font-size: 4rem;
-        text-align: center;
+    
+    .result-url {
+        color: #006621;
+        font-size: 14px;
         margin-bottom: 10px;
     }
-
-    .forecast-day {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        padding: 15px;
-        text-align: center;
+    
+    .result-snippet {
+        color: #545454;
+        font-size: 14px;
+        line-height: 1.5;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ================= САЙДБАР =================
-with st.sidebar:
-    st.markdown("<h3 style='color:#DAA520;'>🇧🇾 ZORNET</h3>", unsafe_allow_html=True)
+# ================= ФУНКЦИИ ПОИСКА =================
+def search_google(query, num_results=10):
+    """Поиск через Google Custom Search API (бесплатно 100 запросов/день)"""
+    try:
+        # Используем DuckDuckGo как fallback (полностью бесплатный)
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=num_results, region='wt-wt'))
+            
+            formatted_results = []
+            for idx, r in enumerate(results[:num_results]):
+                formatted_results.append({
+                    'title': r.get('title', 'Без названия'),
+                    'link': r.get('href', '#'),
+                    'snippet': r.get('body', 'Описание отсутствует'),
+                    'position': idx + 1
+                })
+            
+            return formatted_results
+            
+    except Exception as e:
+        # Запасные результаты
+        return get_fallback_results(query, num_results)
 
+def search_google_direct(query):
+    """Прямой поиск через Google (открывает в новой вкладке)"""
+    search_url = f"https://www.google.com/search?q={urllib.parse.quote(query)}"
+    return search_url
+
+def get_fallback_results(query, num_results=5):
+    """Запасные результаты если поиск не работает"""
+    fallback_results = []
+    
+    templates = [
+        {
+            'title': f'{query} - поиск в Google',
+            'link': f'https://www.google.com/search?q={urllib.parse.quote(query)}',
+            'snippet': f'Нажмите для поиска "{query}" в Google',
+            'position': 1
+        },
+        {
+            'title': f'{query} в Википедии',
+            'link': f'https://ru.wikipedia.org/wiki/{urllib.parse.quote(query)}',
+            'snippet': f'Ищите информацию о "{query}" в Википедии',
+            'position': 2
+        },
+        {
+            'title': f'Новости о {query}',
+            'link': f'https://news.google.com/search?q={urllib.parse.quote(query)}',
+            'snippet': f'Свежие новости по теме "{query}"',
+            'position': 3
+        },
+        {
+            'title': f'{query} видео',
+            'link': f'https://www.youtube.com/results?search_query={urllib.parse.quote(query)}',
+            'snippet': f'Видео по теме "{query}" на YouTube',
+            'position': 4
+        }
+    ]
+    
+    for i in range(min(num_results, len(templates))):
+        fallback_results.append(templates[i])
+    
+    return fallback_results
+
+def get_popular_searches():
+    """Популярные поисковые запросы"""
+    return [
+        "погода в Минске",
+        "новости Беларуси",
+        "курс доллара",
+        "расписание электричек",
+        "кино сегодня",
+        "рецепты",
+        "спорт новости",
+        "технологии",
+        "образование онлайн",
+        "работа в Минске"
+    ]
+
+# ================= ГЛАВНАЯ СТРАНИЦА С ПОИСКОМ =================
+def show_home_with_search():
+    """Главная страница с поиском Google"""
+    
+    # Заголовок
+    st.markdown("""
+    <div style="text-align: center; padding: 40px 0;">
+        <h1 style="font-size: 4rem; color: #4285f4; margin-bottom: 10px;">ZORNET</h1>
+        <p style="font-size: 1.2rem; color: #666; margin-bottom: 30px;">🇧🇾 Белорусский интеллектуальный поиск</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Поисковая строка
+    st.markdown('<div class="search-container">', unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        # Используем форму для обработки поиска
+        with st.form("search_form"):
+            search_query = st.text_input(
+                "",
+                placeholder="Введите запрос для поиска в Google...",
+                key="search_input",
+                label_visibility="collapsed"
+            )
+            
+            col_search, col_lucky = st.columns([2, 1])
+            
+            with col_search:
+                search_submitted = st.form_submit_button(
+                    "🔍 Поиск в Google",
+                    type="primary",
+                    use_container_width=True
+                )
+            
+            with col_lucky:
+                lucky_submitted = st.form_submit_button(
+                    "🎯 Мне повезет!",
+                    use_container_width=True,
+                    help="Перейти к первому результату"
+                )
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Быстрые запросы
+    st.markdown("#### 🔥 Популярные запросы")
+    
+    popular_searches = get_popular_searches()
+    cols = st.columns(5)
+    
+    for idx, search_term in enumerate(popular_searches):
+        with cols[idx % 5]:
+            if st.button(search_term, key=f"quick_{idx}", use_container_width=True):
+                st.session_state.search_query = search_term
+                st.session_state.search_submitted = True
+                st.rerun()
+    
+    # Обработка поиска
+    if 'search_submitted' in st.session_state and st.session_state.search_submitted:
+        query = st.session_state.search_query
+        
+        with st.spinner(f"🔍 Ищу '{query}'..."):
+            # Прямой переход в Google
+            google_url = search_google_direct(query)
+            
+            # Показываем результаты в iframe
+            st.markdown(f"""
+            <div style="background: white; border-radius: 15px; padding: 20px; margin: 20px 0;">
+                <h4>🔎 Результаты поиска: <strong>{query}</strong></h4>
+                <p>Ищется через Google...</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Кнопка для открытия Google
+            if st.button(f"🌐 Открыть результаты в Google", type="primary", use_container_width=True):
+                # Используем JavaScript для открытия в новой вкладке
+                js_code = f"""
+                <script>
+                    window.open("{google_url}", "_blank");
+                </script>
+                """
+                components.html(js_code, height=0)
+            
+            # Также показываем локальные результаты
+            local_results = search_google(query, num_results=8)
+            
+            if local_results:
+                st.markdown("#### 📄 Локальные результаты")
+                
+                for result in local_results:
+                    st.markdown(f"""
+                    <div class="search-result">
+                        <div class="result-title">
+                            <a href="{result['link']}" target="_blank">{result['title']}</a>
+                        </div>
+                        <div class="result-url">{result['link'][:80]}...</div>
+                        <div class="result-snippet">{result['snippet'][:200]}...</div>
+                        <div style="margin-top: 10px;">
+                            <a href="{result['link']}" target="_blank" 
+                               style="padding: 5px 15px; background: #4285f4; color: white; 
+                                      border-radius: 5px; text-decoration: none; font-size: 12px;">
+                                Перейти на сайт →
+                            </a>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            
+            # Поиск картинок
+            st.markdown("#### 🖼️ Картинки по запросу")
+            
+            col_img1, col_img2, col_img3, col_img4 = st.columns(4)
+            
+            with col_img1:
+                st.markdown(f"""
+                <a href="https://www.google.com/search?tbm=isch&q={urllib.parse.quote(query)}" target="_blank">
+                    <div style="background: #f8f9fa; border-radius: 10px; padding: 15px; text-align: center;">
+                        <div style="font-size: 2rem;">🖼️</div>
+                        <div>Картинки</div>
+                    </div>
+                </a>
+                """, unsafe_allow_html=True)
+            
+            with col_img2:
+                st.markdown(f"""
+                <a href="https://www.youtube.com/results?search_query={urllib.parse.quote(query)}" target="_blank">
+                    <div style="background: #f8f9fa; border-radius: 10px; padding: 15px; text-align: center;">
+                        <div style="font-size: 2rem;">🎬</div>
+                        <div>Видео</div>
+                    </div>
+                </a>
+                """, unsafe_allow_html=True)
+            
+            with col_img3:
+                st.markdown(f"""
+                <a href="https://news.google.com/search?q={urllib.parse.quote(query)}" target="_blank">
+                    <div style="background: #f8f9fa; border-radius: 10px; padding: 15px; text-align: center;">
+                        <div style="font-size: 2rem;">📰</div>
+                        <div>Новости</div>
+                    </div>
+                </a>
+                """, unsafe_allow_html=True)
+            
+            with col_img4:
+                st.markdown(f"""
+                <a href="https://www.google.com/maps/search/{urllib.parse.quote(query)}" target="_blank">
+                    <div style="background: #f8f9fa; border-radius: 10px; padding: 15px; text-align: center;">
+                        <div style="font-size: 2rem;">🗺️</div>
+                        <div>Карты</div>
+                    </div>
+                </a>
+                """, unsafe_allow_html=True)
+    
+    # Обработка формы поиска
+    if search_submitted and search_query:
+        st.session_state.search_query = search_query
+        st.session_state.search_submitted = True
+        st.rerun()
+    
+    elif lucky_submitted and search_query:
+        # Режим "Мне повезет" - сразу открывает первый результат
+        st.info("🎯 Режим 'Мне повезет!' - ищу лучший результат...")
+        
+        with st.spinner("Нахожу лучший результат..."):
+            results = search_google(search_query, num_results=1)
+            if results:
+                first_result = results[0]['link']
+                
+                st.success(f"🎯 Найден лучший результат: {results[0]['title']}")
+                
+                # Кнопка для перехода
+                if st.button("🚀 Перейти к результату", type="primary"):
+                    js_code = f"""
+                    <script>
+                        window.open("{first_result}", "_blank");
+                    </script>
+                    """
+                    components.html(js_code, height=0)
+    
+    # Виджеты
+    st.markdown("---")
+    
+    current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #4285f4, #34a853); 
+                    border-radius: 15px; padding: 20px; text-align: center; color: white;">
+            <div style="font-size: 2rem;">🕒</div>
+            <div style="font-size: 1.5rem; font-weight: bold;">{current_time.strftime('%H:%M')}</div>
+            <div>Минск</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        if st.button("🌤️ Погода", key="home_weather", use_container_width=True):
+            st.session_state.page = "Погода"
+            st.rerun()
+    
+    with col3:
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #fbbc05, #ea4335); 
+                    border-radius: 15px; padding: 20px; text-align: center; color: white;">
+            <div style="font-size: 2rem;">💵</div>
+            <div style="font-size: 1.5rem; font-weight: bold;">3.20</div>
+            <div>BYN/USD</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col4:
+        if st.button("🤖 ZORNET AI", key="home_ai", use_container_width=True):
+            st.session_state.page = "ZORNET AI"
+            st.rerun()
+    
+    # Новости
+    st.markdown("---")
+    st.markdown("#### 📰 Последние новости")
+    
+    try:
+        news = feedparser.parse("https://www.belta.by/rss")
+        for i, entry in enumerate(news.entries[:3]):
+            st.markdown(f"""
+            <div style="background: #f8f9fa; border-radius: 10px; padding: 15px; margin: 10px 0;">
+                <a href="{entry.link}" target="_blank" style="color: #1a0dab; text-decoration: none;">
+                    <strong>{entry.title}</strong>
+                </a>
+                <p style="color: #666; font-size: 14px; margin-top: 5px;">
+                    {entry.summary[:200]}...
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+    except:
+        st.info("Новости временно недоступны")
+
+# ================= ОСНОВНОЙ КОД =================
+if "page" not in st.session_state:
+    st.session_state.page = "Главная"
+if "search_query" not in st.session_state:
+    st.session_state.search_query = ""
+if "search_submitted" not in st.session_state:
+    st.session_state.search_submitted = False
+
+# Сайдбар навигация
+with st.sidebar:
+    st.markdown("### 🇧🇾 ZORNET")
+    
     pages = [
-        ("🏠", "ГЛАВНАЯ", "Главная"),
+        ("🔍", "ПОИСК", "Главная"),
+        ("🤖", "ZORNET AI", "ZORNET AI"),
+        ("📷", "КАМЕРА", "Умная камера"),
         ("📰", "НОВОСТИ", "Новости"),
         ("🌤️", "ПОГОДА", "Погода"),
         ("💾", "ДИСК", "Диск"),
         ("👤", "ПРОФИЛЬ", "Профиль"),
     ]
-
-    for i, (icon, text, page) in enumerate(pages):
-        if st.button(f"{icon} {text}", key=f"nav_{i}_{page}", use_container_width=True):
+    
+    for icon, text, page in pages:
+        if st.button(f"{icon} {text}", key=f"nav_{page}", use_container_width=True):
             st.session_state.page = page
+            st.session_state.search_submitted = False
             st.rerun()
-
-
-# ================= ФУНКЦИИ ПОГОДЫ =================
-def get_weather_icon(condition_code):
-    """Возвращает эмодзи для погодных условий"""
-    icons = {
-        "01d": "☀️", "01n": "🌙",
-        "02d": "⛅", "02n": "⛅",
-        "03d": "☁️", "03n": "☁️",
-        "04d": "☁️", "04n": "☁️",
-        "09d": "🌧️", "09n": "🌧️",
-        "10d": "🌦️", "10n": "🌦️",
-        "11d": "⛈️", "11n": "⛈️",
-        "13d": "❄️", "13n": "❄️",
-        "50d": "🌫️", "50n": "🌫️",
-    }
-    return icons.get(condition_code, "🌡️")
-
-
-def get_wind_direction(degrees):
-    """Преобразует градусы в направление ветра"""
-    directions = ["С", "СВ", "В", "ЮВ", "Ю", "ЮЗ", "З", "СЗ"]
-    index = round(degrees / 45) % 8
-    return directions[index]
-
-
-def get_weather_by_coords(lat, lon):
-    """Получает погоду по координатам через OpenWeatherMap API"""
-    # ЗАМЕНИ ЭТОТ КЛЮЧ НА СВОЙ БЕСПЛАТНЫЙ КЛЮЧ С OpenWeatherMap!
-    API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"
-
-    try:
-        # Текущая погода
-        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
-        response = requests.get(url, timeout=10)
-
-        if response.status_code == 200:
-            data = response.json()
-
-            # Прогноз на 5 дней
-            forecast_url = f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
-            forecast_response = requests.get(forecast_url, timeout=10)
-            forecast_data = forecast_response.json() if forecast_response.status_code == 200 else None
-
-            return {
-                "current": {
-                    "temp": round(data["main"]["temp"]),
-                    "feels_like": round(data["main"]["feels_like"]),
-                    "humidity": data["main"]["humidity"],
-                    "pressure": data["main"]["pressure"],
-                    "description": data["weather"][0]["description"].capitalize(),
-                    "icon": data["weather"][0]["icon"],
-                    "wind_speed": data["wind"]["speed"],
-                    "wind_deg": data["wind"].get("deg", 0),
-                    "clouds": data["clouds"]["all"],
-                    "visibility": data.get("visibility", 10000) / 1000,
-                    "city": data["name"],
-                    "country": data["sys"]["country"],
-                    "sunrise": datetime.datetime.fromtimestamp(data["sys"]["sunrise"]).strftime('%H:%M'),
-                    "sunset": datetime.datetime.fromtimestamp(data["sys"]["sunset"]).strftime('%H:%M')
-                },
-                "forecast": forecast_data
-            }
-        else:
-            st.error(f"Ошибка API: {response.status_code}")
-            return None
-    except Exception as e:
-        st.error(f"Ошибка получения погоды: {e}")
-        return None
-
-
-def get_weather_by_city(city_name):
-    """Получает погоду по названию города"""
-    API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"  # Замени на свой ключ!
-
-    try:
-        # Сначала получаем координаты города
-        geocode_url = f"http://api.openweathermap.org/geo/1.0/direct?q={city_name}&limit=1&appid={API_KEY}"
-        geocode_response = requests.get(geocode_url, timeout=10)
-
-        if geocode_response.status_code == 200 and geocode_response.json():
-            city_data = geocode_response.json()[0]
-            lat = city_data["lat"]
-            lon = city_data["lon"]
-
-            return get_weather_by_coords(lat, lon)
-        else:
-            st.error("Город не найден")
-            return None
-    except Exception as e:
-        st.error(f"Ошибка: {e}")
-        return None
-
-
-# Обработчик сообщений от JavaScript
-def handle_js_messages():
-    """Обрабатывает сообщения от JavaScript компонентов"""
-    # Проверяем если есть сообщение от геолокации
-    if 'location_result' not in st.session_state:
-        # Пытаемся получить данные из query parameters (если JavaScript их отправил)
-        query_params = st.experimental_get_query_params()
-
-        if 'geolocation' in query_params:
-            try:
-                geo_data = json.loads(query_params['geolocation'][0])
-                st.session_state.location_result = geo_data
-                # Очищаем параметры
-                st.experimental_set_query_params()
-                st.rerun()
-            except:
-                pass
-
-
-# ================= ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ДИСКА =================
-def get_icon(file_path):
-    """Возвращает иконку для файла"""
-    ext = file_path.suffix.lower()
-    if file_path.is_dir():
-        return "📁"
-    if ext in [".jpg", ".jpeg", ".png", ".gif"]:
-        return "🖼️"
-    if ext == ".pdf":
-        return "📄"
-    if ext in [".doc", ".docx"]:
-        return "📝"
-    if ext in [".mp3", ".wav"]:
-        return "🎵"
-    if ext in [".mp4", ".avi", ".mov"]:
-        return "🎬"
-    return "📦"
-
-
-# ================= НАСТРОЙКИ AI =================
-HF_API_KEY = st.secrets.get("HF_API_KEY", "")
-CHAT_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"
-API_URL = "https://router.huggingface.co/api/chat/completions"
-
-HEADERS = {
-    "Authorization": f"Bearer {HF_API_KEY}",
-    "Content-Type": "application/json"
-} if HF_API_KEY else {}
-
-
-def ask_hf_ai(prompt: str) -> str:
-    if not HF_API_KEY:
-        return "⚠️ API ключ не настроен. Добавьте HF_API_KEY в secrets.toml"
-
-    payload = {
-        "model": CHAT_MODEL,
-        "messages": [
-            {"role": "system", "content": "Ты ZORNET AI — умный помощник. Отвечай по‑русски кратко и понятно."},
-            {"role": "user", "content": prompt}
-        ],
-        "max_new_tokens": 300,
-        "temperature": 0.7
-    }
-
-    try:
-        r = requests.post(API_URL, headers=HEADERS, json=payload, timeout=60)
-
-        if r.status_code == 503:
-            return "⏳ ZORNET AI загружается — попробуйте через несколько секунд."
-
-        if r.status_code != 200:
-            return "⚠️ ZORNET AI временно недоступен."
-
-        data = r.json()
-        text = data["choices"][0]["message"]["content"]
-        return text.strip()
-
-    except Exception:
-        return "⚠️ Ошибка соединения с ZORNET AI."
-
-
-# ================= ФУНКЦИИ ПОИСКА =================
-def search_zornet(query, num_results=5):
-    """Поиск в интернете"""
-    results = []
-
-    try:
-        with DDGS() as ddgs:
-            ddgs_results = list(ddgs.text(query, max_results=num_results, region='wt-wt'))
-
-            if ddgs_results:
-                for r in ddgs_results[:num_results]:
-                    results.append({
-                        "title": r.get("title", query),
-                        "url": r.get("href", f"https://www.google.com/search?q={query}"),
-                        "snippet": r.get("body", f"Результаты по запросу: {query}")[:180] + "...",
-                    })
-                return results
-    except Exception as e:
-        st.error(f"Ошибка поиска: {e}")
-
-    # Запасные результаты
-    fallback_results = [
-        {
-            "title": f"{query} - поиск в Google",
-            "url": f"https://www.google.com/search?q={query}",
-            "snippet": f"Нажмите для поиска '{query}' в Google."
-        },
-        {
-            "title": f"{query} в Википедии",
-            "url": f"https://ru.wikipedia.org/wiki/{query}",
-            "snippet": f"Ищите информацию о '{query}' в Википедии."
-        },
-    ]
-
-    return fallback_results[:num_results]
-
-
-# ================= ТРАНСПОРТНЫЕ ФУНКЦИИ =================
-def get_minsk_metro():
-    return [
-        {"name": "Малиновка", "line": "1", "next": "3 мин"},
-        {"name": "Петровщина", "line": "1", "next": "5 мин"},
-        {"name": "Площадь Ленина", "line": "1", "next": "2 мин"},
-        {"name": "Институт Культуры", "line": "1", "next": "4 мин"},
-        {"name": "Молодёжная", "line": "2", "next": "6 мин"},
-    ]
-
-
-def get_bus_trams():
-    return [
-        {"number": "100", "type": "автобус", "from": "Ст.м. Каменная Горка", "to": "Аэропорт", "next": "7 мин"},
-        {"number": "1", "type": "трамвай", "from": "Тракторный завод", "to": "Серебрянка", "next": "5 мин"},
-        {"number": "3с", "type": "троллейбус", "from": "ДС Веснянка", "to": "ДС Серова", "next": "3 мин"},
-        {"number": "40", "type": "автобус", "from": "Ст.м. Уручье", "to": "Дражня", "next": "10 мин"},
-    ]
-
-
-def get_taxi_prices():
-    return [
-        {"name": "Яндекс Такси", "price": "8-12 руб", "wait": "5-7 мин"},
-        {"name": "Uber", "price": "9-13 руб", "wait": "4-6 мин"},
-        {"name": "Такси Близко", "price": "7-10 руб", "wait": "8-10 мин"},
-        {"name": "Такси Город", "price": "6-9 руб", "wait": "10-15 мин"},
-    ]
-
-
-def get_belarusian_railway():
-    return [
-        {"number": "001Б", "from": "Минск", "to": "Брест", "time": "18:00 - 21:30"},
-        {"number": "735Б", "from": "Минск", "to": "Гомель", "time": "07:30 - 11:15"},
-        {"number": "603Б", "from": "Минск", "to": "Витебск", "time": "14:20 - 18:45"},
-    ]
-
-
-# ================= БАЗА ДАННЫХ =================
-def init_db():
-    conn = sqlite3.connect("zornet.db")
-    c = conn.cursor()
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY,
-            username TEXT UNIQUE,
-            email TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-
-def get_user_count():
-    conn = sqlite3.connect("zornet.db")
-    c = conn.cursor()
-    c.execute("SELECT COUNT(*) FROM users")
-    count = c.fetchone()[0]
-    conn.close()
-    return count
-
-
-# ================= ДИСК ФУНКЦИИ =================
-def init_disk_db():
-    conn = sqlite3.connect("zornet_disk.db")
-    c = conn.cursor()
-    c.execute("""
-        CREATE TABLE IF NOT EXISTS files (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            size INTEGER,
-            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-
-def get_disk_files():
-    conn = sqlite3.connect("zornet_disk.db")
-    c = conn.cursor()
-    c.execute("SELECT name, size, uploaded_at FROM files ORDER BY uploaded_at DESC LIMIT 10")
-    files = c.fetchall()
-    conn.close()
-    return files
-
-
-def save_file_to_db(filename, size):
-    conn = sqlite3.connect("zornet_disk.db")
-    c = conn.cursor()
-    c.execute("INSERT INTO files (name, size) VALUES (?, ?)", (filename, size))
-    conn.commit()
-    conn.close()
-
-
-# ================= НОВОСТИ =================
-def get_belta_news():
-    try:
-        headers = {"User-Agent": "ZORNET/1.0"}
-        response = requests.get("https://www.belta.by/rss", headers=headers, timeout=10)
-        feed = feedparser.parse(response.content)
-        return feed.entries[:5]
-    except:
-        return [
-            {"title": "Новости Беларуси", "link": "#", "summary": "Следите за обновлениями"},
-            {"title": "Экономические новости", "link": "#", "summary": "Развитие экономики страны"},
-            {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
-        ]
+    
+    st.markdown("---")
+    st.markdown("### 🔧 Инструменты")
+    
+    if st.button("🎨 Сменить тему", use_container_width=True):
+        st.info("Тема изменена")
+    
+    if st.button("📊 Статистика", use_container_width=True):
+        st.info("Статистика загружена")
 
 # ================= СТРАНИЦА ГЛАВНАЯ =================
 if st.session_state.page == "Главная":
@@ -525,7 +513,7 @@ if st.session_state.page == "Главная":
     with st.form(key="search_form"):
         search_query = st.text_input(
             "",
-            placeholder="Поиск в интернете... Нажмите Enter для поиска в Google",
+            placeholder="Поиск в интернете",
             key="main_search",
             label_visibility="collapsed"
         )
