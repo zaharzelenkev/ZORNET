@@ -500,7 +500,6 @@ def get_belta_news():
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
 
-
 # ================= СТРАНИЦА ГЛАВНАЯ =================
 if st.session_state.page == "Главная":
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
@@ -522,41 +521,79 @@ if st.session_state.page == "Главная":
 
     st.markdown("---")
 
-    search_query = st.text_input(
-        "",
-        placeholder="Поиск в интернете...",
-        key="main_search",
-        label_visibility="collapsed"
-    )
+    # --- ИНТЕГРАЦИЯ GOOGLE ПОИСКА ---
+    # Мы используем HTML форму, так как это единственный способ
+    # заставить браузер перейти на другой сайт сразу по нажатию кнопки,
+    # не перезагружая Streamlit скрипт.
+    
+    st.markdown("""
+    <style>
+        /* Стили для формы поиска */
+        .google-search-container {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            margin-top: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .search-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 600px;
+        }
 
-    if search_query:
-        st.markdown(f"### 🔍 Результаты поиска: **{search_query}**")
-        with st.spinner("Ищу информацию..."):
-            results = search_zornet(search_query, num_results=5)
-            if results:
-                for idx, result in enumerate(results):
-                    st.markdown(f"""
-                    <div class="search-result">
-                        <div style="font-weight: 600; color: #1a1a1a; font-size: 16px;">
-                            {idx + 1}. {result['title']}
-                        </div>
-                        <div style="color: #1a73e8; font-size: 13px; margin: 5px 0;">
-                            {result['url'][:60]}...
-                        </div>
-                        <div style="color: #555; font-size: 14px;">
-                            {result['snippet']}
-                        </div>
-                        <div style="margin-top: 10px;">
-                            <a href="{result['url']}" target="_blank" 
-                               style="padding: 6px 12px; background: #DAA520; color: white; 
-                                      border-radius: 6px; text-decoration: none; font-size: 12px;">
-                                Перейти на сайт
-                            </a>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.info("По вашему запросу ничего не найдено.")
+        /* Поле ввода в стиле ZORNET */
+        .google-input {
+            width: 100%;
+            padding: 18px 25px;
+            font-size: 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 30px;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            background-color: #ffffff;
+            color: #333;
+        }
+
+        .google-input:focus {
+            border-color: #DAA520;
+            box-shadow: 0 0 15px rgba(218, 165, 32, 0.2);
+        }
+
+        /* Кнопка поиска в стиле ZORNET (Gold) */
+        .google-submit-btn {
+            margin-top: 20px;
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .google-submit-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(218, 165, 32, 0.6);
+        }
+    </style>
+
+    <div class="google-search-container">
+        <form action="https://www.google.com/search" method="get" target="_self" class="search-form">
+            <input type="text" name="q" class="google-input" placeholder="🔍 Введите запрос для Google..." required autocomplete="off">
+            <button type="submit" class="google-submit-btn">ИСКАТЬ В GOOGLE</button>
+        </form>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
