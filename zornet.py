@@ -30,9 +30,6 @@ if "weather_data" not in st.session_state:
     st.session_state.weather_data = None
 if "user_city" not in st.session_state:
     st.session_state.user_city = None
-# НОВОЕ: состояние боковой панели
-if "sidebar_visible" not in st.session_state:
-    st.session_state.sidebar_visible = True
 
 # ================= CSS СТИЛИ =================
 st.markdown("""
@@ -164,103 +161,26 @@ st.markdown("""
         padding: 15px;
         text-align: center;
     }
-    
-    /* КНОПКА ОТКРЫТИЯ БОКОВОЙ ПАНЕЛИ */
-    .sidebar-toggle-btn {
-        position: fixed;
-        top: 20px;
-        left: 10px;
-        z-index: 999999;
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-        color: white;
-        border: none;
-        border-radius: 50%;
-        width: 50px;
-        height: 50px;
-        font-size: 24px;
-        cursor: pointer;
-        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
-        transition: all 0.3s ease;
-    }
-    
-    .sidebar-toggle-btn:hover {
-        transform: scale(1.1);
-        box-shadow: 0 6px 20px rgba(218, 165, 32, 0.6);
-    }
-    
-    /* СТИЛЬ ДЛЯ ПОИСКА ПОГОДЫ */
-    .weather-search-container {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        margin: 10px 0;
-    }
-    
-    .weather-search-input {
-        flex-grow: 1;
-        padding: 10px 15px;
-        border: 2px solid #e0e0e0;
-        border-radius: 25px;
-        font-size: 16px;
-        outline: none;
-    }
-    
-    .weather-search-input:focus {
-        border-color: #DAA520;
-        box-shadow: 0 0 10px rgba(218, 165, 32, 0.2);
-    }
 </style>
 """, unsafe_allow_html=True)
 
-# ================= УПРАВЛЕНИЕ БОКОВОЙ ПАНЕЛЬЮ =================
-# Функция для скрытия/показа боковой панели
-def toggle_sidebar():
-    st.session_state.sidebar_visible = not st.session_state.sidebar_visible
-    st.rerun()
-
-# Кнопка для открытия боковой панели (показывается только когда панель скрыта)
-if not st.session_state.sidebar_visible:
-    components.html("""
-    <button class="sidebar-toggle-btn" onclick="window.parent.postMessage({type: 'TOGGLE_SIDEBAR'}, '*')">
-        ☰
-    </button>
-    <script>
-        // Отправляем сообщение в родительское окно
-        document.querySelector('.sidebar-toggle-btn').addEventListener('click', function() {
-            window.parent.postMessage({type: 'TOGGLE_SIDEBAR'}, '*');
-        });
-        
-        // Слушаем сообщения от Streamlit
-        window.addEventListener('message', function(event) {
-            if (event.data.type === 'TOGGLE_SIDEBAR') {
-                window.location.reload();
-            }
-        });
-    </script>
-    """, height=60)
-
 # ================= САЙДБАР =================
-if st.session_state.sidebar_visible:
-    with st.sidebar:
-        # Кнопка скрытия боковой панели
-        if st.button("✕ Закрыть панель", use_container_width=True):
-            st.session_state.sidebar_visible = False
+with st.sidebar:
+    st.markdown("<h3 style='color:#DAA520;'>🇧🇾 ZORNET</h3>", unsafe_allow_html=True)
+
+    pages = [
+        ("🏠", "ГЛАВНАЯ", "Главная"),
+        ("📰", "НОВОСТИ", "Новости"),
+        ("🌤️", "ПОГОДА", "Погода"),
+        ("💾", "ДИСК", "Диск"),
+        ("👤", "ПРОФИЛЬ", "Профиль"),
+    ]
+
+    for i, (icon, text, page) in enumerate(pages):
+        if st.button(f"{icon} {text}", key=f"nav_{i}_{page}", use_container_width=True):
+            st.session_state.page = page
             st.rerun()
-        
-        st.markdown("<h3 style='color:#DAA520;'>🇧🇾 ZORNET</h3>", unsafe_allow_html=True)
 
-        pages = [
-            ("🏠", "ГЛАВНАЯ", "Главная"),
-            ("📰", "НОВОСТИ", "Новости"),
-            ("🌤️", "ПОГОДА", "Погода"),
-            ("💾", "ДИСК", "Диск"),
-            ("👤", "ПРОФИЛЬ", "Профиль"),
-        ]
-
-        for i, (icon, text, page) in enumerate(pages):
-            if st.button(f"{icon} {text}", key=f"nav_{i}_{page}", use_container_width=True):
-                st.session_state.page = page
-                st.rerun()
 
 # ================= ФУНКЦИИ ПОГОДЫ =================
 def get_weather_icon(condition_code):
@@ -352,6 +272,25 @@ def get_weather_by_city(city_name):
     except Exception as e:
         st.error(f"Ошибка: {e}")
         return None
+
+
+# Обработчик сообщений от JavaScript
+def handle_js_messages():
+    """Обрабатывает сообщения от JavaScript компонентов"""
+    # Проверяем если есть сообщение от геолокации
+    if 'location_result' not in st.session_state:
+        # Пытаемся получить данные из query parameters (если JavaScript их отправил)
+        query_params = st.experimental_get_query_params()
+
+        if 'geolocation' in query_params:
+            try:
+                geo_data = json.loads(query_params['geolocation'][0])
+                st.session_state.location_result = geo_data
+                # Очищаем параметры
+                st.experimental_set_query_params()
+                st.rerun()
+            except:
+                pass
 
 
 # ================= ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ДИСКА =================
@@ -452,6 +391,43 @@ def search_zornet(query, num_results=5):
     return fallback_results[:num_results]
 
 
+# ================= ТРАНСПОРТНЫЕ ФУНКЦИИ =================
+def get_minsk_metro():
+    return [
+        {"name": "Малиновка", "line": "1", "next": "3 мин"},
+        {"name": "Петровщина", "line": "1", "next": "5 мин"},
+        {"name": "Площадь Ленина", "line": "1", "next": "2 мин"},
+        {"name": "Институт Культуры", "line": "1", "next": "4 мин"},
+        {"name": "Молодёжная", "line": "2", "next": "6 мин"},
+    ]
+
+
+def get_bus_trams():
+    return [
+        {"number": "100", "type": "автобус", "from": "Ст.м. Каменная Горка", "to": "Аэропорт", "next": "7 мин"},
+        {"number": "1", "type": "трамвай", "from": "Тракторный завод", "to": "Серебрянка", "next": "5 мин"},
+        {"number": "3с", "type": "троллейбус", "from": "ДС Веснянка", "to": "ДС Серова", "next": "3 мин"},
+        {"number": "40", "type": "автобус", "from": "Ст.м. Уручье", "to": "Дражня", "next": "10 мин"},
+    ]
+
+
+def get_taxi_prices():
+    return [
+        {"name": "Яндекс Такси", "price": "8-12 руб", "wait": "5-7 мин"},
+        {"name": "Uber", "price": "9-13 руб", "wait": "4-6 мин"},
+        {"name": "Такси Близко", "price": "7-10 руб", "wait": "8-10 мин"},
+        {"name": "Такси Город", "price": "6-9 руб", "wait": "10-15 мин"},
+    ]
+
+
+def get_belarusian_railway():
+    return [
+        {"number": "001Б", "from": "Минск", "to": "Брест", "time": "18:00 - 21:30"},
+        {"number": "735Б", "from": "Минск", "to": "Гомель", "time": "07:30 - 11:15"},
+        {"number": "603Б", "from": "Минск", "to": "Витебск", "time": "14:20 - 18:45"},
+    ]
+
+
 # ================= БАЗА ДАННЫХ =================
 def init_db():
     conn = sqlite3.connect("zornet.db")
@@ -529,32 +505,15 @@ if st.session_state.page == "Главная":
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
 
     current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
-    
-    # КОЛОНКИ С ВИДЖЕТАМИ (ВКЛЮЧАЯ ПОГОДУ)
     col1, col2, col3, col4 = st.columns(4)
-    
     with col1:
         st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", use_container_width=True)
-    
     with col2:
-        # ВИДЖЕТ ПОГОДЫ КАК НА ГЛАВНОЙ
-        if st.session_state.weather_data:
-            current = st.session_state.weather_data["current"]
-            temp = current["temp"]
-            icon = get_weather_icon(current["icon"])
-            city = current["city"]
-            
-            if st.button(f"{icon} {temp}°C\n{city}", use_container_width=True):
-                st.session_state.page = "Погода"
-                st.rerun()
-        else:
-            if st.button("🌤️ Погода", use_container_width=True):
-                st.session_state.page = "Погода"
-                st.rerun()
-    
+        if st.button("⛅ Погода", use_container_width=True):
+            st.session_state.page = "Погода"
+            st.rerun()
     with col3:
         st.button("💵 3.20\nBYN/USD", use_container_width=True)
-    
     with col4:
         if st.button("🤖 ZORNET AI", use_container_width=True):
             st.session_state.page = "ZORNET AI"
@@ -562,66 +521,11 @@ if st.session_state.page == "Главная":
 
     st.markdown("---")
 
-    # --- ПОИСК ПОГОДЫ НА ГЛАВНОЙ (КАК В ЗАДАНИИ) ---
-    st.markdown("### 🌤️ Поиск погоды")
+    # --- ИНТЕГРАЦИЯ GOOGLE ПОИСКА (ЧЕРЕЗ IFRAME) ---
+    # Мы используем components.html, чтобы создать изолированный HTML-блок.
+    # target="_top" — это ключ к успеху. Он заставляет ссылку открываться в текущем окне браузера,
+    # полностью замещая сайт ZORNET, и Streamlit не может этому помешать.
     
-    col_search1, col_search2 = st.columns([3, 1])
-    
-    with col_search1:
-        weather_city_input = st.text_input(
-            "Введите город для поиска погоды:",
-            placeholder="Например: Минск, Гомель, Брест...",
-            key="main_weather_search",
-            label_visibility="collapsed"
-        )
-    
-    with col_search2:
-        if st.button("Поиск погоды", type="primary", use_container_width=True):
-            if weather_city_input:
-                with st.spinner(f"Ищу погоду для {weather_city_input}..."):
-                    weather_data = get_weather_by_city(weather_city_input)
-                    if weather_data:
-                        st.session_state.weather_data = weather_data
-                        st.session_state.user_city = weather_city_input
-                        st.success(f"Погода для {weather_city_input} найдена!")
-                    else:
-                        st.error(f"Город '{weather_city_input}' не найден")
-    
-    # Если есть данные о погоде, показываем их
-    if st.session_state.weather_data:
-        current = st.session_state.weather_data["current"]
-        st.markdown(f"""
-        <div style="
-            background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
-            border-radius: 15px;
-            padding: 20px;
-            color: white;
-            margin: 20px 0;
-            box-shadow: 0 4px 15px rgba(6, 147, 227, 0.3);
-        ">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <h3 style="margin: 0; font-size: 1.5rem;">{current['city']}, {current['country']}</h3>
-                    <div style="font-size: 3rem; font-weight: 800; margin: 10px 0;">
-                        {current['temp']}°C
-                    </div>
-                    <div style="font-size: 1.2rem;">
-                        {get_weather_icon(current['icon'])} {current['description']}
-                    </div>
-                </div>
-                <div style="font-size: 4rem;">
-                    {get_weather_icon(current['icon'])}
-                </div>
-            </div>
-            <div style="margin-top: 15px; font-size: 0.9rem; opacity: 0.9;">
-                💧 Влажность: {current['humidity']}% | 💨 Ветер: {current['wind_speed']} м/с | 📊 Давление: {current['pressure']} гПа
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-
-    # --- ИНТЕГРАЦИЯ GOOGLE ПОИСКА ---
     components.html("""
     <!DOCTYPE html>
     <html>
@@ -636,14 +540,16 @@ if st.session_state.page == "Главная":
             justify-content: center;
         }
         
+        /* Контейнер формы */
         .search-container {
             width: 100%;
             max-width: 600px;
             padding: 10px;
-            box-sizing: border-box;
+            box-sizing: border-box; /* Важно для мобильных */
             text-align: center;
         }
 
+        /* Поле ввода */
         input[type="text"] {
             width: 100%;
             padding: 18px 25px;
@@ -655,8 +561,8 @@ if st.session_state.page == "Главная":
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             background-color: #ffffff;
             color: #333;
-            box-sizing: border-box;
-            -webkit-appearance: none;
+            box-sizing: border-box; /* Чтобы padding не ломал ширину */
+            -webkit-appearance: none; /* Убирает стили iOS */
         }
 
         input[type="text"]:focus {
@@ -664,6 +570,7 @@ if st.session_state.page == "Главная":
             box-shadow: 0 0 15px rgba(218, 165, 32, 0.2);
         }
 
+        /* Кнопка */
         button {
             margin-top: 20px;
             background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
@@ -678,9 +585,9 @@ if st.session_state.page == "Главная":
             transition: transform 0.2s, box-shadow 0.2s;
             text-transform: uppercase;
             letter-spacing: 1px;
-            -webkit-appearance: none;
-            width: 100%;
-            max-width: 250px;
+            -webkit-appearance: none; /* Убирает стили iOS */
+            width: 100%; /* На мобильных кнопка будет широкой */
+            max-width: 250px; /* На ПК не шире 250px */
         }
 
         button:hover {
@@ -705,7 +612,7 @@ if st.session_state.page == "Главная":
 
     </body>
     </html>
-    """, height=220)
+    """, height=220) # Высота фрейма, чтобы влезла тень и кнопка
 
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
@@ -731,32 +638,30 @@ elif st.session_state.page == "Новости":
             </div>
             """, unsafe_allow_html=True)
 
-# ================= СТРАНИЦА ПОГОДЫ =================
+# ================= СТРАНИЦА ПОГОДЫ (ПРОСТО И РАБОЧЕ) =================
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
 
-    # ПОИСК ПОГОДЫ КАК НА ГЛАВНОЙ
-    st.markdown("### 🔍 Поиск погоды")
-    
-    search_col1, search_col2 = st.columns([3, 1])
-    
-    with search_col1:
+    # По умолчанию показываем Минск
+    default_city = "Минск"
+
+    # Поисковая строка
+    col1, col2 = st.columns([3, 1])
+    with col1:
         city_input = st.text_input(
-            "Введите город:",
-            value=st.session_state.user_city if st.session_state.user_city else "Минск",
+            "🔍 Введите ваш город",
             placeholder="Например: Минск, Гомель, Брест...",
-            key="weather_page_search",
-            label_visibility="collapsed"
+            key="weather_city_input"
         )
-    
-    with search_col2:
-        search_clicked = st.button("Найти погоду", type="primary", use_container_width=True)
+
+    with col2:
+        search_clicked = st.button("Найти", type="primary", use_container_width=True)
 
     # Определяем какой город показывать
-    city_to_show = "Минск"
+    city_to_show = default_city
     if search_clicked and city_input:
         city_to_show = city_input
-    elif st.session_state.user_city:
+    elif 'user_city' in st.session_state:
         city_to_show = st.session_state.user_city
 
     # Получаем погоду для города
@@ -764,9 +669,10 @@ elif st.session_state.page == "Погода":
         weather_data = get_weather_by_city(city_to_show)
 
         if not weather_data:
+            # Если город не найден, показываем Минск
             st.error(f"Город '{city_to_show}' не найден. Показываю погоду в Минске.")
-            weather_data = get_weather_by_city("Минск")
-            city_to_show = "Минск"
+            weather_data = get_weather_by_city(default_city)
+            city_to_show = default_city
 
         if weather_data:
             current = weather_data["current"]
@@ -920,6 +826,7 @@ elif st.session_state.page == "Погода":
     for idx, (city, description) in enumerate(belarus_cities):
         with cols[idx % 3]:
             if st.button(f"**{city}**", key=f"city_{city}", help=description, use_container_width=True):
+                # При нажатии на кнопку города, ищем погоду для него
                 st.session_state.user_city = city
                 st.rerun()
 
@@ -1334,12 +1241,13 @@ elif st.session_state.page == "Диск":
                                     with open(item_path, 'rb') as f:
                                         st.download_button("Скачать PDF", f.read(), item)
 
-# ================= СТРАНИЦА ПРОФИЛЯ =================
+# ================= СТРАНИЦА ПРОФИЛЯ (ПРОФЕССИОНАЛЬНАЯ ВЕРСИЯ) =================
 elif st.session_state.page == "Профиль":
 
     # CSS для профиля
     st.markdown("""
     <style>
+    /* ЗОЛОТОЙ ЗАГОЛОВОК */
     .profile-gold-title {
         font-family: 'Helvetica Neue', sans-serif;
         font-size: 3.5rem;
@@ -1353,6 +1261,7 @@ elif st.session_state.page == "Профиль":
         padding: 10px;
     }
 
+    /* КОНТЕЙНЕРЫ */
     .profile-container {
         background: white;
         border-radius: 20px;
@@ -1372,6 +1281,7 @@ elif st.session_state.page == "Профиль":
         border: 1px solid #FFD700;
     }
 
+    /* КАРТОЧКИ */
     .profile-card {
         background: #f9f9f9;
         border-radius: 15px;
@@ -1386,6 +1296,7 @@ elif st.session_state.page == "Профиль":
         box-shadow: 0 10px 25px rgba(218, 165, 32, 0.15);
     }
 
+    /* КНОПКИ */
     .gold-button {
         background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%) !important;
         border: none !important;
@@ -1420,6 +1331,7 @@ elif st.session_state.page == "Профиль":
         background: rgba(218, 165, 32, 0.1) !important;
     }
 
+    /* ПОЛЯ ВВОДА */
     .stTextInput > div > div > input {
         border-radius: 10px !important;
         border: 2px solid #e0e0e0 !important;
@@ -1432,6 +1344,13 @@ elif st.session_state.page == "Профиль":
         box-shadow: 0 0 0 3px rgba(218, 165, 32, 0.1) !important;
     }
 
+    /* ПЕРЕКЛЮЧАТЕЛИ */
+    .stCheckbox > div > label {
+        font-weight: 500;
+        color: #333;
+    }
+
+    /* АВАТАРКА */
     .avatar-container {
         width: 180px;
         height: 180px;
@@ -1449,6 +1368,7 @@ elif st.session_state.page == "Профиль":
         border: 4px solid white;
     }
 
+    /* СТАТУС */
     .status-online {
         display: inline-block;
         width: 12px;
@@ -1459,12 +1379,14 @@ elif st.session_state.page == "Профиль":
         vertical-align: middle;
     }
 
+    /* ИКОНКИ СТАТИСТИКИ */
     .stat-icon {
         font-size: 2.5rem;
         color: #DAA520;
         margin-bottom: 10px;
     }
 
+    /* БЭДЖИ */
     .gold-badge {
         background: linear-gradient(135deg, #FFD700, #DAA520);
         color: white;
