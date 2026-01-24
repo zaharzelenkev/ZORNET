@@ -604,9 +604,9 @@ if st.session_state.page == "Главная":
     
         <div class="search-container">
             <form action="https://www.google.com/search" method="get" target="_top">
-                <input type="text" name="q" placeholder="🔍 Введите запрос..." required autocomplete="off">
+                <input type="text" name="q" placeholder="🔍 Введите запрос" required autocomplete="off">
                 <br>
-                <button type="submit">ИСКАТЬ</button>
+                <button type="submit">Поиск</button>
             </form>
         </div>
 
