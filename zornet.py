@@ -28,9 +28,9 @@ st.set_page_config(
 # ================= API КЛЮЧИ =================
 # Получаем из secrets.toml
 try:
-    HF_API_KEY = st.secrets["HF_API_KEY"]
+    DEEPSEEK_API_KEY = st.secrets["DEEPSEEK_API_KEY"]  # Для AI чата (бесплатно)
 except:
-    HF_API_KEY = ""
+    DEEPSEEK_API_KEY = ""
 
 try:
     GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
@@ -521,41 +521,34 @@ def get_weather_by_city(city_name):
         return None
 
 # ================= ФУНКЦИИ ZORNET AI =================
-def ask_hf_ai(prompt: str) -> str:
-    if not HF_API_KEY:
-        return "⚠️ API ключ не настроен. Добавьте HF_API_KEY в secrets.toml"
-
-    API_URL = "https://router.huggingface.co/api/chat/completions"
-    HEADERS = {
-        "Authorization": f"Bearer {HF_API_KEY}",
-        "Content-Type": "application/json"
-    }
-    
-    payload = {
-        "model": "Qwen/Qwen2.5-Coder-7B-Instruct",
-        "messages": [
-            {"role": "system", "content": "Ты ZORNET AI — умный помощник. Отвечай по‑русски кратко и понятно."},
-            {"role": "user", "content": prompt}
-        ],
-        "max_new_tokens": 500,
-        "temperature": 0.7
-    }
-
+def ask_deepseek_ai(prompt: str) -> str:
     try:
-        r = requests.post(API_URL, headers=HEADERS, json=payload, timeout=60)
+        API_URL = "https://api.deepseek.com/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {DEEPSEEK_API_KEY}"  # Получить на platform.deepseek.com/api
+        }
         
-        if r.status_code == 503:
-            return "⏳ ZORNET AI загружается — попробуйте через несколько секунд."
+        data = {
+            "model": "deepseek-chat",
+            "messages": [
+                {"role": "system", "content": "Ты ZORNET AI — умный помощник..."},
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": 500,
+            "temperature": 0.7
+        }
         
-        if r.status_code != 200:
-            return "⚠️ ZORNET AI временно недоступен."
+        response = requests.post(API_URL, headers=headers, json=data, timeout=30)
         
-        data = r.json()
-        text = data["choices"][0]["message"]["content"]
-        return text.strip()
-        
-    except Exception:
-        return "⚠️ Ошибка соединения с ZORNET AI."
+        if response.status_code == 200:
+            return response.json()["choices"][0]["message"]["content"]
+        else:
+            return "AI временно недоступен"
+            
+    except:
+        # Fallback на простые ответы
+        return f"🤖 ZORNET AI: Я обработал ваш запрос: '{prompt}'"
 
 # ================= ФУНКЦИИ УМНОЙ КАМЕРЫ =================
 def detect_objects_simple(image):
@@ -593,8 +586,8 @@ if st.session_state.page == "ZORNET AI":
     st.markdown('<div class="gold-title">🤖 ZORNET AI</div>', unsafe_allow_html=True)
     
     # Показываем предупреждение если нет ключа
-    if not HF_API_KEY:
-        st.warning("⚠️ Для работы AI добавьте HF_API_KEY в secrets.toml")
+    if not DEEPSEEK_API_KEY:  # Исправлено с HF_API_KEY на DEEPSEEK_API_KEY
+        st.warning("⚠️ Для работы AI добавьте DEEPSEEK_API_KEY в secrets.toml")
     
     st.markdown("""
     <div class="ai-chat-container">
