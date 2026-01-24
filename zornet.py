@@ -13,39 +13,6 @@ from duckduckgo_search import DDGS
 from huggingface_hub import InferenceClient
 import streamlit.components.v1 as components
 
-GOOGLE_SEARCH_HTML = """
-<style>
-    .google-search-container {
-        display: flex; justify-content: center; width: 100%;
-        margin-top: 20px; margin-bottom: 20px;
-    }
-    .search-form {
-        display: flex; flex-direction: column; align-items: center;
-        width: 100%; max-width: 600px; padding: 10px; box-sizing: border-box;
-    }
-    .google-input {
-        width: 100%; padding: 18px 25px; font-size: 18px;
-        border: 2px solid #e0e0e0; border-radius: 30px; outline: none;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05); background-color: #ffffff;
-        -webkit-appearance: none;
-    }
-    .google-input:focus { border-color: #DAA520; box-shadow: 0 0 15px rgba(218, 165, 32, 0.2); }
-    .google-submit-btn {
-        margin-top: 15px; background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-        color: white; border: none; padding: 14px 40px; border-radius: 25px;
-        font-size: 16px; font-weight: 700; cursor: pointer;
-        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4); text-transform: uppercase;
-        width: 100%; max-width: 250px; -webkit-appearance: none;
-    }
-</style>
-<div class="google-search-container">
-    <form action="https://www.google.com/search" method="get" target="_top" class="search-form">
-        <input type="text" name="q" class="google-input" placeholder="🔍 Поиск в Google..." required autocomplete="off">
-        <button type="submit" class="google-submit-btn">НАЙТИ</button>
-    </form>
-</div>
-"""
-
 # ================= НАСТРОЙКИ =================
 st.set_page_config(
     page_title="ZORNET",
@@ -516,7 +483,6 @@ def save_file_to_db(filename, size):
     c.execute("INSERT INTO files (name, size) VALUES (?, ?)", (filename, size))
     conn.commit()
     conn.close()
-
 
 # ================= НОВОСТИ =================
 def get_belta_news():
