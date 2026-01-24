@@ -526,7 +526,14 @@ if st.session_state.page == "Главная":
         html_code = f"""
         <script>
             // Открываем Google в новой вкладке
-            window.open("{google_search_url}", "_blank")
+            window.open("{google_search_url}", "_blank");
+            
+            // Также можно показать сообщение
+            window.parent.document.querySelector('.stAlert').style.display = 'block';
+        </script>
+        <div style="padding: 10px; background: #e8f5e8; border-radius: 5px; margin: 10px 0;">
+            ✅ Google поиск открыт в новой вкладке для запроса: <b>{search_query}</b>
+        </div>
         """
         
         # Исполняем JavaScript
