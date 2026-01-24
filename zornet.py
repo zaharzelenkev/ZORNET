@@ -30,7 +30,7 @@ if "weather_data" not in st.session_state:
     st.session_state.weather_data = None
 if "user_city" not in st.session_state:
     st.session_state.user_city = None
-    if "last_search" not in st.session_state:
+if "last_search" not in st.session_state:
     st.session_state.last_search = ""
 
 # ================= CSS СТИЛИ =================
