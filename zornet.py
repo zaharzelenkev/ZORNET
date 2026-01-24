@@ -521,36 +521,32 @@ if st.session_state.page == "Главная":
 
     st.markdown("---")
 
-    # --- ИНТЕГРАЦИЯ GOOGLE ПОИСКА (ЧЕРЕЗ IFRAME) ---
-    # Мы используем components.html, чтобы создать изолированный HTML-блок.
-    # target="_top" — это ключ к успеху. Он заставляет ссылку открываться в текущем окне браузера,
-    # полностью замещая сайт ZORNET, и Streamlit не может этому помешать.
+    # --- ИНТЕГРАЦИЯ GOOGLE ПОИСКА ---
+    # Мы используем HTML форму, так как это единственный способ
+    # заставить браузер перейти на другой сайт сразу по нажатию кнопки,
+    # не перезагружая Streamlit скрипт.
     
-    components.html("""
-    <!DOCTYPE html>
-    <html>
-    <head>
+    st.markdown("""
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: transparent;
-            font-family: 'Helvetica Neue', sans-serif;
+        /* Стили для формы поиска */
+        .google-search-container {
             display: flex;
             justify-content: center;
+            width: 100%;
+            margin-top: 20px;
+            margin-bottom: 40px;
         }
         
-        /* Контейнер формы */
-        .search-container {
+        .search-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             width: 100%;
             max-width: 600px;
-            padding: 10px;
-            box-sizing: border-box; /* Важно для мобильных */
-            text-align: center;
         }
 
-        /* Поле ввода */
-        input[type="text"] {
+        /* Поле ввода в стиле ZORNET */
+        .google-input {
             width: 100%;
             padding: 18px 25px;
             font-size: 18px;
@@ -561,17 +557,15 @@ if st.session_state.page == "Главная":
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             background-color: #ffffff;
             color: #333;
-            box-sizing: border-box; /* Чтобы padding не ломал ширину */
-            -webkit-appearance: none; /* Убирает стили iOS */
         }
 
-        input[type="text"]:focus {
+        .google-input:focus {
             border-color: #DAA520;
             box-shadow: 0 0 15px rgba(218, 165, 32, 0.2);
         }
 
-        /* Кнопка */
-        button {
+        /* Кнопка поиска в стиле ZORNET (Gold) */
+        .google-submit-btn {
             margin-top: 20px;
             background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
             color: white;
@@ -585,34 +579,21 @@ if st.session_state.page == "Главная":
             transition: transform 0.2s, box-shadow 0.2s;
             text-transform: uppercase;
             letter-spacing: 1px;
-            -webkit-appearance: none; /* Убирает стили iOS */
-            width: 100%; /* На мобильных кнопка будет широкой */
-            max-width: 250px; /* На ПК не шире 250px */
         }
 
-        button:hover {
-            transform: scale(1.03);
+        .google-submit-btn:hover {
+            transform: scale(1.05);
             box-shadow: 0 6px 20px rgba(218, 165, 32, 0.6);
         }
-        
-        button:active {
-            transform: scale(0.98);
-        }
     </style>
-    </head>
-    <body>
-    
-        <div class="search-container">
-            <form action="https://www.google.com/search" method="get" target="_top">
-                <input type="text" name="q" placeholder="🔍 Введите запрос..." required autocomplete="off">
-                <br>
-                <button type="submit">Поиск</button>
-            </form>
-        </div>
 
-    </body>
-    </html>
-    """, height=220) # Высота фрейма, чтобы влезла тень и кнопка
+    <div class="google-search-container">
+        <form action="https://www.google.com/search" method="get" target="_self" class="search-form">
+            <input type="text" name="q" class="google-input" placeholder="🔍 Введите запрос для Google..." required autocomplete="off">
+            <button type="submit" class="google-submit-btn">ИСКАТЬ В GOOGLE</button>
+        </form>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
