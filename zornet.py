@@ -26,10 +26,26 @@ st.set_page_config(
 )
 
 # ================= API КЛЮЧИ =================
-GOOGLE_API_KEY = ""  # Получи на https://console.cloud.google.com/
-GOOGLE_CSE_ID = ""   # Получи на https://programmablesearchengine.google.com/
-HF_API_KEY = st.secrets.get("HF_API_KEY", "")
-OPENWEATHER_API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"
+# Получаем из secrets.toml
+try:
+    HF_API_KEY = st.secrets["HF_API_KEY"]
+except:
+    HF_API_KEY = ""
+
+try:
+    GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+except:
+    GOOGLE_API_KEY = ""
+
+try:
+    GOOGLE_CSE_ID = st.secrets["GOOGLE_CSE_ID"]
+except:
+    GOOGLE_CSE_ID = ""
+
+try:
+    OPENWEATHER_API_KEY = st.secrets.get("OPENWEATHER_API_KEY", "20ebdd8243b8a3a29abe332fefdadb44")
+except:
+    OPENWEATHER_API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"
 
 # ================= СЕССИЯ =================
 if "page" not in st.session_state:
@@ -576,6 +592,10 @@ def process_camera_image(image, mode):
 if st.session_state.page == "ZORNET AI":
     st.markdown('<div class="gold-title">🤖 ZORNET AI</div>', unsafe_allow_html=True)
     
+    # Показываем предупреждение если нет ключа
+    if not HF_API_KEY:
+        st.warning("⚠️ Для работы AI добавьте HF_API_KEY в secrets.toml")
+    
     st.markdown("""
     <div class="ai-chat-container">
         <h3 style="color: #DAA520; text-align: center;">✨ Ваш персональный AI-помощник</h3>
@@ -741,6 +761,10 @@ elif st.session_state.page == "Умная камера":
 # ================= СТРАНИЦА ГЛАВНАЯ С GOOGLE ПОИСКОМ =================
 elif st.session_state.page == "Главная":
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
+    
+    # Показываем предупреждение если нет Google ключей
+    if not GOOGLE_API_KEY or not GOOGLE_CSE_ID:
+        st.info("🔍 Для Google Search добавьте GOOGLE_API_KEY и GOOGLE_CSE_ID в secrets.toml")
     
     current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
     
@@ -1025,8 +1049,37 @@ elif st.session_state.page == "Диск":
     if "disk_action" not in st.session_state:
         st.session_state.disk_action = "view"
     
+    # Импортируем os здесь чтобы избежать конфликтов
     import os
     os.makedirs(st.session_state.disk_current_path, exist_ok=True)
+    
+    # Функции для диска
+    def get_file_icon(filename):
+        """Возвращает иконку для файла"""
+        if os.path.isdir(filename):
+            return "📁"
+        elif filename.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
+            return "🖼️"
+        elif filename.lower().endswith('.pdf'):
+            return "📄"
+        elif filename.lower().endswith(('.doc', '.docx')):
+            return "📝"
+        elif filename.lower().endswith(('.mp3', '.wav')):
+            return "🎵"
+        elif filename.lower().endswith(('.mp4', '.avi', '.mov')):
+            return "🎬"
+        return "📄"
+    
+    def format_file_size(size_bytes):
+        """Форматирует размер файла"""
+        if size_bytes < 1024:
+            return f"{size_bytes} B"
+        elif size_bytes < 1024 * 1024:
+            return f"{size_bytes / 1024:.1f} KB"
+        elif size_bytes < 1024 * 1024 * 1024:
+            return f"{size_bytes / (1024 * 1024):.1f} MB"
+        else:
+            return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
     
     col1, col2, col3, col4 = st.columns(4)
     
