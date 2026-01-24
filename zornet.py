@@ -501,106 +501,46 @@ def get_belta_news():
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
 
-# ================= СТРАНИЦА ГЛАВНАЯ =================
+# В начале импортов добавьте:
+from urllib.parse import quote
+
+# А в главной странице:
 if st.session_state.page == "Главная":
-    st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
-
-    current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", use_container_width=True)
-    with col2:
-        if st.button("⛅ Погода", use_container_width=True):
-            st.session_state.page = "Погода"
-            st.rerun()
-    with col3:
-        st.button("💵 3.20\nBYN/USD", use_container_width=True)
-    with col4:
-        if st.button("🤖 ZORNET AI", use_container_width=True):
-            st.session_state.page = "ZORNET AI"
-            st.rerun()
-
-    st.markdown("---")
+    # ... предыдущий код ...
     
-    # Создаем контейнер для поиска с кнопкой
-    col_search, col_btn = st.columns([6, 1])
-    
-    with col_search:
+    with st.form(key="search_form"):
         search_query = st.text_input(
             "",
-            placeholder="Поиск в интернете...",
+            placeholder="Поиск в интернете... Нажмите Enter для поиска в Google",
             key="main_search",
-            label_visibility="collapsed",
-            on_change=None  # Это будет обрабатываться отдельно
+            label_visibility="collapsed"
         )
-    
-    with col_btn:
-        search_clicked = st.button("🔍", use_container_width=True, key="search_button")
-    
-    # Проверяем, был ли выполнен поиск (по кнопке или Enter)
-    search_performed = False
-    
-    if search_query:
-        # Если нажата кнопка поиска
-        if search_clicked:
-            search_performed = True
-            st.session_state.last_search = search_query
-        # Если нажат Enter в поле ввода (имитируем через session state)
-        elif 'last_search' in st.session_state and st.session_state.last_search != search_query:
-            # Это новый поиск при вводе
-            search_performed = True
-            st.session_state.last_search = search_query
-    
-    if search_query and search_performed:
-        # Создаем Google-ссылку
-        google_url = f"https://www.google.com/search?q={search_query.replace(' ', '+')}"
+        submitted = st.form_submit_button("🔍 Искать", use_container_width=True)
+
+    if submitted and search_query:
+        # Создаем JavaScript для открытия Google
+        google_search_url = f"https://www.google.com/search?q={quote(search_query)}"
         
-        st.markdown(f"### 🔍 Результаты поиска: **{search_query}**")
-        
-        # Кнопка для открытия Google в новой вкладке
-        st.markdown(f"""
-        <div style="text-align: center; margin: 30px 0;">
-            <a href="{google_url}" target="_blank" 
-               style="display: inline-block; padding: 15px 40px; 
-                      background: linear-gradient(135deg, #4285f4, #34a853); 
-                      color: white; text-decoration: none; border-radius: 50px; 
-                      font-weight: bold; font-size: 18px; 
-                      box-shadow: 0 4px 15px rgba(66, 133, 244, 0.3);">
-               🔍 Открыть результаты в Google
-            </a>
+        # HTML с JavaScript для открытия новой вкладки
+        html_code = f"""
+        <script>
+            // Открываем Google в новой вкладке
+            window.open("{google_search_url}", "_blank");
+            
+            // Также можно показать сообщение
+            window.parent.document.querySelector('.stAlert').style.display = 'block';
+        </script>
+        <div style="padding: 10px; background: #e8f5e8; border-radius: 5px; margin: 10px 0;">
+            ✅ Google поиск открыт в новой вкладке для запроса: <b>{search_query}</b>
         </div>
-        """, unsafe_allow_html=True)
+        """
         
-        # Также показываем локальные результаты (как было раньше)
-        st.markdown("### 📌 Локальные результаты ZORNET:")
+        # Исполняем JavaScript
+        components.html(html_code, height=100)
         
-        with st.spinner("Ищу информацию..."):
-            results = search_zornet(search_query, num_results=5)
-            if results:
-                for idx, result in enumerate(results):
-                    st.markdown(f"""
-                    <div class="search-result">
-                        <div style="font-weight: 600; color: #1a1a1a; font-size: 16px;">
-                            {idx + 1}. {result['title']}
-                        </div>
-                        <div style="color: #1a73e8; font-size: 13px; margin: 5px 0;">
-                            {result['url'][:60]}...
-                        </div>
-                        <div style="color: #555; font-size: 14px;">
-                            {result['snippet']}
-                        </div>
-                        <div style="margin-top: 10px;">
-                            <a href="{result['url']}" target="_blank" 
-                               style="padding: 6px 12px; background: #DAA520; color: white; 
-                                      border-radius: 6px; text-decoration: none; font-size: 12px;">
-                                Перейти на сайт
-                            </a>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.info("По вашему запросу ничего не найдено в локальном поиске.")
-        
+        # Показываем сообщение в Streamlit
+        st.info(f"🔍 Google поиск открыт в новой вкладке для: **{search_query}**")
+
         # Быстрые ссылки на популярные сайты
         st.markdown("### ⚡ Быстрый поиск на:")
         
