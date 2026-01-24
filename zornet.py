@@ -500,6 +500,7 @@ def get_belta_news():
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
 
+
 # ================= СТРАНИЦА ГЛАВНАЯ =================
 if st.session_state.page == "Главная":
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
@@ -521,44 +522,24 @@ if st.session_state.page == "Главная":
 
     st.markdown("---")
 
-    # Поисковая строка
     search_query = st.text_input(
         "",
-        placeholder="Введите запрос для поиска в Google...",
+        placeholder="Поиск в интернете...",
         key="main_search",
         label_visibility="collapsed"
     )
-    
-    # Кнопка поиска
-    if st.button("🔍 Искать в Google", 
-                 type="primary", 
-                 use_container_width=True,
-                 disabled=not search_query):
-        
-        if search_query:
-            # Сохраняем запрос для показа локальных результатов
-            st.session_state.search_performed = True
-            st.session_state.last_search_query = search_query
-            
-            # Создаем URL для Google
-            google_search_url = f"https://www.google.com/search?q={requests.utils.quote(search_query)}"
-            
-            # JavaScript который СРАБОТАЕТ после rerun
-            js_code = f"""
+if search_query:
+    if st.button("🔎 Искать в ZORNET", use_container_width=True):
+        components.html(
+            f"""
             <script>
-            window.onload = function() {{
-                window.open("{google_search_url}", "_self");
-            }};
+                window.location.href = "https://www.google.com/search?q={search_query}";
             </script>
-            """
-            components.html(js_code, height=0)
-            st.rerun()
-    
-    # Показываем локальные результаты если поиск был выполнен
-    if "search_performed" in st.session_state and st.session_state.search_performed:
-        search_query = st.session_state.last_search_query
-        
-        st.markdown(f"### 🔍 Результаты поиска Zornet: **{search_query}**")
+            """,
+            height=0
+        )
+    if search_query:
+        st.markdown(f"### 🔍 Результаты поиска: **{search_query}**")
         with st.spinner("Ищу информацию..."):
             results = search_zornet(search_query, num_results=5)
             if results:
