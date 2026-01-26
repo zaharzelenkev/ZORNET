@@ -34,6 +34,139 @@ if "city_query" in st.query_params:
     st.session_state.user_city = st.query_params["city_query"]
     st.session_state.page = "Погода"
 
+# ================= CSS СТИЛИ =================
+st.markdown("""
+<style>
+    /* ОБЩИЙ СТИЛЬ */
+    .stApp { background-color: #ffffff; }
+
+    /* СКРЫВАЕМ ЛИШНЕЕ */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+
+    /* ГЛАВНЫЙ ЗАГОЛОВОК */
+    .gold-title {
+        font-family: 'Helvetica Neue', sans-serif;
+        font-size: 4rem;
+        font-weight: 800;
+        text-align: center;
+        background: linear-gradient(to bottom, #DAA520, #B8860B);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        margin: 10px 0 30px 0;
+    }
+
+    /* КНОПКИ ГЛАВНОЙ */
+    div.stButton > button {
+        background: #f8f9fa !important;
+        border: 1px solid #dee2e6 !important;
+        color: #1a1a1a !important;
+        padding: 20px !important; 
+        border-radius: 12px !important;
+        font-weight: bold !important;
+        width: 100% !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
+    }
+
+    /* ЗОЛОТАЯ КНОПКА AI */
+    .gold-btn {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+        border: none !important;
+        color: white !important;
+        border-radius: 12px !important;
+        padding: 14px 28px !important;
+        font-weight: 600 !important;
+        font-size: 16px !important;
+        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3) !important;
+    }
+
+    /* ВРЕМЯ В ЗОЛОТОЙ РАМКЕ */
+    .time-widget {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+        border-radius: 12px;
+        padding: 12px 15px;
+        text-align: center;
+        color: white;
+        font-weight: 600;
+        font-size: 16px;
+        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
+    }
+
+    /* РЕЗУЛЬТАТЫ ПОИСКА */
+    .search-result {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        border-left: 4px solid #DAA520;
+    }
+
+    /* ЧАТ AI */
+    .user-message {
+        background: #f0f0f0;
+        padding: 12px 18px;
+        border-radius: 18px;
+        max-width: 70%;
+        margin-left: auto;
+        margin-bottom: 15px;
+    }
+
+    .ai-message {
+        background: #f9f9f9;
+        padding: 12px 18px;
+        border-radius: 18px;
+        max-width: 70%;
+        margin-right: auto;
+        margin-bottom: 15px;
+        border-left: 4px solid #DAA520;
+    }
+
+    /* СТИЛИ ДЛЯ ПОГОДЫ */
+    .weather-widget {
+        background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
+        border-radius: 15px;
+        padding: 20px;
+        color: white;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(6, 147, 227, 0.3);
+    }
+
+    .weather-temp {
+        font-size: 3.5rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .weather-description {
+        font-size: 1.2rem;
+        margin-bottom: 15px;
+    }
+
+    .weather-details {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 15px;
+    }
+
+    .weather-icon {
+        font-size: 4rem;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    .forecast-day {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # ================= САЙДБАР =================
 with st.sidebar:
     st.markdown("<h3 style='color:#DAA520;'>🇧🇾 ZORNET</h3>", unsafe_allow_html=True)
