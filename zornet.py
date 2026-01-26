@@ -31,74 +31,57 @@ if "weather_data" not in st.session_state:
 if "user_city" not in st.session_state:
     st.session_state.user_city = None
 
-# ================= ГЛОБАЛЬНЫЕ СТИЛИ И КНОПКА МЕНЮ =================
+# ================= ОБНОВЛЕННЫЕ CSS СТИЛИ =================
 st.markdown("""
 <style>
-    /* Прячем стандартный хедер, но оставляем место для нашей кнопки */
-    header {visibility: hidden !important;}
-    #MainMenu {visibility: hidden !important;}
-    footer {visibility: hidden !important;}
-
-    /* НАША КНОПКА-ГАМБУРГЕР */
-    .custom-hamburger {
-        position: fixed;
-        top: 15px;
-        right: 15px;
-        width: 50px;
-        height: 45px;
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-        border-radius: 8px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        gap: 5px;
-        cursor: pointer;
-        z-index: 9999999; /* Максимальный приоритет */
-        border: 2px solid rgba(255,255,255,0.2);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        transition: all 0.3s ease;
+    /* 1. Делаем хедер прозрачным, чтобы он не мешал, но кнопка в нем жила */
+    [data-testid="stHeader"] {
+        background: rgba(0,0,0,0) !important;
+        color: white !important;
     }
 
-    .custom-hamburger:hover {
-        transform: scale(1.05);
-        box-shadow: 0 6px 20px rgba(218, 165, 32, 0.5);
+    /* 2. Находим родную кнопку сайдбара и переносим её вправо */
+    /* Она появляется, когда сайдбар закрыт */
+    button[data-testid="stSidebarCollapse"] {
+        position: fixed !important;
+        right: 20px !important;
+        top: 15px !important;
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+        border-radius: 8px !important;
+        width: 45px !important;
+        height: 45px !important;
+        z-index: 10000 !important;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+        border: 1px solid rgba(255,255,255,0.2) !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
     }
 
-    /* Три полоски внутри */
-    .line {
-        width: 28px;
-        height: 3px;
-        background-color: white;
-        border-radius: 2px;
-        display: block !important;
+    /* 3. Превращаем иконку (стрелочку) в три полоски (гамбургер) */
+    button[data-testid="stSidebarCollapse"] svg {
+        display: none !important; /* Прячем родную стрелку */
+    }
+    
+    button[data-testid="stSidebarCollapse"]::after {
+        content: "☰" !important; /* Символ гамбургера */
+        color: white !important;
+        font-size: 24px !important;
+        font-weight: bold !important;
     }
 
-    /* Общий стиль приложения, чтобы контент не перекрывал кнопку */
-    .stApp {
-        background-color: #ffffff;
+    /* 4. Стили для кнопки внутри открытого сайдбара (чтобы тоже была красивой) */
+    [data-testid="stSidebar"] button[data-testid="stSidebarCollapse"] {
+        right: auto !important;
+        left: 10px !important;
+        top: 10px !important;
+        position: relative !important;
     }
-</style>
 
-<div class="custom-hamburger" id="myMenuBtn" onclick="toggleStreamlitSidebar()">
-    <span class="line"></span>
-    <span class="line"></span>
-    <span class="line"></span>
-</div>
-
-<script>
-    function toggleStreamlitSidebar() {
-        // Ищем кнопку открытия/закрытия в родительском окне (Streamlit специфично)
-        const sidebarBtn = window.parent.document.querySelector('button[data-testid="stSidebarCollapse"]');
-        if (sidebarBtn) {
-            sidebarBtn.click();
-        } else {
-            // Если кнопка не найдена, пробуем найти кнопку открытия
-            const openBtn = window.parent.document.querySelector('button[aria-label="Open sidebar"]');
-            if (openBtn) {
-                openBtn.click();
-            }
-        }
+    /* 5. Убираем лишние отступы, которые Streamlit добавляет для markdown */
+    div[data-testid="stVerticalBlock"] > div:has(div.stMarkdown) {
+        padding: 0 !important;
+        margin: 0 !important;
     }
 
     /* ГЛАВНЫЙ ЗАГОЛОВОК */
