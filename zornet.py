@@ -1283,549 +1283,179 @@ elif st.session_state.page == "Диск":
                                     with open(item_path, 'rb') as f:
                                         st.download_button("Скачать PDF", f.read(), item)
 
-# ================= СТРАНИЦА ПРОФИЛЯ (ПРОФЕССИОНАЛЬНАЯ ВЕРСИЯ) =================
+# ================= СТРАНИЦА ПРОФИЛЯ (ZORNET ID + GOOGLE AUTH) =================
 elif st.session_state.page == "Профиль":
+    # Инициализация расширенных состояний
+    if "auth_status" not in st.session_state:
+        st.session_state.auth_status = "logged_out"
+    if "user_data" not in st.session_state:
+        st.session_state.user_data = None
+    if "user_photo" not in st.session_state:
+        st.session_state.user_photo = None
 
-    # CSS для профиля
     st.markdown("""
     <style>
-    /* ЗОЛОТОЙ ЗАГОЛОВОК */
-    .profile-gold-title {
-        font-family: 'Helvetica Neue', sans-serif;
-        font-size: 3.5rem;
-        font-weight: 800;
-        text-align: center;
-        background: linear-gradient(135deg, #FFD700 0%, #B8860B 50%, #DAA520 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        letter-spacing: 3px;
-        margin: 20px 0 40px 0;
-        padding: 10px;
-    }
+        .auth-card {
+            background: white;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            max-width: 450px;
+            margin: 20px auto;
+            text-align: center;
+            border: 1px solid #f0f0f0;
+        }
+        /* Стилизация кнопки Google */
+        .google-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            height: 45px;
+            background: white;
+            border: 1px solid #dadce0;
+            border-radius: 22px;
+            color: #3c4043;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: background 0.2s;
+        }
+        .google-btn:hover { background: #f8f9fa; border-color: #d2e3fc; }
+        
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            color: #70757a;
+            margin: 20px 0;
+        }
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #e8eaed;
+        }
+        .divider:not(:empty)::before { margin-right: .75em; }
+        .divider:not(:empty)::after { margin-left: .75em; }
 
-    /* КОНТЕЙНЕРЫ */
-    .profile-container {
-        background: white;
-        border-radius: 20px;
-        padding: 30px;
-        margin: 20px 0;
-        box-shadow: 0 10px 40px rgba(218, 165, 32, 0.1);
-        border: 1px solid rgba(218, 165, 32, 0.2);
-    }
-
-    .login-container {
-        background: linear-gradient(135deg, #ffffff 0%, #fffaf0 100%);
-        border-radius: 20px;
-        padding: 40px;
-        margin: 20px auto;
-        max-width: 500px;
-        box-shadow: 0 15px 50px rgba(218, 165, 32, 0.15);
-        border: 1px solid #FFD700;
-    }
-
-    /* КАРТОЧКИ */
-    .profile-card {
-        background: #f9f9f9;
-        border-radius: 15px;
-        padding: 25px;
-        margin: 15px 0;
-        border-left: 5px solid #DAA520;
-        transition: transform 0.3s ease;
-    }
-
-    .profile-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(218, 165, 32, 0.15);
-    }
-
-    /* КНОПКИ */
-    .gold-button {
-        background: linear-gradient(135deg, #FFD700 0%, #DAA520 100%) !important;
-        border: none !important;
-        color: white !important;
-        border-radius: 10px !important;
-        padding: 12px 30px !important;
-        font-weight: 600 !important;
-        font-size: 16px !important;
-        box-shadow: 0 5px 20px rgba(218, 165, 32, 0.3) !important;
-        transition: all 0.3s ease !important;
-        width: 100% !important;
-    }
-
-    .gold-button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(218, 165, 32, 0.4) !important;
-    }
-
-    .outline-button {
-        background: transparent !important;
-        border: 2px solid #DAA520 !important;
-        color: #DAA520 !important;
-        border-radius: 10px !important;
-        padding: 12px 30px !important;
-        font-weight: 600 !important;
-        font-size: 16px !important;
-        transition: all 0.3s ease !important;
-        width: 100% !important;
-    }
-
-    .outline-button:hover {
-        background: rgba(218, 165, 32, 0.1) !important;
-    }
-
-    /* ПОЛЯ ВВОДА */
-    .stTextInput > div > div > input {
-        border-radius: 10px !important;
-        border: 2px solid #e0e0e0 !important;
-        padding: 12px 15px !important;
-        font-size: 16px !important;
-    }
-
-    .stTextInput > div > div > input:focus {
-        border-color: #DAA520 !important;
-        box-shadow: 0 0 0 3px rgba(218, 165, 32, 0.1) !important;
-    }
-
-    /* ПЕРЕКЛЮЧАТЕЛИ */
-    .stCheckbox > div > label {
-        font-weight: 500;
-        color: #333;
-    }
-
-    /* АВАТАРКА */
-    .avatar-container {
-        width: 180px;
-        height: 180px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #FFD700, #DAA520);
-        padding: 5px;
-        margin: 0 auto 25px auto;
-    }
-
-    .avatar-img {
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 4px solid white;
-    }
-
-    /* СТАТУС */
-    .status-online {
-        display: inline-block;
-        width: 12px;
-        height: 12px;
-        background: #4CAF50;
-        border-radius: 50%;
-        margin-right: 8px;
-        vertical-align: middle;
-    }
-
-    /* ИКОНКИ СТАТИСТИКИ */
-    .stat-icon {
-        font-size: 2.5rem;
-        color: #DAA520;
-        margin-bottom: 10px;
-    }
-
-    /* БЭДЖИ */
-    .gold-badge {
-        background: linear-gradient(135deg, #FFD700, #DAA520);
-        color: white;
-        padding: 5px 15px;
-        border-radius: 20px;
-        font-size: 0.9rem;
-        font-weight: 600;
-        display: inline-block;
-        margin: 5px;
-    }
+        /* Круглый аватар */
+        .profile-pic-container {
+            position: relative;
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+        }
+        .main-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #DAA520;
+            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
+        }
+        .avatar-placeholder {
+            width: 120px;
+            height: 120px;
+            background: #DAA520;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: bold;
+        }
     </style>
     """, unsafe_allow_html=True)
 
-    # Инициализация состояния профиля
-    if "user_logged_in" not in st.session_state:
-        st.session_state.user_logged_in = False
-    if "user_email" not in st.session_state:
-        st.session_state.user_email = ""
-    if "user_name" not in st.session_state:
-        st.session_state.user_name = ""
-    if "user_avatar" not in st.session_state:
-        st.session_state.user_avatar = None
-    if "show_login" not in st.session_state:
-        st.session_state.show_login = True
-    if "show_register" not in st.session_state:
-        st.session_state.show_register = False
-
-
-    # Функции базы данных для профилей
-    def init_profile_db():
-        """Инициализация базы данных профилей"""
-        conn = sqlite3.connect("zornet_profiles.db")
-        c = conn.cursor()
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS profiles (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email TEXT UNIQUE,
-                username TEXT,
-                password_hash TEXT,
-                avatar_path TEXT,
-                gender TEXT,
-                join_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                last_login TIMESTAMP,
-                bio TEXT,
-                settings TEXT
-            )
-        """)
-        conn.commit()
-        conn.close()
-
-
-    def register_user(email, username, password):
-        """Регистрация нового пользователя"""
-        try:
-            conn = sqlite3.connect("zornet_profiles.db")
-            c = conn.cursor()
-            # Простой хэш (в реальном приложении используйте hashlib)
-            password_hash = password  # Здесь должен быть реальный хэш
-            c.execute("""
-                INSERT INTO profiles (email, username, password_hash)
-                VALUES (?, ?, ?)
-            """, (email, username, password_hash))
-            conn.commit()
-            conn.close()
-            return True
-        except sqlite3.IntegrityError:
-            return False  # Пользователь уже существует
-        except Exception as e:
-            print(f"Ошибка регистрации: {e}")
-            return False
-
-
-    def login_user(email, password):
-        """Авторизация пользователя"""
-        try:
-            conn = sqlite3.connect("zornet_profiles.db")
-            c = conn.cursor()
-            c.execute("""
-                SELECT username, password_hash FROM profiles 
-                WHERE email = ?
-            """, (email,))
-            result = c.fetchone()
-            conn.close()
-
-            if result and result[1] == password:  # Сравнение хэшей
-                return result[0]  # Возвращаем имя пользователя
-            return None
-        except:
-            return None
-
-
-    def update_profile(email, username, gender, bio):
-        """Обновление профиля"""
-        try:
-            conn = sqlite3.connect("zornet_profiles.db")
-            c = conn.cursor()
-            c.execute("""
-                UPDATE profiles 
-                SET username = ?, gender = ?, bio = ?
-                WHERE email = ?
-            """, (username, gender, bio, email))
-            conn.commit()
-            conn.close()
-            return True
-        except:
-            return False
-
-
-    def save_avatar(email, avatar_path):
-        """Сохранение пути к аватарке"""
-        try:
-            conn = sqlite3.connect("zornet_profiles.db")
-            c = conn.cursor()
-            c.execute("""
-                UPDATE profiles 
-                SET avatar_path = ?
-                WHERE email = ?
-            """, (avatar_path, email))
-            conn.commit()
-            conn.close()
-            return True
-        except:
-            return False
-
-
-    def get_user_profile(email):
-        """Получение профиля пользователя"""
-        try:
-            conn = sqlite3.connect("zornet_profiles.db")
-            c = conn.cursor()
-            c.execute("""
-                SELECT username, gender, bio, avatar_path, join_date 
-                FROM profiles 
-                WHERE email = ?
-            """, (email,))
-            result = c.fetchone()
-            conn.close()
-
-            if result:
-                return {
-                    "username": result[0],
-                    "gender": result[1],
-                    "bio": result[2],
-                    "avatar_path": result[3],
-                    "join_date": result[4]
-                }
-            return None
-        except:
-            return None
-
-
-    # Инициализация БД
-    init_profile_db()
-
-    st.markdown('<div class="profile-gold-title">👤 ПРОФИЛЬ</div>', unsafe_allow_html=True)
-
-    # Если пользователь не авторизован, показываем форму входа/регистрации
-    if not st.session_state.user_logged_in:
-        col_login, col_register = st.columns(2)
-
-        with col_login:
-            if st.session_state.show_login:
-                st.markdown("""
-                <div class="login-container">
-                    <h2 style="text-align: center; color: #DAA520; margin-bottom: 30px;">🔐 Вход в систему</h2>
-                """, unsafe_allow_html=True)
-
-                with st.form("login_form"):
-                    login_email = st.text_input("📧 Email", placeholder="your@email.com")
-                    login_password = st.text_input("🔑 Пароль", type="password", placeholder="••••••••")
-
-                    col_submit, col_switch = st.columns(2)
-                    with col_submit:
-                        login_submit = st.form_submit_button("🚀 Войти", use_container_width=True)
-                    with col_switch:
-                        if st.form_submit_button("📝 Регистрация", use_container_width=True):
-                            st.session_state.show_login = False
-                            st.session_state.show_register = True
-                            st.rerun()
-
-                    if login_submit and login_email and login_password:
-                        with st.spinner("Вход в систему..."):
-                            username = login_user(login_email, login_password)
-                            if username:
-                                st.session_state.user_logged_in = True
-                                st.session_state.user_email = login_email
-                                st.session_state.user_name = username
-                                st.success(f"Добро пожаловать, {username}!")
-                                st.rerun()
-                            else:
-                                st.error("Неверный email или пароль")
-
-                st.markdown("</div>", unsafe_allow_html=True)
-
-        with col_register:
-            if st.session_state.show_register:
-                st.markdown("""
-                <div class="login-container">
-                    <h2 style="text-align: center; color: #DAA520; margin-bottom: 30px;">✨ Регистрация</h2>
-                """, unsafe_allow_html=True)
-
-                with st.form("register_form"):
-                    reg_email = st.text_input("📧 Email", placeholder="your@email.com")
-                    reg_username = st.text_input("👤 Имя пользователя", placeholder="Ваше имя")
-                    reg_password = st.text_input("🔑 Пароль", type="password", placeholder="••••••••")
-                    reg_password_confirm = st.text_input("🔐 Подтвердите пароль", type="password",
-                                                         placeholder="••••••••")
-                    reg_gender = st.selectbox("⚧ Пол", ["Не указан", "Мужской", "Женский"])
-
-                    col_submit_reg, col_switch_reg = st.columns(2)
-                    with col_submit_reg:
-                        reg_submit = st.form_submit_button("🎯 Зарегистрироваться", use_container_width=True)
-                    with col_switch_reg:
-                        if st.form_submit_button("← Назад к входу", use_container_width=True):
-                            st.session_state.show_login = True
-                            st.session_state.show_register = False
-                            st.rerun()
-
-                    if reg_submit:
-                        if not all([reg_email, reg_username, reg_password, reg_password_confirm]):
-                            st.error("Заполните все поля!")
-                        elif reg_password != reg_password_confirm:
-                            st.error("Пароли не совпадают!")
-                        else:
-                            with st.spinner("Регистрация..."):
-                                if register_user(reg_email, reg_username, reg_password):
-                                    st.success("Регистрация успешна! Теперь войдите в систему.")
-                                    st.session_state.show_login = True
-                                    st.session_state.show_register = False
-                                    st.rerun()
-                                else:
-                                    st.error("Пользователь с таким email уже существует")
-
-                st.markdown("</div>", unsafe_allow_html=True)
-
-    # Если пользователь авторизован, показываем профиль
-    else:
-        # Загружаем данные профиля
-        profile_data = get_user_profile(st.session_state.user_email)
-
-        # Кнопка выхода
-        if st.sidebar.button("🚪 Выйти", use_container_width=True):
-            st.session_state.user_logged_in = False
-            st.session_state.user_email = ""
-            st.session_state.user_name = ""
-            st.session_state.user_avatar = None
+    # --- ЛОГИКА ВХОДА ---
+    if st.session_state.auth_status == "logged_out":
+        st.markdown('<div class="auth-card">', unsafe_allow_html=True)
+        st.markdown('<div style="font-size: 28px; font-weight: 800; color: #B8860B; margin-bottom: 10px;">ZORNET ID</div>', unsafe_allow_html=True)
+        st.markdown('<h3 style="margin-top:0;">Вход</h3>', unsafe_allow_html=True)
+        
+        # Кнопка Google
+        if st.button("🌐 Войти через Google", use_container_width=True):
+            # Имитация входа через Google
+            st.session_state.auth_status = "logged_in"
+            st.session_state.user_data = {"name": "Иван Иванов", "email": "ivan@gmail.com", "method": "Google"}
             st.rerun()
+            
+        st.markdown('<div class="divider">или</div>', unsafe_allow_html=True)
+        
+        email = st.text_input("Email или телефон")
+        if st.button("Далее", type="primary", use_container_width=True):
+            if email:
+                st.session_state.auth_email = email
+                st.session_state.auth_status = "step_password"
+                st.rerun()
+        
+        st.markdown('<p style="margin-top:20px; font-size:14px; color:#1a73e8; cursor:pointer;">Создать аккаунт</p>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        # Основной контейнер профиля
-        with st.container():
-            st.markdown('<div class="profile-container">', unsafe_allow_html=True)
+    elif st.session_state.auth_status == "step_password":
+        st.markdown('<div class="auth-card">', unsafe_allow_html=True)
+        st.markdown(f'<h4>Введите пароль</h4><p style="color: #666;">{st.session_state.auth_email}</p>', unsafe_allow_html=True)
+        password = st.text_input("Пароль", type="password")
+        if st.button("Войти", type="primary", use_container_width=True):
+            st.session_state.auth_status = "logged_in"
+            st.session_state.user_data = {"name": "ZORNET Пользователь", "email": st.session_state.auth_email, "method": "Email"}
+            st.rerun()
+        if st.button("Назад"):
+            st.session_state.auth_status = "logged_out"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
-            col_profile_left, col_profile_right = st.columns([1, 2])
-
-            with col_profile_left:
-                # Аватарка пользователя
-                st.markdown("""
-                <div class="avatar-container">
-                    <img src="https://via.placeholder.com/200/FFD700/FFFFFF?text=""" +
-                            (st.session_state.user_name[0] if st.session_state.user_name else "Z") +
-                            """&font-size=80" class="avatar-img">
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                # Загрузка аватарки
-                uploaded_avatar = st.file_uploader("📷 Загрузить фото профиля",
-                                                   type=['jpg', 'jpeg', 'png'],
-                                                   key="avatar_uploader")
-
-                if uploaded_avatar:
-                    # Сохраняем временно в session state
-                    st.session_state.user_avatar = uploaded_avatar
-                    # Сохраняем в базу данных
-                    avatar_path = f"avatars/{st.session_state.user_email}_{uploaded_avatar.name}"
-                    save_avatar(st.session_state.user_email, avatar_path)
-                    st.success("Фото профиля обновлено!")
-                    st.rerun()
-
-                # Статус
-                st.markdown("""
-                <div style="text-align: center; margin: 20px 0;">
-                    <span class="status-online"></span>
-                    <span style="color: #4CAF50; font-weight: 600;">Онлайн</span>
-                </div>
-                """, unsafe_allow_html=True)
-
-            with col_profile_right:
-                # Информация профиля
-                with st.form("profile_info_form"):
-                    st.markdown("### 📝 Информация профиля")
-
-                    username = st.text_input("👤 Имя пользователя",
-                                             value=profile_data[
-                                                 "username"] if profile_data else st.session_state.user_name)
-
-                    email = st.text_input("📧 Email",
-                                          value=st.session_state.user_email,
-                                          disabled=True)
-
-                    gender = st.selectbox("⚧ Пол",
-                                          ["Не указан", "Мужской", "Женский"],
-                                          index=["Не указан", "Мужской", "Женский"].index(
-                                              profile_data["gender"] if profile_data and profile_data[
-                                                  "gender"] else "Не указан"
-                                          ))
-
-                    bio = st.text_area("📖 О себе",
-                                       value=profile_data["bio"] if profile_data and profile_data["bio"] else "",
-                                       height=100,
-                                       placeholder="Расскажите о себе...")
-
-                    col_save, col_cancel = st.columns(2)
-                    with col_save:
-                        save_profile = st.form_submit_button("💾 Сохранить изменения", use_container_width=True)
-                    with col_cancel:
-                        st.form_submit_button("Отмена", use_container_width=True)
-
-                    if save_profile:
-                        if update_profile(st.session_state.user_email, username, gender, bio):
-                            st.session_state.user_name = username
-                            st.success("Профиль успешно обновлен!")
-                            st.rerun()
-                        else:
-                            st.error("Ошибка при обновлении профиля")
-
+    # --- ЛИЧНЫЙ КАБИНЕТ ---
+    elif st.session_state.auth_status == "logged_in":
+        user = st.session_state.user_data
+        
+        col_profile, col_stats = st.columns([1, 2])
+        
+        with col_profile:
+            st.markdown('<div style="background: white; padding: 25px; border-radius: 20px; border: 1px solid #eee; text-align: center;">', unsafe_allow_html=True)
+            
+            # Отображение фото или заглушки
+            if st.session_state.user_photo:
+                st.image(st.session_state.user_photo, width=120, output_format="PNG") # Streamlit сам скруглит через CSS если добавить класс, но проще через контейнер
+            else:
+                st.markdown(f'<div class="profile-pic-container"><div class="avatar-placeholder">{user["name"][0]}</div></div>', unsafe_allow_html=True)
+            
+            st.markdown(f"### {user['name']}")
+            st.markdown(f"<p style='color: #666;'>{user['email']}</p>", unsafe_allow_html=True)
+            
+            # Загрузка фото
+            uploaded_file = st.file_uploader("Обновить фото", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
+            if uploaded_file:
+                st.session_state.user_photo = uploaded_file
+                st.rerun()
+                
+            if st.button("🚪 Выйти", use_container_width=True):
+                st.session_state.auth_status = "logged_out"
+                st.session_state.user_photo = None
+                st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # Статистика в отдельном контейнере
-        st.markdown('<div class="profile-container">', unsafe_allow_html=True)
-        st.markdown("### 📊 Статистика")
-
-        col_stat1, col_stat2, col_stat3, col_stat4 = st.columns(4)
-
-        with col_stat1:
-            st.markdown("""
-            <div style="text-align: center;">
-                <div class="stat-icon">📅</div>
-                <h3>365</h3>
-                <p>Дней с нами</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with col_stat2:
-            st.markdown("""
-            <div style="text-align: center;">
-                <div class="stat-icon">📂</div>
-                <h3>128</h3>
-                <p>Файлов в облаке</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with col_stat3:
-            st.markdown("""
-            <div style="text-align: center;">
-                <div class="stat-icon">🤖</div>
-                <h3>2.4K</h3>
-                <p>Запросов к AI</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with col_stat4:
-            st.markdown("""
-            <div style="text-align: center;">
-                <div class="stat-icon">🎯</div>
-                <h3>95%</h3>
-                <p>Активность</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        # Настройки в отдельном контейнере
-        st.markdown('<div class="profile-container">', unsafe_allow_html=True)
-        st.markdown("### ⚙️ Настройки")
-
-        settings_col1, settings_col2 = st.columns(2)
-
-        with settings_col1:
-            st.markdown("**🔔 Уведомления**")
-            email_notif = st.checkbox("Email уведомления", value=True)
-            push_notif = st.checkbox("Push-уведомления", value=True)
-            ai_notif = st.checkbox("Уведомления от AI", value=True)
-
-        with settings_col2:
-            st.markdown("**🔒 Безопасность**")
-            two_factor = st.checkbox("Двухфакторная аутентификация")
-            login_history = st.button("📋 История входов", use_container_width=True)
-
-        if st.button("💾 Сохранить настройки", type="primary", use_container_width=True):
-            st.success("Настройки сохранены!")
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        # Информация о подписке
-        st.markdown('<div class="profile-container">', unsafe_allow_html=True)
-
-        st.markdown('</div>', unsafe_allow_html=True)
+        with col_stats:
+            st.markdown("### 🛠 Настройки ZORNET ID")
+            
+            with st.expander("👤 Личные данные", expanded=True):
+                st.text_input("Имя", value=user['name'])
+                st.text_input("Электронная почта", value=user['email'], disabled=True)
+                st.markdown(f"*Способ входа: {user.get('method', 'Обычный')}*")
+            
+            with st.expander("🔐 Безопасность"):
+                st.write("Двухфакторная аутентификация: **Выключена**")
+                st.button("Включить защиту")
+            
+            # Статистика использования
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.metric("Место на Диске", "1.2 ГБ", "12%")
+            with col_b:
+                st.metric("Запросы к AI", "154", "+24")
 
 # ================= ИНИЦИАЛИЗАЦИЯ =================
 if __name__ == "__main__":
