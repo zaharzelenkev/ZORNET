@@ -18,12 +18,14 @@ st.set_page_config(
     page_title="ZORNET",
     page_icon="🇧🇾",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"  # Изменили на collapsed, чтобы сайдбар был скрыт по умолчанию
 )
 
 # ================= СЕССИЯ =================
 if "page" not in st.session_state:
     st.session_state.page = "Главная"
+if "sidebar_visible" not in st.session_state:
+    st.session_state.sidebar_visible = False  # Добавили состояние видимости сайдбара
 if "ai_messages" not in st.session_state:
     st.session_state.ai_messages = []
 if "weather_data" not in st.session_state:
@@ -45,6 +47,51 @@ st.markdown("""
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
+    /* КНОПКА МЕНЮ (три полоски справа сверху) */
+    .menu-button-container {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 1000000;
+    }
+    
+    .menu-button {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        width: 50px;
+        height: 50px;
+        font-size: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(218, 165, 32, 0.4);
+        transition: all 0.3s ease;
+    }
+    
+    .menu-button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 16px rgba(218, 165, 32, 0.6);
+    }
+    
+    /* Стиль для трех полосок */
+    .hamburger-icon {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        width: 24px;
+    }
+    
+    .hamburger-icon span {
+        display: block;
+        height: 3px;
+        background: white;
+        border-radius: 2px;
+        transition: all 0.3s ease;
+    }
+    
     /* ГЛАВНЫЙ ЗАГОЛОВОК */
     .gold-title {
         font-family: 'Helvetica Neue', sans-serif;
@@ -167,21 +214,90 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ================= КНОПКА МЕНЮ (три полоски) =================
+# Создаем кнопку меню через JavaScript, чтобы она была всегда видна
+components.html("""
+<script>
+// Функция для создания кнопки меню
+function createMenuButton() {
+    // Создаем контейнер для кнопки
+    const menuContainer = document.createElement('div');
+    menuContainer.className = 'menu-button-container';
+    menuContainer.innerHTML = `
+        <button class="menu-button" id="menuToggleBtn">
+            <div class="hamburger-icon">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </button>
+    `;
+    
+    // Добавляем контейнер в тело документа
+    document.body.appendChild(menuContainer);
+    
+    // Получаем кнопку сайдбара Streamlit
+    const sidebarToggleBtn = document.querySelector('[data-testid="stSidebarCollapseButton"] button');
+    
+    // Назначаем обработчик клика на нашу кнопку
+    document.getElementById('menuToggleBtn').addEventListener('click', function() {
+        if (sidebarToggleBtn) {
+            sidebarToggleBtn.click();
+            
+            // Анимация для кнопки меню
+            this.classList.toggle('active');
+            const spans = this.querySelectorAll('.hamburger-icon span');
+            if (this.classList.contains('active')) {
+                spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
+                spans[1].style.opacity = '0';
+                spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
+            } else {
+                spans[0].style.transform = 'none';
+                spans[1].style.opacity = '1';
+                spans[2].style.transform = 'none';
+            }
+        }
+    });
+    
+    // Делаем стандартную кнопку Streamlit невидимой
+    if (sidebarToggleBtn) {
+        sidebarToggleBtn.parentElement.style.display = 'none';
+    }
+}
+
+// Создаем кнопку при загрузке страницы
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', createMenuButton);
+} else {
+    createMenuButton();
+}
+</script>
+""", height=0)
+
 # ================= САЙДБАР =================
-with st.sidebar:
-    st.markdown("<h3 style='color:#DAA520;'>🇧🇾 ZORNET</h3>", unsafe_allow_html=True)
+# Управляем видимостью сайдбара через session state
+if st.session_state.sidebar_visible:
+    with st.sidebar:
+        st.markdown("<h3 style='color:#DAA520;'>🇧🇾 ZORNET</h3>", unsafe_allow_html=True)
 
-    pages = [
-        ("🏠", "ГЛАВНАЯ", "Главная"),
-        ("📰", "НОВОСТИ", "Новости"),
-        ("🌤️", "ПОГОДА", "Погода"),
-        ("💾", "ДИСК", "Диск"),
-        ("👤", "ПРОФИЛЬ", "Профиль"),
-    ]
+        pages = [
+            ("🏠", "ГЛАВНАЯ", "Главная"),
+            ("📰", "НОВОСТИ", "Новости"),
+            ("🌤️", "ПОГОДА", "Погода"),
+            ("💾", "ДИСК", "Диск"),
+            ("👤", "ПРОФИЛЬ", "Профиль"),
+        ]
 
-    for i, (icon, text, page) in enumerate(pages):
-        if st.button(f"{icon} {text}", key=f"nav_{i}_{page}", use_container_width=True):
-            st.session_state.page = page
+        for i, (icon, text, page) in enumerate(pages):
+            if st.button(f"{icon} {text}", key=f"nav_{i}_{page}", use_container_width=True):
+                st.session_state.page = page
+                st.session_state.sidebar_visible = False
+                st.rerun()
+        
+        # Кнопка закрытия меню
+        st.markdown("---")
+        if st.button("✕ Закрыть меню", use_container_width=True):
+            st.session_state.sidebar_visible = False
             st.rerun()
 
 # ================= ФУНКЦИИ ПОГОДЫ =================
@@ -761,23 +877,6 @@ def get_wind_direction(degrees):
 
 # ================= СТРАНИЦА ПОГОДЫ =================
 if st.session_state.page == "Погода":
-    # CSS для кнопки развертывания меню и фиксации дизайна
-    st.markdown("""
-    <style>
-        /* Кнопка открытия сайдбара (три полоски) теперь всегда видна и золотая */
-        [data-testid="stSidebarCollapseButton"] {
-            position: fixed;
-            top: 15px;
-            left: 15px;
-            z-index: 1000000;
-            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-            color: white !important;
-            border-radius: 10px !important;
-            padding: 5px !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
 
     # --- ЗОЛОТОЙ ПОИСК (ДИЗАЙН КАК НА ГЛАВНОЙ) ---
