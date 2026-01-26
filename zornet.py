@@ -34,235 +34,355 @@ if "city_query" in st.query_params:
     st.session_state.user_city = st.query_params["city_query"]
     st.session_state.page = "Погода"
 
-# ================= CSS СТИЛИ =================
-/* ================= СТИЛИ ДЛЯ ГЛАВНОЙ СТРАНИЦЫ ================= */
-/* Кнопки сервисов */
-div.stButton > button.service-btn {
-    background: white !important;
-    border: 2px solid #E0E0E0 !important;
-    color: #1a1a1a !important;
-    padding: 15px 10px !important;
-    border-radius: 12px !important;
-    font-weight: 500 !important;
-    height: auto !important;
-    min-height: 80px !important;
-    white-space: pre-line !important;
-    line-height: 1.4 !important;
-    margin: 0 !important;
-    transition: all 0.3s ease !important;
-}
-
-div.stButton > button.service-btn:hover {
-    border-color: #DAA520 !important;
-    background: #FFF9E6 !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 5px 15px rgba(218, 165, 32, 0.1) !important;
-}
-
-/* Основные кнопки */
-div.stButton > button {
-    background: #f8f9fa !important;
-    border: 1px solid #dee2e6 !important;
-    color: #1a1a1a !important;
-    padding: 12px 20px !important;
-    border-radius: 10px !important;
-    font-weight: 500 !important;
-    width: 100% !important;
-    transition: all 0.3s ease !important;
-}
-
-div.stButton > button:hover {
-    background: white !important;
-    border-color: #DAA520 !important;
-    box-shadow: 0 4px 10px rgba(218, 165, 32, 0.15) !important;
-}
-
-/* Золотая кнопка */
-div.stButton > button.primary {
-    background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-    border: none !important;
-    color: white !important;
-    border-radius: 12px !important;
-    padding: 14px 28px !important;
-    font-weight: 600 !important;
-    box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3) !important;
-}
-
-st.markdown("""
-<style>
-    /* ОБЩИЙ СТИЛЬ */
-    .stApp { background-color: #ffffff; }
-
-    /* СКРЫВАЕМ ЛИШНЕЕ */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-
-    /* ГЛАВНЫЙ ЗАГОЛОВОК */
-    .gold-title {
-        font-family: 'Helvetica Neue', sans-serif;
-        font-size: 4rem;
-        font-weight: 800;
-        text-align: center;
-        background: linear-gradient(to bottom, #DAA520, #B8860B);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        letter-spacing: 4px;
-        text-transform: uppercase;
-        margin: 10px 0 30px 0;
-    }
-
-/* СКРЫВАЕМ ЛИШНЕЕ, НО ОСТАВЛЯЕМ ВОЗМОЖНОСТЬ ОТКРЫТЬ САЙДБАР */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {background: transparent;} /* Сделали прозрачным вместо hidden, чтобы кнопка меню была доступна */
-
-/* Кнопка-подсказка, если сайдбар закрыт */
-.st-emotion-cache-hp888a {
-    left: 10px !important;
-    color: #DAA520 !important;
-}
-
-/* Принудительно показываем кнопку развертывания, даже если хедер скрыт */
-[data-testid="stSidebarCollapseButton"] {
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    z-index: 10000;
-    background-color: #ffffff;
-    border-radius: 50%;
-    box-shadow: 0 2px 10px rgba(218, 165, 32, 0.4);
-}
-
-    /* КНОПКА ДЛЯ ВЫДВИЖЕНИЯ МЕНЮ (Floating Button) */
-    .menu-toggle {
-        position: fixed;
-        top: 15px;
-        left: 15px;
-        z-index: 999999;
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-        color: white;
-        border: none;
-        padding: 10px 15px;
-        border-radius: 50%;
-        cursor: pointer;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        font-size: 20px;
+# ================= СТРАНИЦА ГЛАВНАЯ (ОБНОВЛЕННЫЙ ДИЗАЙН) =================
+if st.session_state.page == "Главная":
+    # CSS для новой панели
+    st.markdown("""
+    <style>
+    /* НАВИГАЦИОННАЯ ПАНЕЛЬ */
+    .nav-panel {
+        background: white;
+        border-radius: 15px;
+        padding: 15px;
+        margin: 10px 0;
+        box-shadow: 0 4px 20px rgba(218, 165, 32, 0.1);
+        border: 1px solid rgba(218, 165, 32, 0.2);
     }
     
-    /* КНОПКИ ГЛАВНОЙ */
-    div.stButton > button {
-        background: #f8f9fa !important;
-        border: 1px solid #dee2e6 !important;
-        color: #1a1a1a !important;
-        padding: 20px !important; 
-        border-radius: 12px !important;
-        font-weight: bold !important;
-        width: 100% !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
-    }
-
-    /* ЗОЛОТАЯ КНОПКА AI */
-    .gold-btn {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-        border: none !important;
-        color: white !important;
-        border-radius: 12px !important;
-        padding: 14px 28px !important;
-        font-weight: 600 !important;
-        font-size: 16px !important;
-        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3) !important;
-    }
-
-    /* ВРЕМЯ В ЗОЛОТОЙ РАМКЕ */
-    .time-widget {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-        border-radius: 12px;
-        padding: 12px 15px;
-        text-align: center;
-        color: white;
-        font-weight: 600;
-        font-size: 16px;
-        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
-    }
-
-    /* РЕЗУЛЬТАТЫ ПОИСКА */
-    .search-result {
-        background: #f8f9fa;
-        padding: 15px;
+    /* КУРСЫ ВАЛЮТ */
+    .currency-box {
+        background: linear-gradient(135deg, #FFF9E6 0%, #FFEBB2 100%);
         border-radius: 10px;
-        margin-bottom: 10px;
-        border-left: 4px solid #DAA520;
+        padding: 10px 15px;
+        border: 2px solid #FFD700;
+        text-align: center;
+        font-weight: bold;
     }
-
-    /* ЧАТ AI */
-    .user-message {
-        background: #f0f0f0;
-        padding: 12px 18px;
-        border-radius: 18px;
-        max-width: 70%;
-        margin-left: auto;
-        margin-bottom: 15px;
+    
+    /* ПРОМОКОД */
+    .promo-box {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+        border-radius: 10px;
+        padding: 12px;
+        color: white;
+        text-align: center;
+        margin: 10px 0;
     }
-
-    .ai-message {
-        background: #f9f9f9;
-        padding: 12px 18px;
-        border-radius: 18px;
-        max-width: 70%;
-        margin-right: auto;
-        margin-bottom: 15px;
-        border-left: 4px solid #DAA520;
+    
+    /* КНОПКИ СЕРВИСОВ */
+    .service-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 15px;
+        margin: 20px 0;
     }
-
-    /* СТИЛИ ДЛЯ ПОГОДЫ */
-    .weather-widget {
-        background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
+    
+    .service-btn {
+        background: white;
+        border: 2px solid #E0E0E0;
+        border-radius: 12px;
+        padding: 15px 10px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .service-btn:hover {
+        border-color: #DAA520;
+        background: #FFF9E6;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(218, 165, 32, 0.1);
+    }
+    
+    .service-icon {
+        font-size: 24px;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    /* ПОКАЗАТЬ ВСЕ КНОПКА */
+    .show-all-btn {
+        background: #F5F5F5;
+        border: 2px dashed #DAA520;
+        border-radius: 12px;
+        padding: 12px;
+        text-align: center;
+        color: #B8860B;
+        font-weight: bold;
+        cursor: pointer;
+        margin: 15px 0;
+    }
+    
+    /* ПРИЛОЖЕНИЯ */
+    .apps-section {
+        background: #F8F9FA;
         border-radius: 15px;
         padding: 20px;
-        color: white;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 15px rgba(6, 147, 227, 0.3);
+        margin: 20px 0;
     }
-
-    .weather-temp {
-        font-size: 3.5rem;
-        font-weight: 800;
-        line-height: 1;
-    }
-
-    .weather-description {
-        font-size: 1.2rem;
-        margin-bottom: 15px;
-    }
-
-    .weather-details {
-        background: rgba(255, 255, 255, 0.2);
+    
+    .app-btn {
+        background: white;
+        border: 2px solid #E0E0E0;
         border-radius: 10px;
-        padding: 15px;
-        margin-top: 15px;
+        padding: 10px 15px;
+        margin: 5px;
+        display: inline-flex;
+        align-items: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
     }
-
-    .weather-icon {
-        font-size: 4rem;
-        text-align: center;
-        margin-bottom: 10px;
+    
+    .app-btn:hover {
+        border-color: #DAA520;
+        background: #FFF9E6;
     }
-
-    .forecast-day {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        padding: 15px;
-        text-align: center;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Кнопка открытия меню (визуальная подсказка)
-if st.button("☰", key="sidebar_trigger"):
-    # В Streamlit нет прямого API для программного открытия, 
-    # но нажатие на кнопку вызывает перезапуск, а sidebar_state по умолчанию expanded
-    st.rerun()
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Заголовок
+    st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
+    
+    # Время и быстрые действия
+    current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%); 
+                    border-radius: 12px; padding: 12px; text-align: center; color: white;">
+            <div style="font-size: 14px; opacity: 0.9;">🕒 Текущее время</div>
+            <div style="font-size: 20px; font-weight: bold;">{current_time.strftime('%H:%M')}</div>
+            <div style="font-size: 12px;">Минск</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        if st.button("⛅ Погода", key="weather_btn", use_container_width=True):
+            st.session_state.page = "Погода"
+            st.rerun()
+    
+    with col3:
+        if st.button("📰 Новости", key="news_btn", use_container_width=True):
+            st.session_state.page = "Новости"
+            st.rerun()
+    
+    with col4:
+        if st.button("🤖 ZORNET AI", key="ai_btn", use_container_width=True):
+            st.session_state.page = "ZORNET AI"
+            st.rerun()
+    
+    st.markdown("---")
+    
+    # ПАНЕЛЬ "НАЙДЁТСЯ ВСЁ"
+    st.markdown("""
+    <div class="nav-panel">
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h2 style="color: #DAA520; margin-bottom: 10px;">НАЙДЁТСЯ ВСЁ</h2>
+            
+            <div style="display: flex; justify-content: center; gap: 30px; margin: 15px 0;">
+                <div class="currency-box">
+                    <div style="font-size: 14px; color: #666;">USD</div>
+                    <div style="font-size: 20px; color: #1a1a1a;">2.84</div>
+                </div>
+                
+                <div class="currency-box">
+                    <div style="font-size: 14px; color: #666;">EUR</div>
+                    <div style="font-size: 20px; color: #1a1a1a;">3.34</div>
+                </div>
+                
+                <div class="currency-box">
+                    <div style="font-size: 14px; color: #666;">RUB</div>
+                    <div style="font-size: 20px; color: #1a1a1a;">3.21</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # ПРОМОКОД
+    st.markdown("""
+    <div class="promo-box">
+        <div style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">
+            🎁 Промокод 300 рублей на первую рекламу в Яндекс Директе
+        </div>
+        <div style="font-size: 18px; font-weight: 800;">ZORNET.BY</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # ПОИСКОВАЯ СИСТЕМА
+    st.markdown("<h3 style='text-align: center; margin: 30px 0 10px 0;'>🔍 ZORNET ПОИСК</h3>", unsafe_allow_html=True)
+    
+    # Золотая поисковая строка
+    components.html("""
+    <style>
+        .search-form {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 16px 25px;
+            font-size: 18px;
+            border: 2px solid #FFD700;
+            border-radius: 30px;
+            outline: none;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .search-input:focus {
+            border-color: #DAA520;
+            box-shadow: 0 6px 20px rgba(218, 165, 32, 0.3);
+        }
+        
+        .search-btn {
+            margin-top: 15px;
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
+            transition: all 0.3s ease;
+        }
+        
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(218, 165, 32, 0.6);
+        }
+    </style>
+    
+    <div style="text-align: center; padding: 0 20px;">
+        <form action="https://www.google.com/search" method="get" target="_blank" class="search-form">
+            <input type="text" name="q" placeholder="Найти в интернете..." class="search-input" required>
+            <br>
+            <button type="submit" class="search-btn">Найти</button>
+        </form>
+    </div>
+    """, height=150)
+    
+    # СЕРВИСЫ
+    st.markdown("<h3 style='margin: 40px 0 20px 0;'>📱 Найти сервис</h3>", unsafe_allow_html=True)
+    
+    # Сетка сервисов - исправленная версия без синтаксических ошибок
+    services = [
+        {"icon": "🎮", "name": "Игры", "page": "Игры"},
+        {"icon": "🗺️", "name": "Карты", "page": "Карты"},
+        {"icon": "🎬", "name": "Кинопоиск", "page": "Кинопоиск"},
+        {"icon": "🌐", "name": "Переводчик", "page": "Переводчик"},
+        {"icon": "✍️", "name": "Автору", "page": "Автору"},
+        {"icon": "✈️", "name": "Путешествия", "page": "Путешествия"},
+        {"icon": "🎥", "name": "Видео", "page": "Видео"},
+        {"icon": "🖼️", "name": "Картинки", "page": "Картинки"},
+        {"icon": "🎵", "name": "Музыка", "page": "Музыка"},
+        {"icon": "📺", "name": "Телепрограмма", "page": "ТВ"},
+        {"icon": "🏠", "name": "Недвижимость", "page": "Недвижимость"},
+        {"icon": "🎪", "name": "ZORNET Афиша", "page": "Афиша"},
+        {"icon": "💻", "name": "Практикум", "page": "Практикум"},
+        {"icon": "🔋", "name": "Бери заряд", "page": "Заряд"},
+        {"icon": "📢", "name": "Директ", "page": "Директ"},
+        {"icon": "💾", "name": "Диск", "page": "Диск"},
+    ]
+    
+    # Создаем сетку сервисов 4x4
+    for row in range(0, len(services), 4):
+        cols = st.columns(4)
+        for i in range(4):
+            if row + i < len(services):
+                service = services[row + i]
+                with cols[i]:
+                    # Создаем кнопку с кастомным стилем через st.markdown
+                    if st.button(
+                        f"{service['icon']}\n\n**{service['name']}**", 
+                        key=f"service_{row+i}", 
+                        use_container_width=True
+                    ):
+                        if service['page'] == "Диск":
+                            st.session_state.page = "Диск"
+                            st.rerun()
+                        elif service['page'] == "ZORNET Афиша":
+                            st.info("Сервис ZORNET Афиша скоро будет доступен!")
+                        else:
+                            st.info(f"Сервис '{service['name']}' в разработке")
+    
+    # Кнопка "Показать все"
+    if st.button("📋 Показать все сервисы", use_container_width=True):
+        st.info("Все 24 сервиса ZORNET будут показаны здесь")
+    
+    st.markdown("---")
+    
+    # ПРИЛОЖЕНИЯ
+    st.markdown("""
+    <div style="background: #F8F9FA; border-radius: 15px; padding: 20px; margin: 20px 0;">
+        <h4 style="color: #DAA520; margin-bottom: 15px;">📱 Приложения</h4>
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+            <div style="background: white; border: 2px solid #E0E0E0; border-radius: 10px; 
+                        padding: 10px 15px; margin: 5px; display: inline-flex; align-items: center; cursor: pointer;">
+                <span style="margin-right: 8px;">📱</span>
+                <span>ZORNET Браузер</span>
+            </div>
+            
+            <div style="background: white; border: 2px solid #E0E0E0; border-radius: 10px; 
+                        padding: 10px 15px; margin: 5px; display: inline-flex; align-items: center; cursor: pointer;">
+                <span style="margin-right: 8px;">📧</span>
+                <span>ZORNET Почта</span>
+            </div>
+            
+            <div style="background: white; border: 2px solid #E0E0E0; border-radius: 10px; 
+                        padding: 10px 15px; margin: 5px; display: inline-flex; align-items: center; cursor: pointer;">
+                <span style="margin-right: 8px;">🗺️</span>
+                <span>ZORNET Карты</span>
+            </div>
+            
+            <div style="background: white; border: 2px solid #E0E0E0; border-radius: 10px; 
+                        padding: 10px 15px; margin: 5px; display: inline-flex; align-items: center; cursor: pointer;">
+                <span style="margin-right: 8px;">🎵</span>
+                <span>ZORNET Музыка</span>
+            </div>
+            
+            <div style="background: white; border: 2px solid #E0E0E0; border-radius: 10px; 
+                        padding: 10px 15px; margin: 5px; display: inline-flex; align-items: center; cursor: pointer;">
+                <span style="margin-right: 8px;">💾</span>
+                <span>ZORNET Диск</span>
+            </div>
+            
+            <div style="background: white; border: 2px solid #E0E0E0; border-radius: 10px; 
+                        padding: 10px 15px; margin: 5px; display: inline-flex; align-items: center; cursor: pointer;">
+                <span style="margin-right: 8px;">🤖</span>
+                <span>ZORNET AI</span>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # ВСЕ СЕРВИСЫ КНОПКА
+    col_left, col_center, col_right = st.columns([1, 2, 1])
+    with col_center:
+        if st.button("🌐 Все сервисы ZORNET", type="primary", use_container_width=True):
+            st.info("Все сервисы ZORNET будут доступны в полном меню")
+    
+    # БЫСТРЫЕ ССЫЛКИ
+    st.markdown("---")
+    st.markdown("""
+    <div style="text-align: center; padding: 20px 0;">
+        <h4 style="color: #666; margin-bottom: 15px;">⚡ Быстрые ссылки</h4>
+        <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+            <a href="#" style="color: #DAA520; text-decoration: none; font-weight: 500;">🔍 Поиск</a>
+            <a href="#" style="color: #DAA520; text-decoration: none; font-weight: 500;">📰 Новости</a>
+            <a href="#" style="color: #DAA520; text-decoration: none; font-weight: 500;">🌤️ Погода</a>
+            <a href="#" style="color: #DAA520; text-decoration: none; font-weight: 500;">🗺️ Карты</a>
+            <a href="#" style="color: #DAA520; text-decoration: none; font-weight: 500;">🎬 Видео</a>
+            <a href="#" style="color: #DAA520; text-decoration: none; font-weight: 500;">🖼️ Картинки</a>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ================= САЙДБАР =================
 with st.sidebar:
