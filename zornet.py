@@ -31,70 +31,74 @@ if "weather_data" not in st.session_state:
 if "user_city" not in st.session_state:
     st.session_state.user_city = None
 
-# ================= CSS СТИЛИ =================
+# ================= ГЛОБАЛЬНЫЕ СТИЛИ И КНОПКА МЕНЮ =================
 st.markdown("""
 <style>
-<button class="hamburger-menu" id="menuBtn" onclick="toggleSidebar()">
-    <span></span>
-    <span></span>
-    <span></span>
-</button>
+    /* Прячем стандартный хедер, но оставляем место для нашей кнопки */
+    header {visibility: hidden !important;}
+    #MainMenu {visibility: hidden !important;}
+    footer {visibility: hidden !important;}
 
-<script>
-    function toggleSidebar() {
-        // Находим стандартную кнопку Streamlit для открытия/закрытия сайдбара
-        const sidebarButtons = window.parent.document.querySelectorAll('button[data-testid="stSidebarCollapse"]');
-        if (sidebarButtons.length > 0) {
-            sidebarButtons[0].click();
-        } else {
-            // Если кнопка не найдена (сайдбар закрыт полностью), ищем кнопку открытия
-            const openButtons = window.parent.document.querySelectorAll('button[aria-label="Open sidebar"]');
-            if (openButtons.length > 0) {
-                openButtons[0].click();
-            }
-        }
-    }
-</script>
-    /* ОБЩИЙ СТИЛЬ */
-    .stApp { background-color: #ffffff; }
-
-    /* СКРЫВАЕМ ЛИШНЕЕ */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-
-    /* СТИЛЬ КНОПКИ ГАМБУРГЕРА */
-    .hamburger-menu {
+    /* НАША КНОПКА-ГАМБУРГЕР */
+    .custom-hamburger {
         position: fixed;
-        top: 20px;
-        right: 20px;
-        z-index: 9999;
-        cursor: pointer;
+        top: 15px;
+        right: 15px;
+        width: 50px;
+        height: 45px;
         background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-        padding: 10px;
         border-radius: 8px;
-        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
         display: flex;
         flex-direction: column;
-        justify-content: space-around;
-        width: 45px;
-        height: 45px;
-        border: none;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        z-index: 9999999; /* Максимальный приоритет */
+        border: 2px solid rgba(255,255,255,0.2);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        transition: all 0.3s ease;
     }
 
-    .hamburger-menu span {
-        display: block;
-        width: 25px;
+    .custom-hamburger:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(218, 165, 32, 0.5);
+    }
+
+    /* Три полоски внутри */
+    .line {
+        width: 28px;
         height: 3px;
         background-color: white;
-        margin: 2px auto;
         border-radius: 2px;
-        transition: 0.3s;
+        display: block !important;
     }
 
-    .hamburger-menu:hover {
-        transform: scale(1.1);
-        box-shadow: 0 6px 20px rgba(218, 165, 32, 0.6);
+    /* Общий стиль приложения, чтобы контент не перекрывал кнопку */
+    .stApp {
+        background-color: #ffffff;
+    }
+</style>
+
+<div class="custom-hamburger" id="myMenuBtn" onclick="toggleStreamlitSidebar()">
+    <span class="line"></span>
+    <span class="line"></span>
+    <span class="line"></span>
+</div>
+
+<script>
+    function toggleStreamlitSidebar() {
+        // Ищем кнопку открытия/закрытия в родительском окне (Streamlit специфично)
+        const sidebarBtn = window.parent.document.querySelector('button[data-testid="stSidebarCollapse"]');
+        if (sidebarBtn) {
+            sidebarBtn.click();
+        } else {
+            // Если кнопка не найдена, пробуем найти кнопку открытия
+            const openBtn = window.parent.document.querySelector('button[aria-label="Open sidebar"]');
+            if (openBtn) {
+                openBtn.click();
+            }
+        }
     }
 
     /* ГЛАВНЫЙ ЗАГОЛОВОК */
