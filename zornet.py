@@ -34,6 +34,27 @@ if "user_city" not in st.session_state:
 # ================= CSS СТИЛИ =================
 st.markdown("""
 <style>
+<button class="hamburger-menu" id="menuBtn" onclick="toggleSidebar()">
+    <span></span>
+    <span></span>
+    <span></span>
+</button>
+
+<script>
+    function toggleSidebar() {
+        // Находим стандартную кнопку Streamlit для открытия/закрытия сайдбара
+        const sidebarButtons = window.parent.document.querySelectorAll('button[data-testid="stSidebarCollapse"]');
+        if (sidebarButtons.length > 0) {
+            sidebarButtons[0].click();
+        } else {
+            // Если кнопка не найдена (сайдбар закрыт полностью), ищем кнопку открытия
+            const openButtons = window.parent.document.querySelectorAll('button[aria-label="Open sidebar"]');
+            if (openButtons.length > 0) {
+                openButtons[0].click();
+            }
+        }
+    }
+</script>
     /* ОБЩИЙ СТИЛЬ */
     .stApp { background-color: #ffffff; }
 
@@ -41,6 +62,40 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
+
+    /* СТИЛЬ КНОПКИ ГАМБУРГЕРА */
+    .hamburger-menu {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        cursor: pointer;
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+        padding: 10px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+        width: 45px;
+        height: 45px;
+        border: none;
+    }
+
+    .hamburger-menu span {
+        display: block;
+        width: 25px;
+        height: 3px;
+        background-color: white;
+        margin: 2px auto;
+        border-radius: 2px;
+        transition: 0.3s;
+    }
+
+    .hamburger-menu:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(218, 165, 32, 0.6);
+    }
 
     /* ГЛАВНЫЙ ЗАГОЛОВОК */
     .gold-title {
