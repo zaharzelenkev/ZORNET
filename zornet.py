@@ -18,23 +18,18 @@ st.set_page_config(
     page_title="ZORNET",
     page_icon="🇧🇾",
     layout="wide",
-    initial_sidebar_state="collapsed"  # Изменили на collapsed, чтобы сайдбар был скрыт по умолчанию
+    initial_sidebar_state="expanded"
 )
 
 # ================= СЕССИЯ =================
 if "page" not in st.session_state:
     st.session_state.page = "Главная"
-if "sidebar_visible" not in st.session_state:
-    st.session_state.sidebar_visible = False  # Добавили состояние видимости сайдбара
 if "ai_messages" not in st.session_state:
     st.session_state.ai_messages = []
 if "weather_data" not in st.session_state:
     st.session_state.weather_data = None
 if "user_city" not in st.session_state:
     st.session_state.user_city = None
-if "city_query" in st.query_params:
-    st.session_state.user_city = st.query_params["city_query"]
-    st.session_state.page = "Погода"
 
 # ================= CSS СТИЛИ =================
 st.markdown("""
@@ -47,51 +42,6 @@ st.markdown("""
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
-    /* КНОПКА МЕНЮ (три полоски справа сверху) */
-    .menu-button-container {
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        z-index: 1000000;
-    }
-    
-    .menu-button {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        width: 50px;
-        height: 50px;
-        font-size: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        box-shadow: 0 4px 12px rgba(218, 165, 32, 0.4);
-        transition: all 0.3s ease;
-    }
-    
-    .menu-button:hover {
-        transform: scale(1.05);
-        box-shadow: 0 6px 16px rgba(218, 165, 32, 0.6);
-    }
-    
-    /* Стиль для трех полосок */
-    .hamburger-icon {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        width: 24px;
-    }
-    
-    .hamburger-icon span {
-        display: block;
-        height: 3px;
-        background: white;
-        border-radius: 2px;
-        transition: all 0.3s ease;
-    }
-    
     /* ГЛАВНЫЙ ЗАГОЛОВОК */
     .gold-title {
         font-family: 'Helvetica Neue', sans-serif;
@@ -214,162 +164,134 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ================= КНОПКА МЕНЮ (три полоски) =================
-# Создаем кнопку меню через JavaScript, чтобы она была всегда видна
-components.html("""
-<script>
-// Функция для создания кнопки меню
-function createMenuButton() {
-    // Создаем контейнер для кнопки
-    const menuContainer = document.createElement('div');
-    menuContainer.className = 'menu-button-container';
-    menuContainer.innerHTML = `
-        <button class="menu-button" id="menuToggleBtn">
-            <div class="hamburger-icon">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-        </button>
-    `;
-    
-    // Добавляем контейнер в тело документа
-    document.body.appendChild(menuContainer);
-    
-    // Получаем кнопку сайдбара Streamlit
-    const sidebarToggleBtn = document.querySelector('[data-testid="stSidebarCollapseButton"] button');
-    
-    // Назначаем обработчик клика на нашу кнопку
-    document.getElementById('menuToggleBtn').addEventListener('click', function() {
-        if (sidebarToggleBtn) {
-            sidebarToggleBtn.click();
-            
-            // Анимация для кнопки меню
-            this.classList.toggle('active');
-            const spans = this.querySelectorAll('.hamburger-icon span');
-            if (this.classList.contains('active')) {
-                spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
-                spans[1].style.opacity = '0';
-                spans[2].style.transform = 'rotate(-45deg) translate(7px, -6px)';
-            } else {
-                spans[0].style.transform = 'none';
-                spans[1].style.opacity = '1';
-                spans[2].style.transform = 'none';
-            }
-        }
-    });
-    
-    // Делаем стандартную кнопку Streamlit невидимой
-    if (sidebarToggleBtn) {
-        sidebarToggleBtn.parentElement.style.display = 'none';
-    }
-}
-
-// Создаем кнопку при загрузке страницы
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', createMenuButton);
-} else {
-    createMenuButton();
-}
-</script>
-""", height=0)
-
 # ================= САЙДБАР =================
-# Управляем видимостью сайдбара через session state
-if st.session_state.sidebar_visible:
-    with st.sidebar:
-        st.markdown("<h3 style='color:#DAA520;'>🇧🇾 ZORNET</h3>", unsafe_allow_html=True)
+with st.sidebar:
+    st.markdown("<h3 style='color:#DAA520;'>🇧🇾 ZORNET</h3>", unsafe_allow_html=True)
 
-        pages = [
-            ("🏠", "ГЛАВНАЯ", "Главная"),
-            ("📰", "НОВОСТИ", "Новости"),
-            ("🌤️", "ПОГОДА", "Погода"),
-            ("💾", "ДИСК", "Диск"),
-            ("👤", "ПРОФИЛЬ", "Профиль"),
-        ]
+    pages = [
+        ("🏠", "ГЛАВНАЯ", "Главная"),
+        ("📰", "НОВОСТИ", "Новости"),
+        ("🌤️", "ПОГОДА", "Погода"),
+        ("💾", "ДИСК", "Диск"),
+        ("👤", "ПРОФИЛЬ", "Профиль"),
+    ]
 
-        for i, (icon, text, page) in enumerate(pages):
-            if st.button(f"{icon} {text}", key=f"nav_{i}_{page}", use_container_width=True):
-                st.session_state.page = page
-                st.session_state.sidebar_visible = False
-                st.rerun()
-        
-        # Кнопка закрытия меню
-        st.markdown("---")
-        if st.button("✕ Закрыть меню", use_container_width=True):
-            st.session_state.sidebar_visible = False
+    for i, (icon, text, page) in enumerate(pages):
+        if st.button(f"{icon} {text}", key=f"nav_{i}_{page}", use_container_width=True):
+            st.session_state.page = page
             st.rerun()
+
 
 # ================= ФУНКЦИИ ПОГОДЫ =================
 def get_weather_icon(condition_code):
-    icons = {"01d": "☀️", "01n": "🌙", "02d": "⛅", "02n": "⛅", "03d": "☁️", "03n": "☁️", "04d": "☁️", "04n": "☁️", "09d": "🌧️", "09n": "🌧️", "10d": "🌦️", "10n": "🌦️", "11d": "⛈️", "11n": "⛈️", "13d": "❄️", "13n": "❄️", "50d": "🌫️", "50n": "🌫️"}
+    """Возвращает эмодзи для погодных условий"""
+    icons = {
+        "01d": "☀️", "01n": "🌙",
+        "02d": "⛅", "02n": "⛅",
+        "03d": "☁️", "03n": "☁️",
+        "04d": "☁️", "04n": "☁️",
+        "09d": "🌧️", "09n": "🌧️",
+        "10d": "🌦️", "10n": "🌦️",
+        "11d": "⛈️", "11n": "⛈️",
+        "13d": "❄️", "13n": "❄️",
+        "50d": "🌫️", "50n": "🌫️",
+    }
     return icons.get(condition_code, "🌡️")
 
-def get_weather_by_city(city_name):
+
+def get_wind_direction(degrees):
+    """Преобразует градусы в направление ветра"""
+    directions = ["С", "СВ", "В", "ЮВ", "Ю", "ЮЗ", "З", "СЗ"]
+    index = round(degrees / 45) % 8
+    return directions[index]
+
+
+def get_weather_by_coords(lat, lon):
+    """Получает погоду по координатам через OpenWeatherMap API"""
+    # ЗАМЕНИ ЭТОТ КЛЮЧ НА СВОЙ БЕСПЛАТНЫЙ КЛЮЧ С OpenWeatherMap!
     API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"
+
     try:
-        
-        # Геокодинг
-        geo_url = f"http://api.openweathermap.org/geo/1.0/direct?q={city_name}&limit=1&appid={API_KEY}"
-        geo_res = requests.get(geo_url, timeout=10).json()
-        if not geo_res: return None
-        
-        lat, lon = geo_res[0]["lat"], geo_res[0]["lon"]
-        
         # Текущая погода
-        curr_url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
-        curr_data = requests.get(curr_url, timeout=10).json()
-        
-        # Прогноз
-        fore_url = f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
-        fore_data = requests.get(fore_url, timeout=10).json()
-        url = f"https://api.openweathermap.org/data/2.5/weather?q={city_name}&appid={API_KEY}&units=metric&lang=ru"
-        r = requests.get(url, timeout=10)
-        if r.status_code == 200:
-            data = r.json()
+        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
+        response = requests.get(url, timeout=10)
+
+        if response.status_code == 200:
+            data = response.json()
+
+            # Прогноз на 5 дней
+            forecast_url = f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
+            forecast_response = requests.get(forecast_url, timeout=10)
+            forecast_data = forecast_response.json() if forecast_response.status_code == 200 else None
+
             return {
                 "current": {
                     "temp": round(data["main"]["temp"]),
+                    "feels_like": round(data["main"]["feels_like"]),
+                    "humidity": data["main"]["humidity"],
+                    "pressure": data["main"]["pressure"],
                     "description": data["weather"][0]["description"].capitalize(),
                     "icon": data["weather"][0]["icon"],
+                    "wind_speed": data["wind"]["speed"],
+                    "wind_deg": data["wind"].get("deg", 0),
+                    "clouds": data["clouds"]["all"],
+                    "visibility": data.get("visibility", 10000) / 1000,
                     "city": data["name"],
                     "country": data["sys"]["country"],
-                    "humidity": data["main"]["humidity"],
-                    "wind_speed": data["wind"]["speed"]
-                }
+                    "sunrise": datetime.datetime.fromtimestamp(data["sys"]["sunrise"]).strftime('%H:%M'),
+                    "sunset": datetime.datetime.fromtimestamp(data["sys"]["sunset"]).strftime('%H:%M')
+                },
+                "forecast": forecast_data
             }
+        else:
+            st.error(f"Ошибка API: {response.status_code}")
+            return None
+    except Exception as e:
+        st.error(f"Ошибка получения погоды: {e}")
         return None
-    except: return None
 
-# ================= КОМПОНЕНТ ПОИСКА (ЗОЛОТОЙ) =================
-def golden_search_bar(placeholder="Поиск...", target_param="q", is_google=True):
-    # Если это для погоды, форма будет отправлять параметр в URL самого приложения
-    action_url = "https://www.google.com/search" if is_google else ""
-    target_attr = 'target="_top"' if is_google else ""
-    
-    components.html(f"""
-    <style>
-        .search-container {{ text-align: center; font-family: sans-serif; }}
-        input[type="text"] {{
-            width: 100%; max-width: 600px; padding: 15px 25px;
-            font-size: 18px; border: 2px solid #e0e0e0; border-radius: 30px;
-            outline: none; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-        }}
-        input[type="text"]:focus {{ border-color: #DAA520; }}
-        button {{
-            margin-top: 15px; background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-            color: white; border: none; padding: 12px 40px; border-radius: 25px;
-            font-weight: bold; cursor: pointer; box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
-        }}
-    </style>
-    <div class="search-container">
-        <form action="{action_url}" method="get" {target_attr}>
-            <input type="text" name="{target_param}" placeholder="{placeholder}" required autocomplete="off">
-            <br>
-            <button type="submit">Найти</button>
-        </form>
-    </div>
-    """, height=150)
+
+def get_weather_by_city(city_name):
+    """Получает погоду по названию города"""
+    API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"  # Замени на свой ключ!
+
+    try:
+        # Сначала получаем координаты города
+        geocode_url = f"http://api.openweathermap.org/geo/1.0/direct?q={city_name}&limit=1&appid={API_KEY}"
+        geocode_response = requests.get(geocode_url, timeout=10)
+
+        if geocode_response.status_code == 200 and geocode_response.json():
+            city_data = geocode_response.json()[0]
+            lat = city_data["lat"]
+            lon = city_data["lon"]
+
+            return get_weather_by_coords(lat, lon)
+        else:
+            st.error("Город не найден")
+            return None
+    except Exception as e:
+        st.error(f"Ошибка: {e}")
+        return None
+
+
+# Обработчик сообщений от JavaScript
+def handle_js_messages():
+    """Обрабатывает сообщения от JavaScript компонентов"""
+    # Проверяем если есть сообщение от геолокации
+    if 'location_result' not in st.session_state:
+        # Пытаемся получить данные из query parameters (если JavaScript их отправил)
+        query_params = st.experimental_get_query_params()
+
+        if 'geolocation' in query_params:
+            try:
+                geo_data = json.loads(query_params['geolocation'][0])
+                st.session_state.location_result = geo_data
+                # Очищаем параметры
+                st.experimental_set_query_params()
+                st.rerun()
+            except:
+                pass
+
 
 # ================= ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ДИСКА =================
 def get_icon(file_path):
@@ -578,6 +500,7 @@ def get_belta_news():
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
 
+
 # ================= СТРАНИЦА ГЛАВНАЯ =================
 if st.session_state.page == "Главная":
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
@@ -591,9 +514,7 @@ if st.session_state.page == "Главная":
             st.session_state.page = "Погода"
             st.rerun()
     with col3:
-        if st.button("📰 Новости", use_container_width=True):
-            st.session_state.page = "Новости"
-            st.rerun()
+        st.button("💵 3.20\nBYN/USD", use_container_width=True)
     with col4:
         if st.button("🤖 ZORNET AI", use_container_width=True):
             st.session_state.page = "ZORNET AI"
@@ -601,246 +522,41 @@ if st.session_state.page == "Главная":
 
     st.markdown("---")
 
-    # --- ИНТЕГРАЦИЯ GOOGLE ПОИСКА (ЧЕРЕЗ IFRAME) ---
-    components.html("""
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: transparent;
-            font-family: 'Helvetica Neue', sans-serif;
-            display: flex;
-            justify-content: center;
-        }
-        
-        /* Контейнер формы */
-        .search-container {
-            width: 100%;
-            max-width: 600px;
-            padding: 10px;
-            box-sizing: border-box;
-            text-align: center;
-        }
+    search_query = st.text_input(
+        "",
+        placeholder="Поиск в интернете...",
+        key="main_search",
+        label_visibility="collapsed"
+    )
 
-        /* Поле ввода */
-        input[type="text"] {
-            width: 100%;
-            padding: 18px 25px;
-            font-size: 18px;
-            border: 2px solid #e0e0e0;
-            border-radius: 30px;
-            outline: none;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            background-color: #ffffff;
-            color: #333;
-            box-sizing: border-box;
-            -webkit-appearance: none;
-        }
-
-        input[type="text"]:focus {
-            border-color: #DAA520;
-            box-shadow: 0 0 15px rgba(218, 165, 32, 0.2);
-        }
-
-        /* Кнопка */
-        button {
-            margin-top: 20px;
-            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-            color: white;
-            border: none;
-            padding: 14px 40px;
-            border-radius: 25px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
-            transition: transform 0.2s, box-shadow 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            -webkit-appearance: none;
-            width: 100%;
-            max-width: 250px;
-        }
-
-        button:hover {
-            transform: scale(1.03);
-            box-shadow: 0 6px 20px rgba(218, 165, 32, 0.6);
-        }
-        
-        button:active {
-            transform: scale(0.98);
-        }
-    </style>
-    </head>
-    <body>
-    
-        <div class="search-container">
-            <form action="https://www.google.com/search" method="get" target="_top">
-                <input type="text" name="q" placeholder="🔍 Введите запрос" required autocomplete="off">
-                <br>
-                <button type="submit">Поиск</button>
-            </form>
-        </div>
-
-    </body>
-    </html>
-    """, height=220)
-
-    # ДОПОЛНИТЕЛЬНЫЕ КНОПКИ ПОД ПОИСКОМ
-    st.markdown("---")
-    
-    # Панель "Найдется всё" с курсами валют
-    col_currency1, col_currency2, col_currency3 = st.columns(3)
-    with col_currency1:
-        st.markdown("""
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; text-align: center;">
-            <div style="color: #666; font-size: 14px;">USD</div>
-            <div style="color: #DAA520; font-size: 24px; font-weight: bold;">2.84</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col_currency2:
-        st.markdown("""
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; text-align: center;">
-            <div style="color: #666; font-size: 14px;">EUR</div>
-            <div style="color: #DAA520; font-size: 24px; font-weight: bold;">3.34</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col_currency3:
-        st.markdown("""
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; text-align: center;">
-            <div style="color: #666; font-size: 14px;">RUB</div>
-            <div style="color: #DAA520; font-size: 24px; font-weight: bold;">3.21</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.markdown("<h3 style='text-align: center; color: #DAA520; margin: 30px 0 20px 0;'>НАЙДЁТСЯ ВСЁ</h3>", unsafe_allow_html=True)
-    
-    # Промокод
-    st.markdown("""
-    <div style="background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%); 
-                border-radius: 10px; padding: 15px; text-align: center; color: white; margin: 20px 0;">
-        <div style="font-size: 16px; font-weight: bold;">🎁 Промокод 300 рублей на первую рекламу в Яндекс Директе</div>
-        <div style="font-size: 20px; font-weight: 800; margin-top: 5px;">zornet.by</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Сервисы (сетка 4x4)
-    st.markdown("<h3 style='margin: 30px 0 20px 0;'>Найти сервис</h3>", unsafe_allow_html=True)
-    
-    # Первый ряд
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        if st.button("🎮\nИгры", use_container_width=True):
-            st.info("Игры скоро будут доступны!")
-    with col2:
-        if st.button("🗺️\nКарты", use_container_width=True):
-            st.info("Карты скоро будут доступны!")
-    with col3:
-        if st.button("🎬\nКинопоиск", use_container_width=True):
-            st.info("Кинопоиск скоро будет доступен!")
-    with col4:
-        if st.button("🌐\nПереводчик", use_container_width=True):
-            st.info("Переводчик скоро будет доступен!")
-    
-    # Второй ряд
-    col5, col6, col7, col8 = st.columns(4)
-    with col5:
-        if st.button("✍️\nАвтору", use_container_width=True):
-            st.info("Сервис 'Автору' скоро будет доступен!")
-    with col6:
-        if st.button("✈️\nПутешествия", use_container_width=True):
-            st.info("Путешествия скоро будут доступны!")
-    with col7:
-        if st.button("🎥\nВидео", use_container_width=True):
-            st.info("Видео скоро будет доступно!")
-    with col8:
-        if st.button("🖼️\nКартинки", use_container_width=True):
-            st.info("Картинки скоро будут доступны!")
-    
-    # Третий ряд
-    col9, col10, col11, col12 = st.columns(4)
-    with col9:
-        if st.button("🎵\nМузыка", use_container_width=True):
-            st.info("Музыка скоро будет доступна!")
-    with col10:
-        if st.button("📺\nТелепрограмма", use_container_width=True):
-            st.info("Телепрограмма скоро будет доступна!")
-    with col11:
-        if st.button("🏠\nНедвижимость", use_container_width=True):
-            st.info("Недвижимость скоро будет доступна!")
-    with col12:
-        if st.button("🎪\nZORNET Афиша", use_container_width=True):
-            st.info("ZORNET Афиша скоро будет доступна!")
-    
-    # Четвертый ряд
-    col13, col14, col15, col16 = st.columns(4)
-    with col13:
-        if st.button("💻\nПрактикум", use_container_width=True):
-            st.info("Практикум скоро будет доступен!")
-    with col14:
-        if st.button("🔋\nБери заряд", use_container_width=True):
-            st.info("Сервис 'Бери заряд' скоро будет доступен!")
-    with col15:
-        if st.button("📢\nДирект", use_container_width=True):
-            st.info("Директ скоро будет доступен!")
-    with col16:
-        if st.button("💾\nДиск", use_container_width=True):
-            st.session_state.page = "Диск"
-            st.rerun()
-    
-    # Кнопка "Показать все"
-    if st.button("📋 Показать все сервисы", use_container_width=True):
-        st.info("Все сервисы будут показаны в расширенном меню")
-    
-    st.markdown("---")
-    
-    # Приложения
-    st.markdown("<h3 style='margin: 20px 0 15px 0;'>Приложения</h3>", unsafe_allow_html=True)
-    
-    app_col1, app_col2, app_col3, app_col4 = st.columns(4)
-    with app_col1:
-        st.markdown("""
-        <div style="text-align: center; padding: 15px;">
-            <div style="font-size: 32px; margin-bottom: 10px;">📱</div>
-            <div style="font-weight: 500;">ZORNET Браузер</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with app_col2:
-        st.markdown("""
-        <div style="text-align: center; padding: 15px;">
-            <div style="font-size: 32px; margin-bottom: 10px;">📧</div>
-            <div style="font-weight: 500;">ZORNET Почта</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with app_col3:
-        st.markdown("""
-        <div style="text-align: center; padding: 15px;">
-            <div style="font-size: 32px; margin-bottom: 10px;">🗺️</div>
-            <div style="font-weight: 500;">ZORNET Карты</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with app_col4:
-        st.markdown("""
-        <div style="text-align: center; padding: 15px;">
-            <div style="font-size: 32px; margin-bottom: 10px;">🎵</div>
-            <div style="font-weight: 500;">ZORNET Музыка</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Кнопка "Все сервисы"
-    col_left, col_center, col_right = st.columns([1, 2, 1])
-    with col_center:
-        if st.button("🌐 Все сервисы", type="primary", use_container_width=True):
-            st.info("Все сервисы ZORNET будут доступны в полном меню")
+    if search_query:
+        st.markdown(f"### 🔍 Результаты поиска: **{search_query}**")
+        with st.spinner("Ищу информацию..."):
+            results = search_zornet(search_query, num_results=5)
+            if results:
+                for idx, result in enumerate(results):
+                    st.markdown(f"""
+                    <div class="search-result">
+                        <div style="font-weight: 600; color: #1a1a1a; font-size: 16px;">
+                            {idx + 1}. {result['title']}
+                        </div>
+                        <div style="color: #1a73e8; font-size: 13px; margin: 5px 0;">
+                            {result['url'][:60]}...
+                        </div>
+                        <div style="color: #555; font-size: 14px;">
+                            {result['snippet']}
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <a href="{result['url']}" target="_blank" 
+                               style="padding: 6px 12px; background: #DAA520; color: white; 
+                                      border-radius: 6px; text-decoration: none; font-size: 12px;">
+                                Перейти на сайт
+                            </a>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.info("По вашему запросу ничего не найдено.")
 
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
@@ -866,188 +582,197 @@ elif st.session_state.page == "Новости":
             </div>
             """, unsafe_allow_html=True)
 
-# ================= ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ (чтобы не было NameError) =================
-def get_wind_direction(degrees):
-    try:
-        directions = ["С", "СВ", "В", "ЮВ", "Ю", "ЮЗ", "З", "СЗ"]
-        index = round(float(degrees) / 45) % 8
-        return directions[index]
-    except:
-        return "Н/Д"
-
-# ================= СТРАНИЦА ПОГОДЫ =================
-if st.session_state.page == "Погода":
-    st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
-
-    # --- ЗОЛОТОЙ ПОИСК (ДИЗАЙН КАК НА ГЛАВНОЙ) ---
-    components.html("""
-    <div style="text-align: center; font-family: 'Helvetica Neue', sans-serif;">
-        <form action="/" method="get" target="_top">
-            <input type="text" name="city_query" placeholder="🔍 Введите город (напр. Гродно, Москва)" 
-                style="width: 100%; max-width: 600px; padding: 18px 25px; font-size: 18px; 
-                border: 2px solid #e0e0e0; border-radius: 30px; outline: none; 
-                box-shadow: 0 4px 10px rgba(0,0,0,0.05); -webkit-appearance: none;" required>
-            <br>
-            <button type="submit" style="margin-top: 20px; background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-                color: white; border: none; padding: 14px 40px; border-radius: 25px; font-size: 16px; 
-                font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
-                text-transform: uppercase; letter-spacing: 1px; width: 100%; max-width: 250px;">
-                Найти
-            </button>
-        </form>
-    </div>
-    """, height=180)
-
-    # Определяем город для показа
-    city_to_show = st.session_state.get('user_city', 'Минск')
-
-    with st.spinner(f"Получение данных для {city_to_show}..."):
-        weather_data = get_weather_by_city(city_to_show)
-
-        if weather_data:
-            current = weather_data["current"]
-            
-            # Используем .get() для защиты от KeyError
-            temp = current.get('temp', '--')
-            feels = current.get('feels_like', '--')
-            desc = current.get('description', 'Данные отсутствуют')
-            hum = current.get('humidity', '--')
-            wind = current.get('wind_speed', '--')
-            press = current.get('pressure', '--')
-            vis = current.get('visibility', '--')
-
-            st.markdown(f"### 🌤️ Погода в {current.get('city', city_to_show)}, {current.get('country', '')}")
-
-            # Главный блок
-            col_t, col_i = st.columns([2, 1])
-            with col_t:
-                st.markdown(f"""
-                <div style="background: white; padding: 25px; border-radius: 20px; border-left: 8px solid #DAA520; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-                    <div style="font-size: 4.5rem; font-weight: 800; color: #1a1a1a;">{temp}°C</div>
-                    <div style="font-size: 1.5rem; color: #666; margin-top: 5px;">
-                        {get_weather_icon(current.get('icon', ''))} {desc}
-                    </div>
-                    <div style="font-size: 1rem; color: #999; margin-top: 10px;">
-                        💁 Ощущается как <b>{feels}°C</b>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            with col_i:
-                st.markdown(f"""
-                <div style="text-align: center; font-size: 6rem;">
-                    {get_weather_icon(current.get('icon', ''))}
-                </div>
-                """, unsafe_allow_html=True)
-
-            st.markdown("#### 📊 Детали")
-            
-            # Сетка деталей
-            d1, d2, d3, d4 = st.columns(4)
-            d1.metric("💧 Влажность", f"{hum}%")
-            d2.metric("💨 Ветер", f"{wind} м/с")
-            d3.metric("🧭 Направление", get_wind_direction(current.get('wind_deg', 0)))
-            d4.metric("👁️ Видимость", f"{vis} км")
-
-            # Прогноз (если есть в API)
-            if weather_data.get("forecast"):
-                st.markdown("#### 📅 Прогноз")
-                forecast_list = weather_data["forecast"]["list"]
-                # Показываем 5 следующих отметок времени (или дней)
-                cols = st.columns(5)
-                for idx, item in enumerate(forecast_list[:5]):
-                    with cols[idx]:
-                        time_label = item['dt_txt'].split(' ')[1][:5]
-                        st.markdown(f"""
-                        <div style="background: #f0f2f6; padding: 10px; border-radius: 10px; text-align: center;">
-                            <div style="font-weight: bold;">{time_label}</div>
-                            <div style="font-size: 1.5rem;">{get_weather_icon(item['weather'][0]['icon'])}</div>
-                            <div>{round(item['main']['temp'])}°C</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-        else:
-            st.error(f"Не удалось найти город '{city_to_show}'. Проверьте правильность написания.")
-
-    # Кнопки быстрых городов
-    st.markdown("---")
-    st.markdown("### 🇧🇾 Быстрый выбор")
-    bc1, bc2, bc3, bc4 = st.columns(4)
-    if bc1.button("Минск", use_container_width=True): st.session_state.user_city = "Минск"; st.rerun()
-    if bc2.button("Гродно", use_container_width=True): st.session_state.user_city = "Гродно"; st.rerun()
-    if bc3.button("Брест", use_container_width=True): st.session_state.user_city = "Брест"; st.rerun()
-    if bc4.button("Гомель", use_container_width=True): st.session_state.user_city = "Гомель"; st.rerun()
-
-# ================= СТРАНИЦА ПОГОДЫ =================
+# ================= СТРАНИЦА ПОГОДЫ (ПРОСТО И РАБОЧЕ) =================
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
 
-    # Поиск внутри погоды
-    with st.container():
-        col_s1, col_s2 = st.columns([4, 1])
-        with col_s1:
-            city_in = st.text_input("Город", value=st.session_state.user_city, label_visibility="collapsed", placeholder="Введите город...")
-        with col_s2:
-            if st.button("Поиск", type="primary", use_container_width=True):
-                st.session_state.user_city = city_in
-                st.rerun()
+    # По умолчанию показываем Минск
+    default_city = "Минск"
 
-    data = get_weather_by_city(st.session_state.user_city)
-    
-    if data:
-        curr = data["current"]
-        st.markdown(f"### 📍 {curr['city']}, {curr['country']}")
-        
-        # Основной блок
-        m1, m2 = st.columns([2, 1])
-        with m1:
-            st.markdown(f"""
-            <div class="weather-card">
-                <div style="font-size: 4.5rem; font-weight: 800; color: #1a1a1a;">{curr['temp']}°C</div>
-                <div style="font-size: 1.6rem; color: #DAA520; font-weight: 600;">{get_weather_icon(curr['icon'])} {curr['description']}</div>
-                <div style="color: #666; margin-top: 10px;">Ощущается как <b>{curr['feels_like']}°C</b></div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with m2:
-            st.markdown(f"""
-            <div style="background: #f8f9fa; padding: 20px; border-radius: 20px; height: 100%;">
-                <p>💧 Влажность: <b>{curr['humidity']}%</b></p>
-                <p>💨 Ветер: <b>{curr['wind_speed']} м/с</b></p>
-                <p>🧭 Направление: <b>{get_wind_direction(curr['wind_deg'])}</b></p>
-                <p>👁️ Видимость: <b>{curr['visibility']} км</b></p>
-            </div>
-            """, unsafe_allow_html=True)
+    # Поисковая строка
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        city_input = st.text_input(
+            "🔍 Введите ваш город",
+            placeholder="Например: Минск, Гомель, Брест...",
+            key="weather_city_input"
+        )
 
-        # Прогноз на 5 дней (Восстановлено!)
-        if data.get("forecast"):
-            st.markdown("#### 📅 Прогноз на ближайшие дни")
-            f_cols = st.columns(5)
-            # Фильтруем прогноз, чтобы брать данные на 12:00 каждого дня
-            forecast_items = [item for item in data["forecast"]["list"] if "12:00:00" in item["dt_txt"]][:5]
-            
-            for idx, item in enumerate(forecast_items):
-                with f_cols[idx]:
-                    day_name = datetime.datetime.strptime(item["dt_txt"], "%Y-%m-%d %H:%M:%S").strftime("%a")
+    with col2:
+        search_clicked = st.button("Найти", type="primary", use_container_width=True)
+
+    # Определяем какой город показывать
+    city_to_show = default_city
+    if search_clicked and city_input:
+        city_to_show = city_input
+    elif 'user_city' in st.session_state:
+        city_to_show = st.session_state.user_city
+
+    # Получаем погоду для города
+    with st.spinner(f"Получаю погоду для {city_to_show}..."):
+        weather_data = get_weather_by_city(city_to_show)
+
+        if not weather_data:
+            # Если город не найден, показываем Минск
+            st.error(f"Город '{city_to_show}' не найден. Показываю погоду в Минске.")
+            weather_data = get_weather_by_city(default_city)
+            city_to_show = default_city
+
+        if weather_data:
+            current = weather_data["current"]
+
+            # Сохраняем город в сессии
+            st.session_state.user_city = city_to_show
+            st.session_state.weather_data = weather_data
+
+            # Показываем город
+            st.markdown(f"### 🌤️ Погода в {current['city']}, {current['country']}")
+
+            # Основная информация
+            col_temp, col_icon = st.columns([2, 1])
+
+            with col_temp:
+                st.markdown(f"""
+                <div style="text-align: center;">
+                    <div style="font-size: 4rem; font-weight: 800; color: #1a1a1a;">
+                        {current['temp']}°C
+                    </div>
+                    <div style="font-size: 1.5rem; color: #666; margin-top: 10px;">
+                        {get_weather_icon(current['icon'])} {current['description']}
+                    </div>
+                    <div style="font-size: 1rem; color: #888; margin-top: 5px;">
+                        💁 Ощущается как {current['feels_like']}°C
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            with col_icon:
+                st.markdown(f"""
+                <div style="text-align: center; padding-top: 15px;">
+                    <div style="font-size: 5rem;">
+                        {get_weather_icon(current['icon'])}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            # Детали погоды
+            st.markdown("#### 📊 Детали")
+
+            details = [
+                ("💧 Влажность", f"{current['humidity']}%"),
+                ("💨 Ветер", f"{current['wind_speed']} м/с"),
+                ("🧭 Направление", get_wind_direction(current['wind_deg'])),
+                ("📊 Давление", f"{current['pressure']} гПа"),
+                ("👁️ Видимость", f"{current['visibility']} км"),
+                ("☁️ Облачность", f"{current['clouds']}%"),
+                ("🌅 Восход", current['sunrise']),
+                ("🌇 Закат", current['sunset'])
+            ]
+
+            # Показываем детали в 2 колонки
+            for i in range(0, len(details), 2):
+                col1, col2 = st.columns(2)
+                with col1:
+                    name, value = details[i]
                     st.markdown(f"""
-                    <div style="background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%); 
-                        padding: 15px; border-radius: 15px; text-align: center; color: white;">
-                        <div style="font-weight: bold;">{day_name}</div>
-                        <div style="font-size: 2rem;">{get_weather_icon(item['weather'][0]['icon'])}</div>
-                        <div style="font-size: 1.2rem; font-weight: bold;">{round(item['main']['temp'])}°C</div>
+                    <div style="
+                        background: #f8f9fa;
+                        padding: 12px;
+                        border-radius: 8px;
+                        margin-bottom: 10px;
+                    ">
+                        <div style="color: #666; font-size: 0.9rem;">{name}</div>
+                        <div style="font-size: 1.2rem; font-weight: bold;">{value}</div>
                     </div>
                     """, unsafe_allow_html=True)
 
-        # Города Беларуси (Восстановлено!)
-        st.markdown("---")
-        st.markdown("### 🇧🇾 Быстрый выбор")
-        bel_cities = ["Минск", "Гродно", "Брест", "Гомель", "Витебск", "Могилев", "Солигорск", "Лида"]
-        b_cols = st.columns(4)
-        for i, city in enumerate(bel_cities):
-            if b_cols[i % 4].button(city, use_container_width=True):
+                if i + 1 < len(details):
+                    with col2:
+                        name, value = details[i + 1]
+                        st.markdown(f"""
+                        <div style="
+                            background: #f8f9fa;
+                            padding: 12px;
+                            border-radius: 8px;
+                            margin-bottom: 10px;
+                        ">
+                            <div style="color: #666; font-size: 0.9rem;">{name}</div>
+                            <div style="font-size: 1.2rem; font-weight: bold;">{value}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+            # Прогноз на 5 дней
+            if weather_data.get("forecast"):
+                st.markdown("#### 📅 Прогноз на 5 дней")
+
+                forecast = weather_data["forecast"]["list"]
+                days = {}
+
+                for item in forecast:
+                    date = item["dt_txt"].split(" ")[0]
+                    if date not in days:
+                        days[date] = item
+
+                # Берем максимум 5 дней
+                forecast_dates = list(days.keys())[:5]
+
+                # Показываем прогноз в ряд
+                cols = st.columns(len(forecast_dates))
+                for idx, date in enumerate(forecast_dates):
+                    with cols[idx]:
+                        day = days[date]
+                        day_name = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"][
+                            datetime.datetime.strptime(date, "%Y-%m-%d").weekday()
+                        ]
+
+                        st.markdown(f"""
+                        <div style="
+                            background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
+                            border-radius: 8px;
+                            padding: 12px;
+                            text-align: center;
+                            color: white;
+                        ">
+                            <div style="font-weight: bold; margin-bottom: 8px;">{day_name}</div>
+                            <div style="font-size: 2rem; margin: 8px 0;">
+                                {get_weather_icon(day['weather'][0]['icon'])}
+                            </div>
+                            <div style="font-size: 1.2rem; font-weight: bold;">
+                                {round(day['main']['temp'])}°C
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+    # Блок с городами Беларуси
+    st.markdown("---")
+    st.markdown("### 🇧🇾 Города Беларуси")
+
+    belarus_cities = [
+        ("Минск", "Столица"),
+        ("Гомель", "Второй по величине"),
+        ("Витебск", "Город фестивалей"),
+        ("Могилёв", "Исторический центр"),
+        ("Брест", "Город-герой"),
+        ("Гродно", "Западные ворота"),
+        ("Бобруйск", "Промышленный центр"),
+        ("Барановичи", "Крупный транспортный узел"),
+        ("Борисов", "Древний город"),
+        ("Орша", "Восточные ворота"),
+        ("Пинск", "Столица Полесья"),
+        ("Мозырь", "Нефтяная столица"),
+        ("Солигорск", "Город шахтёров"),
+        ("Новополоцк", "Нефтехимический центр"),
+        ("Лида", "Замковый город")
+    ]
+
+    # Показываем города в 3 колонки
+    cols = st.columns(3)
+    for idx, (city, description) in enumerate(belarus_cities):
+        with cols[idx % 3]:
+            if st.button(f"**{city}**", key=f"city_{city}", help=description, use_container_width=True):
+                # При нажатии на кнопку города, ищем погоду для него
                 st.session_state.user_city = city
                 st.rerun()
-    else:
-        st.error("Город не найден. Попробуйте еще раз.")
 
 # ================= ПРОФЕССИОНАЛЬНЫЙ ОБЛАЧНЫЙ ДИСК ZORNET DISK =================
 elif st.session_state.page == "Диск":
