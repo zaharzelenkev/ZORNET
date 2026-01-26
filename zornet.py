@@ -500,7 +500,6 @@ def get_belta_news():
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
 
-
 # ================= СТРАНИЦА ГЛАВНАЯ =================
 if st.session_state.page == "Главная":
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
@@ -522,41 +521,98 @@ if st.session_state.page == "Главная":
 
     st.markdown("---")
 
-    search_query = st.text_input(
-        "",
-        placeholder="Поиск в интернете...",
-        key="main_search",
-        label_visibility="collapsed"
-    )
+    # --- ИНТЕГРАЦИЯ GOOGLE ПОИСКА (ЧЕРЕЗ IFRAME) ---
+    # Мы используем components.html, чтобы создать изолированный HTML-блок.
+    # target="_top" — это ключ к успеху. Он заставляет ссылку открываться в текущем окне браузера,
+    # полностью замещая сайт ZORNET, и Streamlit не может этому помешать.
+    
+    components.html("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: transparent;
+            font-family: 'Helvetica Neue', sans-serif;
+            display: flex;
+            justify-content: center;
+        }
+        
+        /* Контейнер формы */
+        .search-container {
+            width: 100%;
+            max-width: 600px;
+            padding: 10px;
+            box-sizing: border-box; /* Важно для мобильных */
+            text-align: center;
+        }
 
-    if search_query:
-        st.markdown(f"### 🔍 Результаты поиска: **{search_query}**")
-        with st.spinner("Ищу информацию..."):
-            results = search_zornet(search_query, num_results=5)
-            if results:
-                for idx, result in enumerate(results):
-                    st.markdown(f"""
-                    <div class="search-result">
-                        <div style="font-weight: 600; color: #1a1a1a; font-size: 16px;">
-                            {idx + 1}. {result['title']}
-                        </div>
-                        <div style="color: #1a73e8; font-size: 13px; margin: 5px 0;">
-                            {result['url'][:60]}...
-                        </div>
-                        <div style="color: #555; font-size: 14px;">
-                            {result['snippet']}
-                        </div>
-                        <div style="margin-top: 10px;">
-                            <a href="{result['url']}" target="_blank" 
-                               style="padding: 6px 12px; background: #DAA520; color: white; 
-                                      border-radius: 6px; text-decoration: none; font-size: 12px;">
-                                Перейти на сайт
-                            </a>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.info("По вашему запросу ничего не найдено.")
+        /* Поле ввода */
+        input[type="text"] {
+            width: 100%;
+            padding: 18px 25px;
+            font-size: 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 30px;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            background-color: #ffffff;
+            color: #333;
+            box-sizing: border-box; /* Чтобы padding не ломал ширину */
+            -webkit-appearance: none; /* Убирает стили iOS */
+        }
+
+        input[type="text"]:focus {
+            border-color: #DAA520;
+            box-shadow: 0 0 15px rgba(218, 165, 32, 0.2);
+        }
+
+        /* Кнопка */
+        button {
+            margin-top: 20px;
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            -webkit-appearance: none; /* Убирает стили iOS */
+            width: 100%; /* На мобильных кнопка будет широкой */
+            max-width: 250px; /* На ПК не шире 250px */
+        }
+
+        button:hover {
+            transform: scale(1.03);
+            box-shadow: 0 6px 20px rgba(218, 165, 32, 0.6);
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+    </style>
+    </head>
+    <body>
+    
+        <div class="search-container">
+            <form action="https://www.google.com/search" method="get" target="_top">
+                <input type="text" name="q" placeholder="🔍 Введите запрос..." required autocomplete="off">
+                <br>
+                <button type="submit">ИСКАТЬ</button>
+            </form>
+        </div>
+
+    </body>
+    </html>
+    """, height=220) # Высота фрейма, чтобы влезла тень и кнопка
 
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
