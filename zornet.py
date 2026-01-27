@@ -876,18 +876,27 @@ elif st.session_state.page == "Погода":
 elif st.session_state.page == "Диск":
     st.markdown('<div class="gold-title">💾 ДИСК</div>', unsafe_allow_html=True)
 
-    # Инициализация сессионных переменных
-    if "disk_current_path" not in st.session_state:
-        st.session_state.disk_current_path = "zornet_cloud"
+    # --- НОВАЯ ПРОВЕРКА ПРИВАТНОСТИ ---
+    if st.session_state.get("auth_status") != "logged_in":
+        st.warning("⚠️ Чтобы пользоваться личным Диском, пожалуйста, войдите в ZORNET ID")
+        if st.button("Перейти в Профиль для входа"):
+            st.session_state.page = "Профиль"
+            st.rerun()
+        st.stop() # Остановка выполнения, если не вошел
 
-    if "disk_action" not in st.session_state:
-        st.session_state.disk_action = "view"  # view, upload, new_folder, search
+    # Создаем уникальный путь для текущего пользователя
+    user_email = st.session_state.user_data['email']
+    # Очищаем email от точек и символов, чтобы создать имя папки
+    user_folder_name = "".join(filter(str.isalnum, user_email)) 
+    user_base_path = os.path.join("zornet_storage", user_folder_name)
 
-    # Создаем корневую папку если не существует
-    import os
+    # Если путь еще не задан или он «чужой» — обновляем
+    if "disk_current_path" not in st.session_state or not st.session_state.disk_current_path.startswith(user_base_path):
+        st.session_state.disk_current_path = user_base_path
 
+    # Физически создаем папку пользователя на сервере
     os.makedirs(st.session_state.disk_current_path, exist_ok=True)
-
+    
     # CSS стили для диска
     st.markdown("""
     <style>
