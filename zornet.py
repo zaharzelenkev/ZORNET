@@ -1417,7 +1417,6 @@ elif st.session_state.page == "Профиль":
         with col_right:
             st.markdown(f"""
             <div style="text-align:left;">
-                <span style="background:#fff9e6; color:#B8860B; padding:5px 15px; border-radius:50px; font-weight:bold; font-size:12px;">PREMIUM ACCOUNT</span>
                 <h1 style="margin:10px 0 0 0;">{user['first_name']} {user['last_name']}</h1>
                 <p style="color:#666; font-size:18px;">@{user['nickname']}</p>
                 <hr style="margin:20px 0;">
