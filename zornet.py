@@ -1292,179 +1292,193 @@ elif st.session_state.page == "Диск":
                                     with open(item_path, 'rb') as f:
                                         st.download_button("Скачать PDF", f.read(), item)
 
-# ================= СТРАНИЦА ПРОФИЛЯ (ZORNET ID + GOOGLE AUTH) =================
+# ================= СТРАНИЦА ПРОФИЛЯ (ZORNET ID С ГУГЛ-АВТОРИЗАЦИЕЙ) =================
 elif st.session_state.page == "Профиль":
-    # Инициализация расширенных состояний
-    if "auth_status" not in st.session_state:
-        st.session_state.auth_status = "logged_out"
+    # Состояния сессии
+    if "auth_step" not in st.session_state:
+        st.session_state.auth_step = "login_start" # login_start, google_picker, info_form, logged_in
     if "user_data" not in st.session_state:
-        st.session_state.user_data = None
+        st.session_state.user_data = {"email": "", "first_name": "", "last_name": "", "nickname": ""}
     if "user_photo" not in st.session_state:
         st.session_state.user_photo = None
 
+    # --- УЛУЧШЕННЫЕ СТИЛИ (GOOGLE STYLE + ZORNET GOLD) ---
     st.markdown("""
     <style>
-        .auth-card {
+        /* Общий контейнер как в Google */
+        .google-box {
             background: white;
-            padding: 40px;
-            border-radius: 24px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-            max-width: 450px;
-            margin: 20px auto;
-            text-align: center;
-            border: 1px solid #f0f0f0;
-        }
-        /* Стилизация кнопки Google */
-        .google-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            width: 100%;
-            height: 45px;
-            background: white;
+            border-radius: 8px;
             border: 1px solid #dadce0;
-            border-radius: 22px;
-            color: #3c4043;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            margin-bottom: 20px;
-            transition: background 0.2s;
-        }
-        .google-btn:hover { background: #f8f9fa; border-color: #d2e3fc; }
-        
-        .divider {
+            max-width: 850px;
+            margin: 40px auto;
             display: flex;
-            align-items: center;
-            text-align: center;
-            color: #70757a;
-            margin: 20px 0;
+            overflow: hidden;
+            min-height: 450px;
+            font-family: 'Roboto', arial, sans-serif;
         }
-        .divider::before, .divider::after {
-            content: '';
+        .google-left {
             flex: 1;
-            border-bottom: 1px solid #e8eaed;
+            padding: 40px;
+            text-align: left;
         }
-        .divider:not(:empty)::before { margin-right: .75em; }
-        .divider:not(:empty)::after { margin-left: .75em; }
-
-        /* Круглый аватар */
-        .profile-pic-container {
-            position: relative;
-            width: 120px;
-            height: 120px;
-            margin: 0 auto 20px;
+        .google-right {
+            flex: 1;
+            padding: 40px;
+            border-left: 1px solid #f0f0f0;
         }
-        .main-avatar {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid #DAA520;
-            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
-        }
-        .avatar-placeholder {
-            width: 120px;
-            height: 120px;
-            background: #DAA520;
-            color: white;
-            border-radius: 50%;
+        .google-logo-text { font-size: 24px; font-weight: 500; margin-bottom: 20px; }
+        .google-title { font-size: 32px; font-weight: 400; color: #202124; margin-bottom: 15px; }
+        
+        /* Список аккаунтов */
+        .account-item {
             display: flex;
             align-items: center;
-            justify-content: center;
-            font-size: 48px;
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .account-item:hover { background: #f8f9fa; }
+        .account-avatar {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: #DAA520;
+            margin-right: 12px;
+        }
+        
+        /* Профиль */
+        .premium-profile-card {
+            background: #fff;
+            border-radius: 30px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+            border: 1px solid #f0f0f0;
+            text-align: center;
+        }
+        .id-badge-main {
+            display: inline-block;
+            padding: 5px 15px;
+            background: linear-gradient(135deg, #DAA520, #B8860B);
+            color: white;
+            border-radius: 50px;
             font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 20px;
         }
     </style>
     """, unsafe_allow_html=True)
 
-    # --- ЛОГИКА ВХОДА ---
-    if st.session_state.auth_status == "logged_out":
-        st.markdown('<div class="auth-card">', unsafe_allow_html=True)
-        st.markdown('<div style="font-size: 28px; font-weight: 800; color: #B8860B; margin-bottom: 10px;">ZORNET ID</div>', unsafe_allow_html=True)
-        st.markdown('<h3 style="margin-top:0;">Вход</h3>', unsafe_allow_html=True)
-        
-        # Кнопка Google
-        if st.button("🌐 Войти через Google", use_container_width=True):
-            # Имитация входа через Google
-            st.session_state.auth_status = "logged_in"
-            st.session_state.user_data = {"name": "Иван Иванов", "email": "ivan@gmail.com", "method": "Google"}
-            st.rerun()
-            
-        st.markdown('<div class="divider">или</div>', unsafe_allow_html=True)
-        
-        email = st.text_input("Email или телефон")
-        if st.button("Далее", type="primary", use_container_width=True):
-            if email:
-                st.session_state.auth_email = email
-                st.session_state.auth_status = "step_password"
-                st.rerun()
-        
-        st.markdown('<p style="margin-top:20px; font-size:14px; color:#1a73e8; cursor:pointer;">Создать аккаунт</p>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    elif st.session_state.auth_status == "step_password":
-        st.markdown('<div class="auth-card">', unsafe_allow_html=True)
-        st.markdown(f'<h4>Введите пароль</h4><p style="color: #666;">{st.session_state.auth_email}</p>', unsafe_allow_html=True)
-        password = st.text_input("Пароль", type="password")
-        if st.button("Войти", type="primary", use_container_width=True):
-            st.session_state.auth_status = "logged_in"
-            st.session_state.user_data = {"name": "ZORNET Пользователь", "email": st.session_state.auth_email, "method": "Email"}
-            st.rerun()
-        if st.button("Назад"):
-            st.session_state.auth_status = "logged_out"
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # --- ЛИЧНЫЙ КАБИНЕТ ---
-    elif st.session_state.auth_status == "logged_in":
-        user = st.session_state.user_data
-        
-        col_profile, col_stats = st.columns([1, 2])
-        
-        with col_profile:
-            st.markdown('<div style="background: white; padding: 25px; border-radius: 20px; border: 1px solid #eee; text-align: center;">', unsafe_allow_html=True)
-            
-            # Отображение фото или заглушки
-            if st.session_state.user_photo:
-                st.image(st.session_state.user_photo, width=120, output_format="PNG") # Streamlit сам скруглит через CSS если добавить класс, но проще через контейнер
-            else:
-                st.markdown(f'<div class="profile-pic-container"><div class="avatar-placeholder">{user["name"][0]}</div></div>', unsafe_allow_html=True)
-            
-            st.markdown(f"### {user['name']}")
-            st.markdown(f"<p style='color: #666;'>{user['email']}</p>", unsafe_allow_html=True)
-            
-            # Загрузка фото
-            uploaded_file = st.file_uploader("Обновить фото", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
-            if uploaded_file:
-                st.session_state.user_photo = uploaded_file
-                st.rerun()
-                
-            if st.button("🚪 Выйти", use_container_width=True):
-                st.session_state.auth_status = "logged_out"
-                st.session_state.user_photo = None
+    # 1. ЭКРАН: НАЧАЛО (КНОПКА ВОЙТИ)
+    if st.session_state.auth_step == "login_start":
+        st.markdown('<div class="gold-title">🆔 ZORNET ID</div>', unsafe_allow_html=True)
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.markdown('<div style="text-align:center; padding: 50px 0;">', unsafe_allow_html=True)
+            if st.button("🌐 Войти через Google", use_container_width=True):
+                st.session_state.auth_step = "google_picker"
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-        with col_stats:
-            st.markdown("### 🛠 Настройки ZORNET ID")
+    # 2. ЭКРАН: ВЫБОР АККАУНТА (КАК НА ТВОЕМ ФОТО)
+    elif st.session_state.auth_step == "google_picker":
+        st.markdown(f"""
+        <div class="google-box">
+            <div class="google-left">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:30px;">
+                    <span style="color:#4285F4; font-weight:bold; font-size:20px;">G</span>
+                    <span style="color:#666; font-size:14px;">Вход через аккаунт Google</span>
+                </div>
+                <div class="google-title">Выберите аккаунт</div>
+                <div style="color:#5f6368; font-size:16px;">Переход в приложение "ZORNET Disk"</div>
+            </div>
+            <div class="google-right">
+                <div style="margin-top:20px;"></div>
+        """, unsafe_allow_html=True)
+        
+        # Имитация выбора аккаунта
+        if st.button("👤 Захар Зеленкевич (zahar.zelenkevv@gmail.com)", use_container_width=True):
+            st.session_state.user_data["email"] = "zahar.zelenkevv@gmail.com"
+            st.session_state.auth_step = "info_form"
+            st.rerun()
             
-            with st.expander("👤 Личные данные", expanded=True):
-                st.text_input("Имя", value=user['name'])
-                st.text_input("Электронная почта", value=user['email'], disabled=True)
-                st.markdown(f"*Способ входа: {user.get('method', 'Обычный')}*")
+        st.markdown('<div style="margin: 15px 0; border-bottom: 1px solid #f0f0f0;"></div>', unsafe_allow_html=True)
+        
+        if st.button("➕ Использовать другой аккаунт", use_container_width=True):
+            st.info("Пожалуйста, выберите основной аккаунт для теста.")
             
-            with st.expander("🔐 Безопасность"):
-                st.write("Двухфакторная аутентификация: **Выключена**")
-                st.button("Включить защиту")
+        st.markdown("""
+            </div>
+        </div>
+        <div style="max-width:850px; margin: 0 auto; display:flex; justify-content:space-between; color:#70757a; font-size:12px; padding:0 10px;">
+            <div>Русский</div>
+            <div style="display:flex; gap:15px;"><span>Справка</span><span>Конфиденциальность</span><span>Условия</span></div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # 3. ЭКРАН: ВВОД ДАННЫХ (ФАМИЛИЯ, ИМЯ, НИК)
+    elif st.session_step == "info_form" if "session_step" in locals() else st.session_state.auth_step == "info_form":
+        st.markdown('<div class="gold-title">🆔 ZORNET ID</div>', unsafe_allow_html=True)
+        with st.container():
+            st.markdown('<div class="google-box" style="flex-direction:column; padding:40px; min-height:auto;">', unsafe_allow_html=True)
+            st.subheader("Завершение регистрации")
+            st.write(f"Аккаунт: **{st.session_state.user_data['email']}**")
             
-            # Статистика использования
-            col_a, col_b = st.columns(2)
-            with col_a:
-                st.metric("Место на Диске", "1.2 ГБ", "12%")
-            with col_b:
-                st.metric("Запросы к AI", "154", "+24")
+            f_name = st.text_input("Ваше Имя")
+            l_name = st.text_input("Ваша Фамилия")
+            n_name = st.text_input("Никнейм (будет виден всем)")
+            
+            if st.button("Создать профиль ZORNET", type="primary"):
+                if f_name and l_name and n_name:
+                    st.session_state.user_data.update({
+                        "first_name": f_name,
+                        "last_name": l_name,
+                        "nickname": n_name
+                    })
+                    st.session_state.auth_step = "logged_in"
+                    st.success("Профиль успешно создан!")
+                    st.rerun()
+                else:
+                    st.error("Пожалуйста, заполните все поля")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    # 4. ЭКРАН: ГОТОВЫЙ ПРОФИЛЬ
+    elif st.session_state.auth_step == "logged_in":
+        st.markdown('<div class="gold-title">🆔 ZORNET ID</div>', unsafe_allow_html=True)
+        
+        user = st.session_state.user_data
+        
+        col1, col2 = st.columns([1, 2])
+        
+        with col1:
+            st.markdown('<div class="premium-profile-card">', unsafe_allow_html=True)
+            
+            # Аватар
+            if st.session_state.user_photo:
+                st.image(st.session_state.user_photo, width=150)
+            else:
+                st.markdown(f'<div style="width:120px; height:120px; background:#DAA520; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:50px; margin:0 auto 20px;">{user["first_name"][0]}</div>', unsafe_allow_html=True)
+            
+            st.markdown(f'<div class="id-badge-main">@{user["nickname"]}</div>', unsafe_allow_html=True)
+            
+            # Загрузка фото
+            new_photo = st.file_uploader("Изменить фото", type=['png', 'jpg', 'jpeg'], label_visibility="collapsed")
+            if new_photo:
+                st.session_state.user_photo = new_photo
+                st.rerun()
+
+            if st.button("🚪 Выйти", use_container_width=True):
+                st.session_state.auth_step = "login_start"
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+        with col2:
+            st.markdown("### Личная информация")
+            st.info("Эти данные используются во всех сервисах ZORNET (Disk, AI, Weather)")
+            
+            st.text_input("Имя", value=user["first_name"], disabled=True)
+            st.text_input("Фамилия", value=user["last_name"], disabled=True)
+            st.text_input("Email", value=user["email"], disabled=True)
 
 # ================= ИНИЦИАЛИЗАЦИЯ =================
 if __name__ == "__main__":
