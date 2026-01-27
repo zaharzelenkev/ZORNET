@@ -878,7 +878,7 @@ elif st.session_state.page == "Диск":
 
     # --- НОВАЯ ПРОВЕРКА ПРИВАТНОСТИ ---
     if st.session_state.get("auth_status") != "logged_in":
-        st.warning("⚠️ Чтобы пользоваться диском, пожалуйста, войдите в ZORNET ID")
+        st.warning("⚠️ Чтобы пользоваться диском войдите в ZORNET ID")
         if st.button("Перейти в профиль для входа"):
             st.session_state.page = "Профиль"
             st.rerun()
