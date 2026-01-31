@@ -59,9 +59,9 @@ if "is_logged_in" not in st.session_state:
     st.session_state.is_logged_in = False
 
 # ================= GOOGLE OAUTH НАСТРОЙКИ =================
-GOOGLE_CLIENT_ID = st.secrets.get("GOOGLE_CLIENT_ID", "ваш_клиент_ID")
-GOOGLE_CLIENT_SECRET = st.secrets.get("GOOGLE_CLIENT_SECRET", "ваш_клиент_секрет")
-GOOGLE_REDIRECT_URI = st.secrets.get("GOOGLE_REDIRECT_URI", "http://localhost:8501")
+GOOGLE_CLIENT_ID = st.secrets.get("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_REDIRECT_URI = st.secrets.get("GOOGLE_REDIRECT_URI", "")
 
 # ================= ОБНОВЛЕННЫЕ CSS СТИЛИ (ТВОЙ ДИЗАЙН) =================
 st.markdown("""
@@ -450,13 +450,90 @@ def init_db():
     conn.commit()
     conn.close()
 
+def create_database():
+    """Создает базу данных и таблицы с нуля"""
+    import os
+    
+    # Удаляем старую базу если есть
+    if os.path.exists("zornet.db"):
+        os.remove("zornet.db")
+        print("Старая база удалена")
+    
+    # Создаем новую
+    conn = sqlite3.connect("zornet.db")
+    c = conn.cursor()
+    
+    # Таблица пользователей
+    c.execute("""
+        CREATE TABLE users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            username TEXT UNIQUE,
+            first_name TEXT,
+            last_name TEXT,
+            avatar TEXT,
+            google_id TEXT UNIQUE,
+            password_hash TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # Таблица сообщений
+    c.execute("""
+        CREATE TABLE messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            room_id TEXT,
+            user_id INTEGER,
+            content TEXT,
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id)
+        )
+    """)
+    
+    # Таблица комнат
+    c.execute("""
+        CREATE TABLE rooms (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            room_id TEXT UNIQUE,
+            name TEXT,
+            youtube_url TEXT,
+            password_hash TEXT,
+            owner_id INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (owner_id) REFERENCES users (id)
+        )
+    """)
+    
+    conn.commit()
+    conn.close()
+    print("✅ База данных создана!")
+    
+    # Создаем тестового пользователя
+    conn = sqlite3.connect("zornet.db")
+    c = conn.cursor()
+    
+    test_password_hash = hashlib.sha256("test123".encode()).hexdigest()
+    
+    try:
+        c.execute("""
+            INSERT INTO users (email, username, first_name, last_name, password_hash)
+            VALUES (?, ?, ?, ?, ?)
+        """, ("test@zornet.by", "test_user", "Тестовый", "Пользователь", test_password_hash))
+        conn.commit()
+        print("✅ Тестовый пользователь создан: test@zornet.by / test123")
+    except:
+        print("Тестовый пользователь уже существует")
+    
+    conn.close()
+    return True
+
 def register_user(email, username, first_name, last_name, password=None, google_id=None, avatar=None):
     """Регистрация пользователя"""
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
     
     try:
-        # Создаем таблицу если не существует
+        # 1. СОЗДАЕМ ТАБЛИЦУ
         c.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -470,52 +547,85 @@ def register_user(email, username, first_name, last_name, password=None, google_
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        conn.commit()
         
-        password_hash = hashlib.sha256(password.encode()).hexdigest() if password else None
+        # 2. ХЕШИРУЕМ ПАРОЛЬ (если есть)
+        password_hash = None
+        if password:
+            password_hash = hashlib.sha256(password.encode()).hexdigest()
         
-        # ВСТАВКА: 8 полей, 8 значений
+        # 3. ВСТАВКА ПОЛЬЗОВАТЕЛЯ
         c.execute("""
             INSERT INTO users (email, username, first_name, last_name, avatar, google_id, password_hash, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
         """, (email, username, first_name, last_name, avatar, google_id, password_hash))
         
         conn.commit()
+        conn.close()
         return True
+        
     except sqlite3.IntegrityError as e:
-        print(f"Registration error: {e}")
+        print(f"Registration error (дубликат): {e}")
+        conn.close()
         return False
     except Exception as e:
-        print(f"Other error: {e}")
-        return False
-    finally:
+        print(f"Registration error: {e}")
         conn.close()
+        return False
 
 def login_user(email, password):
     """Вход пользователя по email и паролю"""
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
     
-    password_hash = hashlib.sha256(password.encode()).hexdigest()
-    
-    c.execute("""
-        SELECT id, email, username, first_name, last_name, avatar 
-        FROM users 
-        WHERE email = ? AND password_hash = ?
-    """, (email, password_hash))
-    
-    user = c.fetchone()
-    conn.close()
-    
-    if user:
-        return {
-            "id": user[0],
-            "email": user[1],
-            "username": user[2],
-            "first_name": user[3],
-            "last_name": user[4],
-            "avatar": user[5]
-        }
-    return None
+    try:
+        # 1. СОЗДАЕМ ТАБЛИЦУ ЕСЛИ НЕ СУЩЕСТВУЕТ
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE NOT NULL,
+                username TEXT UNIQUE,
+                first_name TEXT,
+                last_name TEXT,
+                avatar TEXT,
+                google_id TEXT UNIQUE,
+                password_hash TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.commit()
+        
+        # 2. ХЕШИРУЕМ ПАРОЛЬ
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        
+        # 3. ИЩЕМ ПОЛЬЗОВАТЕЛЯ
+        c.execute("""
+            SELECT id, email, username, first_name, last_name, avatar 
+            FROM users 
+            WHERE email = ? AND password_hash = ?
+        """, (email, password_hash))
+        
+        user = c.fetchone()
+        
+        if user:
+            conn.close()
+            return {
+                "id": user[0],
+                "email": user[1],
+                "username": user[2],
+                "first_name": user[3],
+                "last_name": user[4],
+                "avatar": user[5]
+            }
+        else:
+            # 4. ПОЛЬЗОВАТЕЛЬ НЕ НАЙДЕН - возвращаем None
+            conn.close()
+            return None
+        
+    except Exception as e:
+        print(f"Login error: {e}")
+        conn.close()
+        return None
 
 def get_user_by_google_id(google_id):
     """Поиск пользователя по Google ID"""
