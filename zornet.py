@@ -731,10 +731,17 @@ if st.session_state.page == "Главная":
             if response.status_code == 200:
                 data = response.json()
                 usd_rate = data['Cur_OfficialRate']
+                # Форматируем дату
                 date_str = data['Date'][:10]
+                date_obj = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+                formatted_date = date_obj.strftime("%d.%m.%Y")
+                
+                # Форматируем курс (до 4 знаков после запятой)
+                formatted_rate = f"{usd_rate:.4f}".rstrip('0').rstrip('.')
+                
                 return {
-                    "rate": usd_rate,
-                    "date": date_str,
+                    "rate": formatted_rate,
+                    "date": formatted_date,
                     "success": True
                 }
         except Exception as e:
@@ -742,33 +749,24 @@ if st.session_state.page == "Главная":
         
         # Если не удалось получить данные, возвращаем дефолтное значение
         return {
-            "rate": 3.20,
-            "date": datetime.datetime.now().strftime("%Y-%m-%d"),
+            "rate": "3.20",
+            "date": datetime.datetime.now().strftime("%d.%m.%Y"),
             "success": False
         }
     
-    # Получаем текущий курс
+    # Получаем текущий курс (обновляется при заходе на сайт)
     usd_data = get_usd_rate()
     usd_rate = usd_data["rate"]
     rate_date = usd_data["date"]
-    
-    # Преобразуем дату в читаемый формат
-    try:
-        rate_date_obj = datetime.datetime.strptime(rate_date, "%Y-%m-%d")
-        formatted_date = rate_date_obj.strftime("%d.%m.%Y")
-    except:
-        formatted_date = rate_date
     
     # Создаем 4 колонки одинаковой ширины для верхней панели
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        if st.button(f"💵 USD: {usd_rate}\nBYN ({formatted_date})", 
-                    use_container_width=True,
-                    help=f"Курс USD/BYN от НБ РБ на {formatted_date}"):
-            # Можно добавить дополнительную информацию при клике
-            st.session_state.show_rate_info = not st.session_state.get('show_rate_info', False)
-            st.rerun()
+        # Простая кнопка как и все остальные
+        st.button(f"💵 {usd_rate}\nBYN/USD", 
+                 use_container_width=True,
+                 help=f"Официальный курс НБ РБ на {rate_date}")
     
     with col2:
         if st.button("⛅ Погода", use_container_width=True):
@@ -808,39 +806,8 @@ if st.session_state.page == "Главная":
             white-space: pre-line !important;
             text-align: center !important;
         }
-        
-        /* Стиль для информации о курсе */
-        .rate-info {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 10px 0;
-            border-left: 4px solid #DAA520;
-        }
     </style>
     """, unsafe_allow_html=True)
-    
-    # Показываем дополнительную информацию о курсе если нужно
-    if st.session_state.get('show_rate_info', False):
-        st.markdown(f"""
-        <div class="rate-info">
-            <h4>💱 Информация о курсе USD/BYN</h4>
-            <p><strong>Курс НБ РБ:</strong> {usd_rate} BYN за 1 USD</p>
-            <p><strong>Дата установки курса:</strong> {formatted_date}</p>
-            <p><strong>Источник:</strong> Национальный банк Республики Беларусь</p>
-            <p><em>Данные обновляются ежедневно в рабочие дни</em></p>
-            <button onclick="window.open('https://www.nbrb.by/statistics/rates/ratesdaily', '_blank')" 
-                    style="background:#DAA520;color:white;border:none;padding:8px 16px;border-radius:5px;cursor:pointer;">
-                Подробнее на сайте НБ РБ
-            </button>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Кнопка для обновления курса вручную
-    if st.button("🔄 Обновить курс USD", type="secondary"):
-        # Очищаем кэш для принудительного обновления
-        st.cache_data.clear()
-        st.rerun()
     
     if st.session_state.is_logged_in:
         user = st.session_state.user_data
