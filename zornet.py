@@ -456,17 +456,36 @@ def register_user(email, username, first_name, last_name, password=None, google_
     c = conn.cursor()
     
     try:
+        # Создаем таблицу если не существует
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE NOT NULL,
+                username TEXT UNIQUE,
+                first_name TEXT,
+                last_name TEXT,
+                avatar TEXT,
+                google_id TEXT UNIQUE,
+                password_hash TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
         password_hash = hashlib.sha256(password.encode()).hexdigest() if password else None
         
+        # ВСТАВКА: 8 полей, 8 значений
         c.execute("""
-            INSERT INTO users (email, username, first_name, last_name, avatar, google_id, password_hash)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO users (email, username, first_name, last_name, avatar, google_id, password_hash, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
         """, (email, username, first_name, last_name, avatar, google_id, password_hash))
         
         conn.commit()
         return True
     except sqlite3.IntegrityError as e:
         print(f"Registration error: {e}")
+        return False
+    except Exception as e:
+        print(f"Other error: {e}")
         return False
     finally:
         conn.close()
