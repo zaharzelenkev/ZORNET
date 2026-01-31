@@ -1194,103 +1194,416 @@ elif st.session_state.page == "Совместный просмотр":
         else:
             st.info("🎬 Нет активных комнат")
 
-# ================= СТРАНИЦА ДИСКА =================
+# ================= ПРОФЕССИОНАЛЬНЫЙ ОБЛАЧНЫЙ ДИСК ZORNET DISK =================
 elif st.session_state.page == "Диск":
     st.markdown('<div class="gold-title">💾 ДИСК</div>', unsafe_allow_html=True)
-    
-    if not st.session_state.is_logged_in:
-        st.warning("⚠️ Для использования диска войдите в систему")
-        if st.button("Перейти к входу"):
-            st.session_state.page = "Профиль"
-            st.rerun()
-        st.stop()
-    
-    # Создаем папку пользователя
-    user_folder = f"user_{st.session_state.user_data['username']}"
-    if not os.path.exists(user_folder):
-        os.makedirs(user_folder)
-    
-    if st.session_state.disk_current_path == "zornet_cloud":
-        st.session_state.disk_current_path = user_folder
-    
-    # Панель инструментов
-    col_tools = st.columns(5)
-    with col_tools[0]:
-        if st.button("📤 Загрузить", use_container_width=True):
+
+    # Инициализация сессионных переменных
+    if "disk_current_path" not in st.session_state:
+        st.session_state.disk_current_path = "zornet_cloud"
+
+    if "disk_action" not in st.session_state:
+        st.session_state.disk_action = "view"  # view, upload, new_folder, search
+
+    # Создаем корневую папку если не существует
+    import os
+
+    os.makedirs(st.session_state.disk_current_path, exist_ok=True)
+
+    # CSS стили для диска
+    st.markdown("""
+    <style>
+        .disk-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 10px 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .disk-header {
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+            border-radius: 12px;
+            padding: 25px;
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .disk-btn {
+            background: white !important;
+            border: 2px solid #DAA520 !important;
+            color: #B8860B !important;
+            padding: 10px 20px !important;
+            border-radius: 8px !important;
+            font-weight: 600 !important;
+            transition: all 0.3s ease !important;
+        }
+
+        .disk-btn:hover {
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+            color: white !important;
+            border-color: transparent !important;
+        }
+
+        .disk-btn-active {
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+            color: white !important;
+            border-color: transparent !important;
+        }
+
+        .file-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #DAA520;
+            transition: all 0.3s ease;
+        }
+
+        .file-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .folder-card {
+            background: linear-gradient(135deg, #fff9e6 0%, #ffe699 100%);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            border: 2px solid #ffd966;
+        }
+
+        .storage-bar {
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .storage-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #DAA520, #FFD700);
+            border-radius: 4px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+
+    # Функции для работы с диском
+    def get_file_icon(filename):
+        """Возвращает иконку для файла"""
+        if filename.endswith('/'):
+            return "📁"
+        elif filename.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
+            return "🖼️"
+        elif filename.lower().endswith('.pdf'):
+            return "📄"
+        elif filename.lower().endswith(('.doc', '.docx')):
+            return "📝"
+        elif filename.lower().endswith(('.mp3', '.wav')):
+            return "🎵"
+        elif filename.lower().endswith(('.mp4', '.avi', '.mov')):
+            return "🎬"
+        elif filename.lower().endswith(('.zip', '.rar', '.7z')):
+            return "🗜️"
+        elif filename.lower().endswith(('.py', '.js', '.html', '.css')):
+            return "💻"
+        else:
+            return "📄"
+
+
+    def format_file_size(size_bytes):
+        """Форматирует размер файла"""
+        if size_bytes < 1024:
+            return f"{size_bytes} B"
+        elif size_bytes < 1024 * 1024:
+            return f"{size_bytes / 1024:.1f} KB"
+        elif size_bytes < 1024 * 1024 * 1024:
+            return f"{size_bytes / (1024 * 1024):.1f} MB"
+        else:
+            return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
+
+
+    def get_disk_stats():
+        """Получает статистику диска"""
+        total_size = 0
+        file_count = 0
+        folder_count = 0
+
+        for root, dirs, files in os.walk(st.session_state.disk_current_path):
+            folder_count += len(dirs)
+            for file in files:
+                file_path = os.path.join(root, file)
+                if os.path.exists(file_path):
+                    total_size += os.path.getsize(file_path)
+                    file_count += 1
+
+        return {
+            'total_size': total_size,
+            'file_count': file_count,
+            'folder_count': folder_count
+        }
+
+
+    # ПАНЕЛЬ ИНСТРУМЕНТОВ
+    st.markdown("### 🛠 Панель инструментов")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        btn_upload_class = "disk-btn-active" if st.session_state.disk_action == "upload" else "disk-btn"
+        if st.button("📤 Загрузить", key="btn_upload", use_container_width=True):
             st.session_state.disk_action = "upload"
-    with col_tools[1]:
-        if st.button("📁 Создать папку", use_container_width=True):
+            st.rerun()
+
+    with col2:
+        btn_folder_class = "disk-btn-active" if st.session_state.disk_action == "new_folder" else "disk-btn"
+        if st.button("📁 Новая папка", key="btn_new_folder", use_container_width=True):
             st.session_state.disk_action = "new_folder"
-    with col_tools[2]:
-        if st.button("🔍 Поиск", use_container_width=True):
+            st.rerun()
+
+    with col3:
+        btn_search_class = "disk-btn-active" if st.session_state.disk_action == "search" else "disk-btn"
+        if st.button("🔍 Поиск", key="btn_search", use_container_width=True):
             st.session_state.disk_action = "search"
-    with col_tools[3]:
-        if st.button("🔄 Обновить", use_container_width=True):
             st.rerun()
-    with col_tools[4]:
-        if st.button("← Назад", use_container_width=True) and st.session_state.disk_current_path != user_folder:
-            st.session_state.disk_current_path = os.path.dirname(st.session_state.disk_current_path)
+
+    with col4:
+        if st.button("🔄 Обновить", key="btn_refresh", use_container_width=True):
             st.rerun()
-    
-    # Режимы работы
+
+    # СТАТИСТИКА ХРАНИЛИЩА
+    stats = get_disk_stats()
+    used_gb = stats['total_size'] / (1024 * 1024 * 1024)
+    used_percent = min(100, (used_gb / 1.0) * 100)  # Предполагаем 1GB лимит
+
+    st.markdown(f"""
+    <div style="background: white; padding: 15px; border-radius: 10px; margin: 15px 0; border: 1px solid #e0e0e0;">
+        <h4 style="margin: 0 0 10px 0;">📊 Использование хранилища</h4>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+            <span>Использовано: {format_file_size(stats['total_size'])}</span>
+            <span>Лимит: 1.0 GB</span>
+        </div>
+        <div class="storage-bar">
+            <div class="storage-fill" style="width: {used_percent}%;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.9rem;">
+            <span>📁 Папок: {stats['folder_count']}</span>
+            <span>📄 Файлов: {stats['file_count']}</span>
+            <span>📊 Свободно: {format_file_size(1073741824 - stats['total_size'])}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # РЕЖИМЫ РАБОТЫ
     if st.session_state.disk_action == "upload":
         st.markdown("### 📤 Загрузка файлов")
-        uploaded_files = st.file_uploader("Выберите файлы", accept_multiple_files=True)
-        
+
+        uploaded_files = st.file_uploader(
+            "Выберите файлы для загрузки",
+            accept_multiple_files=True,
+            key="file_uploader"
+        )
+
         if uploaded_files:
-            for file in uploaded_files:
-                with open(os.path.join(st.session_state.disk_current_path, file.name), "wb") as f:
-                    f.write(file.getbuffer())
-            st.success(f"Загружено {len(uploaded_files)} файлов!")
+            for uploaded_file in uploaded_files:
+                file_path = os.path.join(st.session_state.disk_current_path, uploaded_file.name)
+                with open(file_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+            st.success(f"✅ Загружено {len(uploaded_files)} файлов!")
             st.session_state.disk_action = "view"
             st.rerun()
-    
+
+        col_back1, col_back2 = st.columns(2)
+        with col_back1:
+            if st.button("← Назад к файлам", use_container_width=True):
+                st.session_state.disk_action = "view"
+                st.rerun()
+
     elif st.session_state.disk_action == "new_folder":
-        st.markdown("### 📁 Новая папка")
-        folder_name = st.text_input("Имя папки:")
-        if st.button("Создать") and folder_name:
-            os.makedirs(os.path.join(st.session_state.disk_current_path, folder_name), exist_ok=True)
-            st.success(f"Папка '{folder_name}' создана!")
-            st.session_state.disk_action = "view"
-            st.rerun()
-    
+        st.markdown("### 📁 Создание новой папки")
+
+        folder_name = st.text_input("Введите название папки:")
+
+        col_create, col_back = st.columns(2)
+
+        with col_create:
+            if st.button("✅ Создать папку", type="primary", use_container_width=True):
+                if folder_name:
+                    new_folder_path = os.path.join(st.session_state.disk_current_path, folder_name)
+                    os.makedirs(new_folder_path, exist_ok=True)
+                    st.success(f"Папка '{folder_name}' создана!")
+                    st.session_state.disk_action = "view"
+                    st.rerun()
+
+        with col_back:
+            if st.button("← Назад к файлам", use_container_width=True):
+                st.session_state.disk_action = "view"
+                st.rerun()
+
     elif st.session_state.disk_action == "search":
         st.markdown("### 🔍 Поиск файлов")
-        search_query = st.text_input("Поиск по имени:")
-        # Поисковая логика здесь
-    
+
+        search_query = st.text_input("Введите название файла или папки:")
+
+        if search_query:
+            found_items = []
+            for root, dirs, files in os.walk(st.session_state.disk_current_path):
+                for name in dirs + files:
+                    if search_query.lower() in name.lower():
+                        item_path = os.path.join(root, name)
+                        found_items.append({
+                            'name': name,
+                            'path': item_path,
+                            'is_dir': os.path.isdir(item_path),
+                            'size': os.path.getsize(item_path) if os.path.isfile(item_path) else 0
+                        })
+
+            if found_items:
+                st.markdown(f"**Найдено {len(found_items)} результатов:**")
+                for item in found_items[:10]:  # Показываем первые 10
+                    icon = "📁" if item['is_dir'] else get_file_icon(item['name'])
+                    size = format_file_size(item['size']) if not item['is_dir'] else "Папка"
+
+                    col1, col2, col3 = st.columns([3, 2, 1])
+                    with col1:
+                        st.markdown(f"{icon} **{item['name']}**")
+                    with col2:
+                        st.text(size)
+                    with col3:
+                        if not item['is_dir']:
+                            with open(item['path'], 'rb') as f:
+                                st.download_button(
+                                    "📥",
+                                    f.read(),
+                                    item['name'],
+                                    key=f"dl_search_{item['name']}"
+                                )
+            else:
+                st.info("Ничего не найдено")
+
+        if st.button("← Назад к файлам"):
+            st.session_state.disk_action = "view"
+            st.rerun()
+
     else:
-        # Просмотр файлов
+        # ОСНОВНОЙ РЕЖИМ ПРОСМОТРА ФАЙЛОВ
+        st.markdown("### 📁 Файлы и папки")
+
+        # Быстрая загрузка (всегда доступна)
+        quick_upload = st.file_uploader(
+            "Загрузить файлы (можно перетащить)",
+            accept_multiple_files=True,
+            key="quick_upload"
+        )
+
+        if quick_upload:
+            for file in quick_upload:
+                file_path = os.path.join(st.session_state.disk_current_path, file.name)
+                with open(file_path, "wb") as f:
+                    f.write(file.getbuffer())
+            st.success(f"✅ Загружено {len(quick_upload)} файлов!")
+            st.rerun()
+
+        # Навигация по папкам
+        if st.session_state.disk_current_path != "zornet_cloud":
+            current_parts = st.session_state.disk_current_path.split(os.sep)
+            breadcrumb = []
+            path_so_far = ""
+
+            for part in current_parts:
+                if part:
+                    path_so_far = os.path.join(path_so_far, part) if path_so_far else part
+                    breadcrumb.append((part, path_so_far))
+
+            st.markdown("**Путь:** ", unsafe_allow_html=True)
+            crumb_cols = st.columns(len(breadcrumb) * 2 - 1)
+
+            for i, (name, path) in enumerate(breadcrumb):
+                with crumb_cols[i * 2]:
+                    if st.button(name, key=f"breadcrumb_{i}"):
+                        st.session_state.disk_current_path = path
+                        st.rerun()
+
+                if i < len(breadcrumb) - 1:
+                    with crumb_cols[i * 2 + 1]:
+                        st.markdown("/", unsafe_allow_html=True)
+
+        # Список файлов и папок
         try:
             items = os.listdir(st.session_state.disk_current_path)
         except:
             items = []
-        
-        if items:
-            st.markdown(f"**Файлы в папке:**")
-            cols = st.columns(4)
+
+        if not items:
+            st.info("📭 Папка пуста. Загрузите файлы или создайте папку.")
+        else:
+            # Сортируем: сначала папки, потом файлы
+            items.sort(
+                key=lambda x: (not os.path.isdir(os.path.join(st.session_state.disk_current_path, x)), x.lower()))
+
+            # Показываем файлы в сетке
+            cols = st.columns(3)
             for idx, item in enumerate(items):
-                with cols[idx % 4]:
+                with cols[idx % 3]:
                     item_path = os.path.join(st.session_state.disk_current_path, item)
                     is_dir = os.path.isdir(item_path)
-                    icon = "📁" if is_dir else get_icon(Path(item))
-                    
+                    icon = "📁" if is_dir else get_file_icon(item)
+
                     if is_dir:
-                        if st.button(f"{icon} {item}", key=f"folder_{item}", use_container_width=True):
+                        st.markdown(f"""
+                        <div class="folder-card">
+                            <div style="font-size: 2.5rem; text-align: center;">{icon}</div>
+                            <div style="text-align: center; font-weight: 600; margin-top: 10px;">{item}</div>
+                            <div style="text-align: center; color: #666; font-size: 0.9em;">Папка</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                        if st.button(f"Открыть", key=f"open_{item}", use_container_width=True):
                             st.session_state.disk_current_path = item_path
                             st.rerun()
+
                     else:
-                        st.markdown(f"{icon} **{item}**")
-                        with open(item_path, 'rb') as f:
-                            st.download_button(
-                                "📥",
-                                f.read(),
-                                item,
-                                key=f"dl_{item}",
-                                use_container_width=True
-                            )
-        else:
-            st.info("📁 Папка пуста")
+                        file_size = os.path.getsize(item_path)
+                        st.markdown(f"""
+                        <div class="file-card">
+                            <div style="font-size: 2.5rem; text-align: center;">{icon}</div>
+                            <div style="text-align: center; font-weight: 600; margin-top: 10px;">{item}</div>
+                            <div style="text-align: center; color: #666; font-size: 0.9em;">{format_file_size(file_size)}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            with open(item_path, 'rb') as f:
+                                st.download_button(
+                                    "📥 Скачать",
+                                    f.read(),
+                                    item,
+                                    key=f"dl_{item}",
+                                    use_container_width=True
+                                )
+                        with col2:
+                            if st.button("👁️ Просмотр", key=f"view_{item}", use_container_width=True):
+                                # Превью файла
+                                if item.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
+                                    try:
+                                        image = Image.open(item_path)
+                                        st.image(image, caption=item, use_column_width=True)
+                                    except:
+                                        st.error("Не удалось открыть изображение")
+                                elif item.lower().endswith('.txt'):
+                                    try:
+                                        with open(item_path, 'r', encoding='utf-8') as f:
+                                            content = f.read()
+                                        st.text_area("Содержимое файла", content, height=200)
+                                    except:
+                                        st.error("Не удалось открыть файл")
+                                elif item.lower().endswith('.pdf'):
+                                    st.info(f"PDF файл: {item}")
+                                    with open(item_path, 'rb') as f:
+                                        st.download_button("Скачать PDF", f.read(), item)
 
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
