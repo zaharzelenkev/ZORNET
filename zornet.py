@@ -840,8 +840,8 @@ if register_clicked:
     st.session_state.auth_step = "register"
     st.rerun()
         
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
     
     # Страница регистрации
     elif st.session_state.auth_step == "register":
