@@ -803,20 +803,38 @@ if st.session_state.page == "Профиль" and not st.session_state.is_logged_
                 with col_register:
                     register_clicked = st.form_submit_button("Регистрация", use_container_width=True)
                 
-                if login_submitted:
-                    if email and password:
-                        user = login_user(email, password)
-                        if user:
-                            st.session_state.user_data = user
-                            st.session_state.is_logged_in = True
-                            st.session_state.auth_status = "logged_in"
-                            st.session_state.page = "Главная"
-                            st.success("✅ Вход выполнен!")
-                            st.rerun()
-                        else:
-                            st.error("Неверный email или пароль")
-                    else:
-                        st.error("Заполните все поля")
+                if register_submitted:
+    if not all([first_name, email, username, password, password_confirm]):
+        st.error("Заполните все обязательные поля")
+    elif password != password_confirm:
+        st.error("Пароли не совпадают")
+    elif len(password) < 6:
+        st.error("Пароль должен быть не менее 6 символов")
+    else:
+        # Сохраняем аватар если есть
+        avatar_path = None  # ← ОБЯЗАТЕЛЬНО ИНИЦИАЛИЗИРУЕМ ПЕРЕМЕННУЮ
+        if avatar:
+            os.makedirs("avatars", exist_ok=True)
+            avatar_path = f"avatars/{username}_{int(datetime.datetime.now().timestamp())}.jpg"
+            with open(avatar_path, "wb") as f:
+                f.write(avatar.getbuffer())
+        
+        result = register_user(email, username, first_name, last_name, password, None, avatar_path)
+        
+        if result == "success":
+            # Автоматически входим после регистрации
+            user = login_user(email, password)
+            if user:
+                st.session_state.user_data = user
+                st.session_state.is_logged_in = True
+                st.session_state.auth_status = "logged_in"
+                st.success("✅ Аккаунт успешно создан!")
+                st.session_state.page = "Главная"
+                st.rerun()
+        elif result == "exists":
+            st.error("Пользователь с таким email или никнеймом уже существует")
+        else:
+            st.error("Ошибка при создании аккаунта. Попробуйте еще раз.")
                 
                 if register_clicked:
                     st.session_state.auth_step = "register"
@@ -994,46 +1012,6 @@ def get_icon(file_path):
     if ext in [".mp4", ".avi", ".mov"]:
         return "🎬"
     return "📦"
-
-# ================= НАСТРОЙКИ AI =================
-HF_API_KEY = st.secrets.get("HF_API_KEY", "")
-CHAT_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"
-API_URL = "https://router.huggingface.co/api/chat/completions"
-
-HEADERS = {
-    "Authorization": f"Bearer {HF_API_KEY}",
-    "Content-Type": "application/json"
-} if HF_API_KEY else {}
-
-def ask_hf_ai(prompt: str) -> str:
-    if not HF_API_KEY:
-        return "⚠️ API ключ не настроен. Добавьте HF_API_KEY в secrets.toml"
-    
-    payload = {
-        "model": CHAT_MODEL,
-        "messages": [
-            {"role": "system", "content": "Ты ZORNET AI — умный помощник. Отвечай по‑русски кратко и понятно."},
-            {"role": "user", "content": prompt}
-        ],
-        "max_new_tokens": 300,
-        "temperature": 0.7
-    }
-    
-    try:
-        r = requests.post(API_URL, headers=HEADERS, json=payload, timeout=60)
-        
-        if r.status_code == 503:
-            return "⏳ ZORNET AI загружается — попробуйте через несколько секунд."
-        
-        if r.status_code != 200:
-            return "⚠️ ZORNET AI временно недоступен."
-        
-        data = r.json()
-        text = data["choices"][0]["message"]["content"]
-        return text.strip()
-    
-    except Exception:
-        return "⚠️ Ошибка соединения с ZORNET AI."
 
 # ================= ФУНКЦИИ ПОИСКА =================
 def search_zornet(query, num_results=5):
