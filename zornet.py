@@ -723,7 +723,8 @@ if st.session_state.page == "Главная":
     
     current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk')).strftime('%H:%M')
     
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    # Создаем 4 колонки одинаковой ширины для верхней панели
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         st.button(f"🕒 {current_time}\nМинск", use_container_width=True)
@@ -732,13 +733,39 @@ if st.session_state.page == "Главная":
             st.session_state.page = "Погода"
             st.rerun()
     with col3:
-        st.button("💵 3.20\nBYN/USD", use_container_width=True)
-    with col5:
         if st.button("💬 Мессенджер", use_container_width=True):
             st.session_state.page = "Мессенджер"
             st.rerun()
+    with col4:
+        if st.button("📰 Новости", use_container_width=True):
+            st.session_state.page = "Новости"
+            st.rerun()
     
     st.markdown("---")
+    
+    # Добавьте этот CSS для исправления выравнивания кнопок
+    st.markdown("""
+    <style>
+        /* Стиль для выровненных кнопок на главной */
+        div[data-testid="column"] {
+            align-items: center !important;
+        }
+        
+        /* Фиксируем высоту кнопок для равного размера */
+        div.stButton > button {
+            height: 80px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: center !important;
+            margin: 0 5px !important;
+            font-size: 14px !important;
+            line-height: 1.3 !important;
+            white-space: pre-line !important;
+            text-align: center !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
     
     if st.session_state.is_logged_in:
         user = st.session_state.user_data
@@ -746,6 +773,7 @@ if st.session_state.page == "Главная":
     else:
         st.warning("⚠️ Вы не авторизованы. Перейдите в профиль для входа.")
     
+    # ВАШ СУЩЕСТВУЮЩИЙ HTML КОД ДЛЯ ПОИСКА...
     components.html("""
     <!DOCTYPE html>
     <html>
