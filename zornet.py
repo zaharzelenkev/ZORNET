@@ -406,7 +406,7 @@ def init_db():
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
     
-    # Пользователи
+    # Пользователи - ОБЯЗАТЕЛЬНО сначала
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
