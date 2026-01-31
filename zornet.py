@@ -597,20 +597,13 @@ def get_chat_history(user1, user2):
 
 # ================= САЙДБАР =================
 with st.sidebar:
-    st.markdown("<h3 style='color:#DAA520;'>🇧🇾 ZORNET</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#DAA520;'>ZORNET</h3>", unsafe_allow_html=True)
     
     if st.session_state.is_logged_in:
         user = st.session_state.user_data
         st.markdown(f"**👤 {user.get('first_name', '')} {user.get('last_name', '')}**")
         st.markdown(f"*@{user.get('username', '')}*")
         st.markdown("---")
-        
-        if st.button("🚪 Выйти", use_container_width=True):
-            # Очищаем все данные сессии
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.session_state.page = "Главная"
-            st.rerun()
     
     pages = [
         ("🏠", "ГЛАВНАЯ", "Главная"),
