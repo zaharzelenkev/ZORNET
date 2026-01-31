@@ -836,9 +836,9 @@ if register_submitted:
         else:
             st.error("Ошибка при создании аккаунта. Попробуйте еще раз.")
                 
-                if register_clicked:
-                    st.session_state.auth_step = "register"
-                    st.rerun()
+if register_clicked:
+    st.session_state.auth_step = "register"
+    st.rerun()
         
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
