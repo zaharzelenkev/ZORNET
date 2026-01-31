@@ -889,9 +889,9 @@ elif result == "exists":
 else:
     st.error("Ошибка при создании аккаунта. Попробуйте еще раз.")
             
-            if back_clicked:
-                st.session_state.auth_step = "login_start"
-                st.rerun()
+    if back_clicked:
+        st.session_state.auth_step = "login_start"
+        st.rerun()
         
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
