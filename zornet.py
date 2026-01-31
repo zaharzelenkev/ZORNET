@@ -721,47 +721,21 @@ def get_belta_news():
 if st.session_state.page == "Главная":
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
     
-    # Функция для получения курса доллара с НБ РБ
-    @st.cache_data(ttl=3600)  # Кэшируем на 1 час
-    def get_usd_rate():
-        try:
-            # API НБ РБ для получения курсов валют
-            url = "https://www.nbrb.by/api/exrates/rates/USD?parammode=2"
-            response = requests.get(url, timeout=10)
-            if response.status_code == 200:
-                data = response.json()
-                usd_rate = data['Cur_OfficialRate']
-                # Форматируем курс (до 4 знаков после запятой)
-                formatted_rate = f"{usd_rate:.4f}".rstrip('0').rstrip('.')
-                return formatted_rate
-        except Exception as e:
-            print(f"Ошибка получения курса: {e}")
-        
-        # Если не удалось получить данные, возвращаем дефолтное значение
-        return "3.20"
-    
-    # Получаем текущий курс
-    usd_rate = get_usd_rate()
+    current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk')).strftime('%H:%M')
     
     # Создаем 4 колонки одинаковой ширины для верхней панели
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        # Простая кнопка как и все остальные
-        st.button(f"💵 {usd_rate}\nBYN/USD", 
-                 use_container_width=True,
-                 help="Курс НБ РБ")
-    
+        st.button(f"🕒 {current_time}\nМинск", use_container_width=True)
     with col2:
         if st.button("⛅ Погода", use_container_width=True):
             st.session_state.page = "Погода"
             st.rerun()
-    
     with col3:
         if st.button("💬 Мессенджер", use_container_width=True):
             st.session_state.page = "Мессенджер"
             st.rerun()
-    
     with col4:
         if st.button("📰 Новости", use_container_width=True):
             st.session_state.page = "Новости"
@@ -769,86 +743,7 @@ if st.session_state.page == "Главная":
     
     st.markdown("---")
     
-    # Инициализируем состояние поиска
-    if "search_query" not in st.session_state:
-        st.session_state.search_query = ""
-    if "show_search" not in st.session_state:
-        st.session_state.show_search = True
-    
-    # Если был выполнен поиск, показываем результаты
-    if st.session_state.search_query:
-        # Компактная строка поиска сверху
-        col_search, col_clear = st.columns([4, 1])
-        with col_search:
-            st.markdown(f"### 🔍 Поиск: `{st.session_state.search_query}`")
-        with col_clear:
-            if st.button("✕ Очистить", type="secondary"):
-                st.session_state.search_query = ""
-                st.session_state.show_search = True
-                st.rerun()
-        
-        # Гугл поиск через iframe
-        search_url = f"https://www.google.com/search?q={st.session_state.search_query}"
-        
-        st.markdown("### Результаты поиска")
-        components.html(f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{
-                    margin: 0;
-                    padding: 0;
-                }}
-                iframe {{
-                    width: 100%;
-                    height: 700px;
-                    border: none;
-                    border-radius: 10px;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-                }}
-            </style>
-        </head>
-        <body>
-            <iframe src="{search_url}" sandbox="allow-same-origin allow-scripts allow-forms"></iframe>
-        </body>
-        </html>
-        """, height=720)
-        
-        # Кнопка для нового поиска
-        if st.button("🔍 Новый поиск"):
-            st.session_state.search_query = ""
-            st.rerun()
-    
-    else:
-        # Нормальное отображение если поиск не выполнен
-        if st.session_state.is_logged_in:
-            user = st.session_state.user_data
-            st.info(f"👤 **{user.get('first_name', 'Пользователь')} {user.get('last_name', '')}** | ✉️ {user.get('email', '')} | 🆔 @{user.get('username', 'user')}")
-        else:
-            st.warning("⚠️ Вы не авторизованы. Перейдите в профиль для входа.")
-        
-        # Поисковая форма с обработкой в одном окне
-        with st.form(key="search_form"):
-            search_input = st.text_input(
-                "🔍 Введите запрос для поиска в Google:",
-                placeholder="Введите ваш запрос...",
-                key="search_input_field"
-            )
-            
-            col_submit, col_reset = st.columns([1, 1])
-            with col_submit:
-                submit_button = st.form_submit_button("🔎 Искать", type="primary", use_container_width=True)
-            with col_reset:
-                if st.form_submit_button("🗑️ Очистить", type="secondary", use_container_width=True):
-                    st.session_state.search_query = ""
-                    st.rerun()
-            
-            if submit_button and search_input:
-                st.session_state.search_query = search_input
-                st.rerun()
-    
-    # CSS для выравнивания кнопок
+    # Добавьте этот CSS для исправления выравнивания кнопок
     st.markdown("""
     <style>
         /* Стиль для выровненных кнопок на главной */
@@ -869,22 +764,98 @@ if st.session_state.page == "Главная":
             white-space: pre-line !important;
             text-align: center !important;
         }
-        
-        /* Стиль для формы поиска */
-        [data-testid="stForm"] {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 15px;
-            border: 1px solid #e0e0e0;
-            margin: 20px 0;
-        }
-        
-        [data-testid="stTextInput"] input {
-            font-size: 16px !important;
-            padding: 12px 20px !important;
-        }
     </style>
     """, unsafe_allow_html=True)
+    
+    if st.session_state.is_logged_in:
+        user = st.session_state.user_data
+        st.info(f"👤 **{user.get('first_name', 'Пользователь')} {user.get('last_name', '')}** | ✉️ {user.get('email', '')} | 🆔 @{user.get('username', 'user')}")
+    else:
+        st.warning("⚠️ Вы не авторизованы. Перейдите в профиль для входа.")
+    
+    # ВАШ СУЩЕСТВУЮЩИЙ HTML КОД ДЛЯ ПОИСКА...
+    components.html("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: transparent;
+            font-family: 'Helvetica Neue', sans-serif;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .search-container {
+            width: 100%;
+            max-width: 600px;
+            padding: 10px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 18px 25px;
+            font-size: 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 30px;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            background-color: #ffffff;
+            color: #333;
+            box-sizing: border-box;
+            -webkit-appearance: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: #DAA520;
+            box-shadow: 0 0 15px rgba(218, 165, 32, 0.2);
+        }
+
+        button {
+            margin-top: 20px;
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            -webkit-appearance: none;
+            width: 100%;
+            max-width: 250px;
+        }
+
+        button:hover {
+            transform: scale(1.03);
+            box-shadow: 0 6px 20px rgba(218, 165, 32, 0.6);
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+    </style>
+    </head>
+    <body>
+        <div class="search-container">
+            <form action="https://www.google.com/search" method="get" target="_top">
+                <input type="text" name="q" placeholder="🔍 Введите запрос..." required autocomplete="off">
+                <br>
+                <button type="submit">ИСКАТЬ</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    """, height=220)
 
 # ================= МЕССЕНДЖЕР =================
 elif st.session_state.page == "Мессенджер":
