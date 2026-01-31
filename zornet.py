@@ -12,6 +12,8 @@ import mimetypes
 from duckduckgo_search import DDGS
 from huggingface_hub import InferenceClient
 import streamlit.components.v1 as components
+import uuid  # ДОБАВЛЕНО ДЛЯ ГЕНЕРАЦИИ ID
+import re    # ДОБАВЛЕНО ДЛЯ РАБОТЫ С YOUTUBE ССЫЛКАМИ
 
 # ================= НАСТРОЙКИ =================
 st.set_page_config(
@@ -29,6 +31,30 @@ if "weather_data" not in st.session_state:
     st.session_state.weather_data = None
 if "user_city" not in st.session_state:
     st.session_state.user_city = None
+if "rooms" not in st.session_state:
+    st.session_state.rooms = []
+if "music_rooms" not in st.session_state:
+    st.session_state.music_rooms = []
+if "watch_room" not in st.session_state:
+    st.session_state.watch_room = None
+if "current_music_room" not in st.session_state:
+    st.session_state.current_music_room = None
+
+# 🔴 ИСПРАВЛЕННАЯ ЧАСТЬ - Правильная инициализация авторизации
+if "auth_step" not in st.session_state:
+    st.session_state.auth_step = "login_start"  # "login_start", "info_form", "logged_in"
+if "user_data" not in st.session_state:
+    st.session_state.user_data = {}
+if "user_photo" not in st.session_state:
+    st.session_state.user_photo = None
+if "disk_current_path" not in st.session_state:
+    st.session_state.disk_current_path = "zornet_cloud"
+if "disk_action" not in st.session_state:
+    st.session_state.disk_action = "view"
+
+# 🔴 НОВОЕ: Флаг авторизации (заменяем auth_status)
+if "is_logged_in" not in st.session_state:
+    st.session_state.is_logged_in = False  # Изначально не авторизован
 
 # ================= ОБНОВЛЕННЫЕ CSS СТИЛИ =================
 st.markdown("""
@@ -40,7 +66,6 @@ st.markdown("""
     }
 
     /* 2. Находим родную кнопку сайдбара и переносим её вправо */
-    /* Она появляется, когда сайдбар закрыт */
     button[data-testid="stSidebarCollapse"] {
         position: fixed !important;
         right: 20px !important;
@@ -57,19 +82,17 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
     }
 
-    /* 3. Превращаем иконку (стрелочку) в три полоски (гамбургер) */
     button[data-testid="stSidebarCollapse"] svg {
-        display: none !important; /* Прячем родную стрелку */
+        display: none !important;
     }
     
     button[data-testid="stSidebarCollapse"]::after {
-        content: "☰" !important; /* Символ гамбургера */
+        content: "☰" !important;
         color: white !important;
         font-size: 24px !important;
         font-weight: bold !important;
     }
 
-    /* 4. Стили для кнопки внутри открытого сайдбара (чтобы тоже была красивой) */
     [data-testid="stSidebar"] button[data-testid="stSidebarCollapse"] {
         right: auto !important;
         left: 10px !important;
@@ -77,13 +100,11 @@ st.markdown("""
         position: relative !important;
     }
 
-    /* 5. Убираем лишние отступы, которые Streamlit добавляет для markdown */
     div[data-testid="stVerticalBlock"] > div:has(div.stMarkdown) {
         padding: 0 !important;
         margin: 0 !important;
     }
 
-    /* ГЛАВНЫЙ ЗАГОЛОВОК */
     .gold-title {
         font-family: 'Helvetica Neue', sans-serif;
         font-size: 4rem;
@@ -97,7 +118,6 @@ st.markdown("""
         margin: 10px 0 30px 0;
     }
 
-    /* КНОПКИ ГЛАВНОЙ */
     div.stButton > button {
         background: #f8f9fa !important;
         border: 1px solid #dee2e6 !important;
@@ -109,7 +129,6 @@ st.markdown("""
         box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
     }
 
-    /* ЗОЛОТАЯ КНОПКА AI */
     .gold-btn {
         background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
         border: none !important;
@@ -121,7 +140,6 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3) !important;
     }
 
-    /* ВРЕМЯ В ЗОЛОТОЙ РАМКЕ */
     .time-widget {
         background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
         border-radius: 12px;
@@ -133,7 +151,6 @@ st.markdown("""
         box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
     }
 
-    /* РЕЗУЛЬТАТЫ ПОИСКА */
     .search-result {
         background: #f8f9fa;
         padding: 15px;
@@ -142,7 +159,6 @@ st.markdown("""
         border-left: 4px solid #DAA520;
     }
 
-    /* ЧАТ AI */
     .user-message {
         background: #f0f0f0;
         padding: 12px 18px;
@@ -162,7 +178,6 @@ st.markdown("""
         border-left: 4px solid #DAA520;
     }
 
-    /* СТИЛИ ДЛЯ ПОГОДЫ */
     .weather-widget {
         background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
         border-radius: 15px;
@@ -202,25 +217,135 @@ st.markdown("""
         padding: 15px;
         text-align: center;
     }
+    
+    /* Стили для диска */
+    .disk-container {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin: 10px 0;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+    
+    .disk-header {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+        border-radius: 12px;
+        padding: 25px;
+        color: white;
+        margin-bottom: 20px;
+    }
+    
+    .disk-btn {
+        background: white !important;
+        border: 2px solid #DAA520 !important;
+        color: #B8860B !important;
+        padding: 10px 20px !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .disk-btn:hover {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+        color: white !important;
+        border-color: transparent !important;
+    }
+    
+    .disk-btn-active {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+        color: white !important;
+        border-color: transparent !important;
+    }
+    
+    .file-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin: 10px 0;
+        border-left: 4px solid #DAA520;
+        transition: all 0.3s ease;
+    }
+    
+    .file-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .folder-card {
+        background: linear-gradient(135deg, #fff9e6 0%, #ffe699 100%);
+        border-radius: 10px;
+        padding: 15px;
+        margin: 10px 0;
+        border: 2px solid #ffd966;
+    }
+    
+    .storage-bar {
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 10px 0;
+    }
+    
+    .storage-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #DAA520, #FFD700);
+        border-radius: 4px;
+    }
+    
+    /* Стили для профиля */
+    .giant-id-title {
+        font-size: 5rem !important;
+        font-weight: 900 !important;
+        text-align: center;
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 20px 0 40px 0 !important;
+        letter-spacing: -2px;
+    }
+    
+    .profile-container {
+        background: white;
+        border-radius: 32px;
+        padding: 40px;
+        border: 1px solid #f0f0f0;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+    
+    .user-avatar-main {
+        width: 180px;
+        height: 180px;
+        border-radius: 40px;
+        object-fit: cover;
+        border: 4px solid #DAA520;
+        margin-bottom: 20px;
+    }
+    
+    .stFileUploader section {
+        background-color: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # ================= САЙДБАР =================
 with st.sidebar:
     st.markdown("<h3 style='color:#DAA520;'>🇧🇾 ZORNET</h3>", unsafe_allow_html=True)
-
-    # В САЙДБАРЕ (строки ~60-80 в твоем коде)
-pages = [
-    ("🏠", "ГЛАВНАЯ", "Главная"),
-    ("💬", "МЕССЕНДЖЕР", "Мессенджер"),      # НОВОЕ
-    ("🎬", "СОВМЕСТНЫЙ ПРОСМОТР", "Совместный просмотр"),  # НОВОЕ
-    ("🎵", "МУЗЫКА", "Музыка"),            # НОВОЕ
-    ("📰", "НОВОСТИ", "Новости"),
-    ("🌤️", "ПОГОДА", "Погода"),
-    ("💾", "ДИСК", "Диск"),
-    ("👤", "ПРОФИЛЬ", "Профиль"),
-]
-
+    
+    pages = [
+        ("🏠", "ГЛАВНАЯ", "Главная"),
+        ("💬", "МЕССЕНДЖЕР", "Мессенджер"),
+        ("🎬", "СОВМЕСТНЫЙ ПРОСМОТР", "Совместный просмотр"),
+        ("🎵", "МУЗЫКА", "Музыка"),
+        ("📰", "НОВОСТИ", "Новости"),
+        ("🌤️", "ПОГОДА", "Погода"),
+        ("💾", "ДИСК", "Диск"),
+        ("👤", "ПРОФИЛЬ", "Профиль"),
+    ]
+    
     for i, (icon, text, page) in enumerate(pages):
         if st.button(f"{icon} {text}", key=f"nav_{i}_{page}", use_container_width=True):
             st.session_state.page = page
@@ -228,7 +353,6 @@ pages = [
 
 # ================= ФУНКЦИИ ПОГОДЫ =================
 def get_weather_icon(condition_code):
-    """Возвращает эмодзи для погодных условий"""
     icons = {
         "01d": "☀️", "01n": "🌙",
         "02d": "⛅", "02n": "⛅",
@@ -242,32 +366,25 @@ def get_weather_icon(condition_code):
     }
     return icons.get(condition_code, "🌡️")
 
-
 def get_wind_direction(degrees):
-    """Преобразует градусы в направление ветра"""
     directions = ["С", "СВ", "В", "ЮВ", "Ю", "ЮЗ", "З", "СЗ"]
     index = round(degrees / 45) % 8
     return directions[index]
 
-
 def get_weather_by_coords(lat, lon):
-    """Получает погоду по координатам через OpenWeatherMap API"""
-    # ЗАМЕНИ ЭТОТ КЛЮЧ НА СВОЙ БЕСПЛАТНЫЙ КЛЮЧ С OpenWeatherMap!
     API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"
-
+    
     try:
-        # Текущая погода
         url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
         response = requests.get(url, timeout=10)
-
+        
         if response.status_code == 200:
             data = response.json()
-
-            # Прогноз на 5 дней
+            
             forecast_url = f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
             forecast_response = requests.get(forecast_url, timeout=10)
             forecast_data = forecast_response.json() if forecast_response.status_code == 200 else None
-
+            
             return {
                 "current": {
                     "temp": round(data["main"]["temp"]),
@@ -294,21 +411,18 @@ def get_weather_by_coords(lat, lon):
         st.error(f"Ошибка получения погоды: {e}")
         return None
 
-
 def get_weather_by_city(city_name):
-    """Получает погоду по названию города"""
-    API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"  # Замени на свой ключ!
-
+    API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"
+    
     try:
-        # Сначала получаем координаты города
         geocode_url = f"http://api.openweathermap.org/geo/1.0/direct?q={city_name}&limit=1&appid={API_KEY}"
         geocode_response = requests.get(geocode_url, timeout=10)
-
+        
         if geocode_response.status_code == 200 and geocode_response.json():
             city_data = geocode_response.json()[0]
             lat = city_data["lat"]
             lon = city_data["lon"]
-
+            
             return get_weather_by_coords(lat, lon)
         else:
             st.error("Город не найден")
@@ -317,29 +431,8 @@ def get_weather_by_city(city_name):
         st.error(f"Ошибка: {e}")
         return None
 
-
-# Обработчик сообщений от JavaScript
-def handle_js_messages():
-    """Обрабатывает сообщения от JavaScript компонентов"""
-    # Проверяем если есть сообщение от геолокации
-    if 'location_result' not in st.session_state:
-        # Пытаемся получить данные из query parameters (если JavaScript их отправил)
-        query_params = st.experimental_get_query_params()
-
-        if 'geolocation' in query_params:
-            try:
-                geo_data = json.loads(query_params['geolocation'][0])
-                st.session_state.location_result = geo_data
-                # Очищаем параметры
-                st.experimental_set_query_params()
-                st.rerun()
-            except:
-                pass
-
-
 # ================= ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ДИСКА =================
 def get_icon(file_path):
-    """Возвращает иконку для файла"""
     ext = file_path.suffix.lower()
     if file_path.is_dir():
         return "📁"
@@ -355,7 +448,6 @@ def get_icon(file_path):
         return "🎬"
     return "📦"
 
-
 # ================= НАСТРОЙКИ AI =================
 HF_API_KEY = st.secrets.get("HF_API_KEY", "")
 CHAT_MODEL = "Qwen/Qwen2.5-Coder-7B-Instruct"
@@ -366,11 +458,10 @@ HEADERS = {
     "Content-Type": "application/json"
 } if HF_API_KEY else {}
 
-
 def ask_hf_ai(prompt: str) -> str:
     if not HF_API_KEY:
         return "⚠️ API ключ не настроен. Добавьте HF_API_KEY в secrets.toml"
-
+    
     payload = {
         "model": CHAT_MODEL,
         "messages": [
@@ -380,33 +471,31 @@ def ask_hf_ai(prompt: str) -> str:
         "max_new_tokens": 300,
         "temperature": 0.7
     }
-
+    
     try:
         r = requests.post(API_URL, headers=HEADERS, json=payload, timeout=60)
-
+        
         if r.status_code == 503:
             return "⏳ ZORNET AI загружается — попробуйте через несколько секунд."
-
+        
         if r.status_code != 200:
             return "⚠️ ZORNET AI временно недоступен."
-
+        
         data = r.json()
         text = data["choices"][0]["message"]["content"]
         return text.strip()
-
+    
     except Exception:
         return "⚠️ Ошибка соединения с ZORNET AI."
 
-
 # ================= ФУНКЦИИ ПОИСКА =================
 def search_zornet(query, num_results=5):
-    """Поиск в интернете"""
     results = []
-
+    
     try:
         with DDGS() as ddgs:
             ddgs_results = list(ddgs.text(query, max_results=num_results, region='wt-wt'))
-
+            
             if ddgs_results:
                 for r in ddgs_results[:num_results]:
                     results.append({
@@ -417,8 +506,7 @@ def search_zornet(query, num_results=5):
                 return results
     except Exception as e:
         st.error(f"Ошибка поиска: {e}")
-
-    # Запасные результаты
+    
     fallback_results = [
         {
             "title": f"{query} - поиск в Google",
@@ -431,46 +519,8 @@ def search_zornet(query, num_results=5):
             "snippet": f"Ищите информацию о '{query}' в Википедии."
         },
     ]
-
+    
     return fallback_results[:num_results]
-
-
-# ================= ТРАНСПОРТНЫЕ ФУНКЦИИ =================
-def get_minsk_metro():
-    return [
-        {"name": "Малиновка", "line": "1", "next": "3 мин"},
-        {"name": "Петровщина", "line": "1", "next": "5 мин"},
-        {"name": "Площадь Ленина", "line": "1", "next": "2 мин"},
-        {"name": "Институт Культуры", "line": "1", "next": "4 мин"},
-        {"name": "Молодёжная", "line": "2", "next": "6 мин"},
-    ]
-
-
-def get_bus_trams():
-    return [
-        {"number": "100", "type": "автобус", "from": "Ст.м. Каменная Горка", "to": "Аэропорт", "next": "7 мин"},
-        {"number": "1", "type": "трамвай", "from": "Тракторный завод", "to": "Серебрянка", "next": "5 мин"},
-        {"number": "3с", "type": "троллейбус", "from": "ДС Веснянка", "to": "ДС Серова", "next": "3 мин"},
-        {"number": "40", "type": "автобус", "from": "Ст.м. Уручье", "to": "Дражня", "next": "10 мин"},
-    ]
-
-
-def get_taxi_prices():
-    return [
-        {"name": "Яндекс Такси", "price": "8-12 руб", "wait": "5-7 мин"},
-        {"name": "Uber", "price": "9-13 руб", "wait": "4-6 мин"},
-        {"name": "Такси Близко", "price": "7-10 руб", "wait": "8-10 мин"},
-        {"name": "Такси Город", "price": "6-9 руб", "wait": "10-15 мин"},
-    ]
-
-
-def get_belarusian_railway():
-    return [
-        {"number": "001Б", "from": "Минск", "to": "Брест", "time": "18:00 - 21:30"},
-        {"number": "735Б", "from": "Минск", "to": "Гомель", "time": "07:30 - 11:15"},
-        {"number": "603Б", "from": "Минск", "to": "Витебск", "time": "14:20 - 18:45"},
-    ]
-
 
 # ================= БАЗА ДАННЫХ =================
 def init_db():
@@ -487,7 +537,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-
 def get_user_count():
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
@@ -495,7 +544,6 @@ def get_user_count():
     count = c.fetchone()[0]
     conn.close()
     return count
-
 
 # ================= ДИСК ФУНКЦИИ =================
 def init_disk_db():
@@ -512,7 +560,6 @@ def init_disk_db():
     conn.commit()
     conn.close()
 
-
 def get_disk_files():
     conn = sqlite3.connect("zornet_disk.db")
     c = conn.cursor()
@@ -521,14 +568,12 @@ def get_disk_files():
     conn.close()
     return files
 
-
 def save_file_to_db(filename, size):
     conn = sqlite3.connect("zornet_disk.db")
     c = conn.cursor()
     c.execute("INSERT INTO files (name, size) VALUES (?, ?)", (filename, size))
     conn.commit()
     conn.close()
-
 
 # ================= НОВОСТИ =================
 def get_belta_news():
@@ -545,11 +590,22 @@ def get_belta_news():
         ]
 
 # ================= СТРАНИЦА ГЛАВНАЯ =================
+# ================= СТРАНИЦА ГЛАВНАЯ =================
 if st.session_state.page == "Главная":
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
-
-    current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
-    col1, col2, col3, col4 = st.columns(4)
+    
+    # 🔴 ИНДИКАТОР АВТОРИЗАЦИИ
+    if st.session_state.is_logged_in:
+        user = st.session_state.user_data
+        st.success(f"✅ Авторизован как: {user.get('first_name', 'Пользователь')} (@{user.get('nickname', 'user')})")
+    else:
+        st.warning("⚠️ Вы не авторизованы. Для доступа ко всем функциям войдите в ZORNET ID")
+        if st.button("🆔 Войти", key="login_from_main"):
+            st.session_state.page = "Профиль"
+            st.rerun()
+    
+    current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk')
+    
     with col1:
         st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", use_container_width=True)
     with col2:
@@ -562,13 +618,20 @@ if st.session_state.page == "Главная":
         if st.button("🤖 ZORNET AI", use_container_width=True):
             st.session_state.page = "ZORNET AI"
             st.rerun()
-
+    with col5:
+        if st.button("💬 Мессенджер", use_container_width=True):
+            st.session_state.page = "Мессенджер"
+            st.rerun()
+    with col6:
+        if st.button("🎬 Совм. просмотр", use_container_width=True):
+            st.session_state.page = "Совместный просмотр"
+            st.rerun()
+    with col7:
+        if st.button("🎵 Музыка", use_container_width=True):
+            st.session_state.page = "Музыка"
+            st.rerun()
+    
     st.markdown("---")
-
-    # --- ИНТЕГРАЦИЯ GOOGLE ПОИСКА (ЧЕРЕЗ IFRAME) ---
-    # Мы используем components.html, чтобы создать изолированный HTML-блок.
-    # target="_top" — это ключ к успеху. Он заставляет ссылку открываться в текущем окне браузера,
-    # полностью замещая сайт ZORNET, и Streamlit не может этому помешать.
     
     components.html("""
     <!DOCTYPE html>
@@ -584,16 +647,14 @@ if st.session_state.page == "Главная":
             justify-content: center;
         }
         
-        /* Контейнер формы */
         .search-container {
             width: 100%;
             max-width: 600px;
             padding: 10px;
-            box-sizing: border-box; /* Важно для мобильных */
+            box-sizing: border-box;
             text-align: center;
         }
 
-        /* Поле ввода */
         input[type="text"] {
             width: 100%;
             padding: 18px 25px;
@@ -605,8 +666,8 @@ if st.session_state.page == "Главная":
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             background-color: #ffffff;
             color: #333;
-            box-sizing: border-box; /* Чтобы padding не ломал ширину */
-            -webkit-appearance: none; /* Убирает стили iOS */
+            box-sizing: border-box;
+            -webkit-appearance: none;
         }
 
         input[type="text"]:focus {
@@ -614,7 +675,6 @@ if st.session_state.page == "Главная":
             box-shadow: 0 0 15px rgba(218, 165, 32, 0.2);
         }
 
-        /* Кнопка */
         button {
             margin-top: 20px;
             background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
@@ -629,9 +689,9 @@ if st.session_state.page == "Главная":
             transition: transform 0.2s, box-shadow 0.2s;
             text-transform: uppercase;
             letter-spacing: 1px;
-            -webkit-appearance: none; /* Убирает стили iOS */
-            width: 100%; /* На мобильных кнопка будет широкой */
-            max-width: 250px; /* На ПК не шире 250px */
+            -webkit-appearance: none;
+            width: 100%;
+            max-width: 250px;
         }
 
         button:hover {
@@ -645,7 +705,6 @@ if st.session_state.page == "Главная":
     </style>
     </head>
     <body>
-    
         <div class="search-container">
             <form action="https://www.google.com/search" method="get" target="_top">
                 <input type="text" name="q" placeholder="🔍 Введите запрос..." required autocomplete="off">
@@ -653,797 +712,19 @@ if st.session_state.page == "Главная":
                 <button type="submit">ИСКАТЬ</button>
             </form>
         </div>
-
     </body>
     </html>
-    """, height=220) # Высота фрейма, чтобы влезла тень и кнопка
+    """, height=220)
 
-# ================= СТРАНИЦА НОВОСТЕЙ =================
-elif st.session_state.page == "Новости":
-    st.markdown('<div class="gold-title">📰 НОВОСТИ</div>', unsafe_allow_html=True)
-
-    with st.spinner("Загружаю новости..."):
-        news = get_belta_news()
-
-        for item in news:
-            st.markdown(f"""
-            <div style="
-                background: #f8f9fa;
-                border-left: 4px solid #DAA520;
-                padding: 15px;
-                margin-bottom: 15px;
-                border-radius: 8px;
-            ">
-                <a href="{item.link}" target="_blank" 
-                   style="color:#DAA520; font-size:1.2rem; font-weight:bold; text-decoration:none;">
-                    {item.title}
-                </a>
-                <p style="color:#1a1a1a; margin-top:10px;">{item.summary[:200]}...</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-# ================= СТРАНИЦА ПОГОДЫ (ПРОСТО И РАБОЧЕ) =================
-elif st.session_state.page == "Погода":
-    st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
-
-    # По умолчанию показываем Минск
-    default_city = "Минск"
-
-    # Поисковая строка
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        city_input = st.text_input(
-            "🔍 Введите ваш город",
-            placeholder="Например: Минск, Гомель, Брест...",
-            key="weather_city_input"
-        )
-
-    with col2:
-        search_clicked = st.button("Найти", type="primary", use_container_width=True)
-
-    # Определяем какой город показывать
-    city_to_show = default_city
-    if search_clicked and city_input:
-        city_to_show = city_input
-    elif 'user_city' in st.session_state:
-        city_to_show = st.session_state.user_city
-
-    # Получаем погоду для города
-    with st.spinner(f"Получаю погоду для {city_to_show}..."):
-        weather_data = get_weather_by_city(city_to_show)
-
-        if not weather_data:
-            # Если город не найден, показываем Минск
-            st.error(f"Город '{city_to_show}' не найден. Показываю погоду в Минске.")
-            weather_data = get_weather_by_city(default_city)
-            city_to_show = default_city
-
-        if weather_data:
-            current = weather_data["current"]
-
-            # Сохраняем город в сессии
-            st.session_state.user_city = city_to_show
-            st.session_state.weather_data = weather_data
-
-            # Показываем город
-            st.markdown(f"### 🌤️ Погода в {current['city']}, {current['country']}")
-
-            # Основная информация
-            col_temp, col_icon = st.columns([2, 1])
-
-            with col_temp:
-                st.markdown(f"""
-                <div style="text-align: center;">
-                    <div style="font-size: 4rem; font-weight: 800; color: #1a1a1a;">
-                        {current['temp']}°C
-                    </div>
-                    <div style="font-size: 1.5rem; color: #666; margin-top: 10px;">
-                        {get_weather_icon(current['icon'])} {current['description']}
-                    </div>
-                    <div style="font-size: 1rem; color: #888; margin-top: 5px;">
-                        💁 Ощущается как {current['feels_like']}°C
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            with col_icon:
-                st.markdown(f"""
-                <div style="text-align: center; padding-top: 15px;">
-                    <div style="font-size: 5rem;">
-                        {get_weather_icon(current['icon'])}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            # Детали погоды
-            st.markdown("#### 📊 Детали")
-
-            details = [
-                ("💧 Влажность", f"{current['humidity']}%"),
-                ("💨 Ветер", f"{current['wind_speed']} м/с"),
-                ("🧭 Направление", get_wind_direction(current['wind_deg'])),
-                ("📊 Давление", f"{current['pressure']} гПа"),
-                ("👁️ Видимость", f"{current['visibility']} км"),
-                ("☁️ Облачность", f"{current['clouds']}%"),
-                ("🌅 Восход", current['sunrise']),
-                ("🌇 Закат", current['sunset'])
-            ]
-
-            # Показываем детали в 2 колонки
-            for i in range(0, len(details), 2):
-                col1, col2 = st.columns(2)
-                with col1:
-                    name, value = details[i]
-                    st.markdown(f"""
-                    <div style="
-                        background: #f8f9fa;
-                        padding: 12px;
-                        border-radius: 8px;
-                        margin-bottom: 10px;
-                    ">
-                        <div style="color: #666; font-size: 0.9rem;">{name}</div>
-                        <div style="font-size: 1.2rem; font-weight: bold;">{value}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                if i + 1 < len(details):
-                    with col2:
-                        name, value = details[i + 1]
-                        st.markdown(f"""
-                        <div style="
-                            background: #f8f9fa;
-                            padding: 12px;
-                            border-radius: 8px;
-                            margin-bottom: 10px;
-                        ">
-                            <div style="color: #666; font-size: 0.9rem;">{name}</div>
-                            <div style="font-size: 1.2rem; font-weight: bold;">{value}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-            # Прогноз на 5 дней
-            if weather_data.get("forecast"):
-                st.markdown("#### 📅 Прогноз на 5 дней")
-
-                forecast = weather_data["forecast"]["list"]
-                days = {}
-
-                for item in forecast:
-                    date = item["dt_txt"].split(" ")[0]
-                    if date not in days:
-                        days[date] = item
-
-                # Берем максимум 5 дней
-                forecast_dates = list(days.keys())[:5]
-
-                # Показываем прогноз в ряд
-                cols = st.columns(len(forecast_dates))
-                for idx, date in enumerate(forecast_dates):
-                    with cols[idx]:
-                        day = days[date]
-                        day_name = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"][
-                            datetime.datetime.strptime(date, "%Y-%m-%d").weekday()
-                        ]
-
-                        st.markdown(f"""
-                        <div style="
-                            background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
-                            border-radius: 8px;
-                            padding: 12px;
-                            text-align: center;
-                            color: white;
-                        ">
-                            <div style="font-weight: bold; margin-bottom: 8px;">{day_name}</div>
-                            <div style="font-size: 2rem; margin: 8px 0;">
-                                {get_weather_icon(day['weather'][0]['icon'])}
-                            </div>
-                            <div style="font-size: 1.2rem; font-weight: bold;">
-                                {round(day['main']['temp'])}°C
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-    # Блок с городами Беларуси
-    st.markdown("---")
-    st.markdown("### 🇧🇾 Города Беларуси")
-
-    belarus_cities = [
-        ("Минск", "Столица"),
-        ("Гомель", "Второй по величине"),
-        ("Витебск", "Город фестивалей"),
-        ("Могилёв", "Исторический центр"),
-        ("Брест", "Город-герой"),
-        ("Гродно", "Западные ворота"),
-        ("Бобруйск", "Промышленный центр"),
-        ("Барановичи", "Крупный транспортный узел"),
-        ("Борисов", "Древний город"),
-        ("Орша", "Восточные ворота"),
-        ("Пинск", "Столица Полесья"),
-        ("Мозырь", "Нефтяная столица"),
-        ("Солигорск", "Город шахтёров"),
-        ("Новополоцк", "Нефтехимический центр"),
-        ("Лида", "Замковый город")
-    ]
-
-    # Показываем города в 3 колонки
-    cols = st.columns(3)
-    for idx, (city, description) in enumerate(belarus_cities):
-        with cols[idx % 3]:
-            if st.button(f"**{city}**", key=f"city_{city}", help=description, use_container_width=True):
-                # При нажатии на кнопку города, ищем погоду для него
-                st.session_state.user_city = city
-                st.rerun()
-
-# ================= ПРОФЕССИОНАЛЬНЫЙ ОБЛАЧНЫЙ ДИСК ZORNET DISK =================
-elif st.session_state.page == "Диск":
-    st.markdown('<div class="gold-title">💾 ДИСК</div>', unsafe_allow_html=True)
-
-    # --- НОВАЯ ПРОВЕРКА ПРИВАТНОСТИ ---
-    if st.session_state.get("auth_status") != "logged_in":
-        st.warning("⚠️ Чтобы пользоваться диском войдите в ZORNET ID")
-        if st.button("Перейти в профиль для входа"):
-            st.session_state.page = "Профиль"
-            st.rerun()
-        st.stop() # Остановка выполнения, если не вошел
-
-    # Создаем уникальный путь для текущего пользователя
-    user_email = st.session_state.user_data['email']
-    # Очищаем email от точек и символов, чтобы создать имя папки
-    user_folder_name = "".join(filter(str.isalnum, user_email)) 
-    user_base_path = os.path.join("zornet_storage", user_folder_name)
-
-    # Если путь еще не задан или он «чужой» — обновляем
-    if "disk_current_path" not in st.session_state or not st.session_state.disk_current_path.startswith(user_base_path):
-        st.session_state.disk_current_path = user_base_path
-
-    # Физически создаем папку пользователя на сервере
-    os.makedirs(st.session_state.disk_current_path, exist_ok=True)
-    
-    # CSS стили для диска
-    st.markdown("""
-    <style>
-        .disk-container {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            margin: 10px 0;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        }
-
-        .disk-header {
-            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-            border-radius: 12px;
-            padding: 25px;
-            color: white;
-            margin-bottom: 20px;
-        }
-
-        .disk-btn {
-            background: white !important;
-            border: 2px solid #DAA520 !important;
-            color: #B8860B !important;
-            padding: 10px 20px !important;
-            border-radius: 8px !important;
-            font-weight: 600 !important;
-            transition: all 0.3s ease !important;
-        }
-
-        .disk-btn:hover {
-            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-            color: white !important;
-            border-color: transparent !important;
-        }
-
-        .disk-btn-active {
-            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-            color: white !important;
-            border-color: transparent !important;
-        }
-
-        .file-card {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 10px 0;
-            border-left: 4px solid #DAA520;
-            transition: all 0.3s ease;
-        }
-
-        .file-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-
-        .folder-card {
-            background: linear-gradient(135deg, #fff9e6 0%, #ffe699 100%);
-            border-radius: 10px;
-            padding: 15px;
-            margin: 10px 0;
-            border: 2px solid #ffd966;
-        }
-
-        .storage-bar {
-            height: 8px;
-            background: #e9ecef;
-            border-radius: 4px;
-            overflow: hidden;
-            margin: 10px 0;
-        }
-
-        .storage-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #DAA520, #FFD700);
-            border-radius: 4px;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
-
-    # Функции для работы с диском
-    def get_file_icon(filename):
-        """Возвращает иконку для файла"""
-        if filename.endswith('/'):
-            return "📁"
-        elif filename.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
-            return "🖼️"
-        elif filename.lower().endswith('.pdf'):
-            return "📄"
-        elif filename.lower().endswith(('.doc', '.docx')):
-            return "📝"
-        elif filename.lower().endswith(('.mp3', '.wav')):
-            return "🎵"
-        elif filename.lower().endswith(('.mp4', '.avi', '.mov')):
-            return "🎬"
-        elif filename.lower().endswith(('.zip', '.rar', '.7z')):
-            return "🗜️"
-        elif filename.lower().endswith(('.py', '.js', '.html', '.css')):
-            return "💻"
-        else:
-            return "📄"
-
-
-    def format_file_size(size_bytes):
-        """Форматирует размер файла"""
-        if size_bytes < 1024:
-            return f"{size_bytes} B"
-        elif size_bytes < 1024 * 1024:
-            return f"{size_bytes / 1024:.1f} KB"
-        elif size_bytes < 1024 * 1024 * 1024:
-            return f"{size_bytes / (1024 * 1024):.1f} MB"
-        else:
-            return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
-
-
-    def get_disk_stats():
-        """Получает статистику диска"""
-        total_size = 0
-        file_count = 0
-        folder_count = 0
-
-        for root, dirs, files in os.walk(st.session_state.disk_current_path):
-            folder_count += len(dirs)
-            for file in files:
-                file_path = os.path.join(root, file)
-                if os.path.exists(file_path):
-                    total_size += os.path.getsize(file_path)
-                    file_count += 1
-
-        return {
-            'total_size': total_size,
-            'file_count': file_count,
-            'folder_count': folder_count
-        }
-
-
-    # ПАНЕЛЬ ИНСТРУМЕНТОВ
-    st.markdown("### 🛠 Панель инструментов")
-
-    col1, col2, col3, col4 = st.columns(4)
-
-    with col1:
-        btn_upload_class = "disk-btn-active" if st.session_state.disk_action == "upload" else "disk-btn"
-        if st.button("📤 Загрузить", key="btn_upload", use_container_width=True):
-            st.session_state.disk_action = "upload"
-            st.rerun()
-
-    with col2:
-        btn_folder_class = "disk-btn-active" if st.session_state.disk_action == "new_folder" else "disk-btn"
-        if st.button("📁 Новая папка", key="btn_new_folder", use_container_width=True):
-            st.session_state.disk_action = "new_folder"
-            st.rerun()
-
-    with col3:
-        btn_search_class = "disk-btn-active" if st.session_state.disk_action == "search" else "disk-btn"
-        if st.button("🔍 Поиск", key="btn_search", use_container_width=True):
-            st.session_state.disk_action = "search"
-            st.rerun()
-
-    with col4:
-        if st.button("🔄 Обновить", key="btn_refresh", use_container_width=True):
-            st.rerun()
-
-    # СТАТИСТИКА ХРАНИЛИЩА
-    stats = get_disk_stats()
-    used_gb = stats['total_size'] / (1024 * 1024 * 1024)
-    used_percent = min(100, (used_gb / 1.0) * 100)  # Предполагаем 1GB лимит
-
-    st.markdown(f"""
-    <div style="background: white; padding: 15px; border-radius: 10px; margin: 15px 0; border: 1px solid #e0e0e0;">
-        <h4 style="margin: 0 0 10px 0;">📊 Использование хранилища</h4>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-            <span>Использовано: {format_file_size(stats['total_size'])}</span>
-            <span>Лимит: 1.0 GB</span>
-        </div>
-        <div class="storage-bar">
-            <div class="storage-fill" style="width: {used_percent}%;"></div>
-        </div>
-        <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.9rem;">
-            <span>📁 Папок: {stats['folder_count']}</span>
-            <span>📄 Файлов: {stats['file_count']}</span>
-            <span>📊 Свободно: {format_file_size(1073741824 - stats['total_size'])}</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # РЕЖИМЫ РАБОТЫ
-    if st.session_state.disk_action == "upload":
-        st.markdown("### 📤 Загрузка файлов")
-
-        uploaded_files = st.file_uploader(
-            "Выберите файлы для загрузки",
-            accept_multiple_files=True,
-            key="file_uploader"
-        )
-
-        if uploaded_files:
-            for uploaded_file in uploaded_files:
-                file_path = os.path.join(st.session_state.disk_current_path, uploaded_file.name)
-                with open(file_path, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
-            st.success(f"✅ Загружено {len(uploaded_files)} файлов!")
-            st.session_state.disk_action = "view"
-            st.rerun()
-
-        col_back1, col_back2 = st.columns(2)
-        with col_back1:
-            if st.button("← Назад к файлам", use_container_width=True):
-                st.session_state.disk_action = "view"
-                st.rerun()
-
-    elif st.session_state.disk_action == "new_folder":
-        st.markdown("### 📁 Создание новой папки")
-
-        folder_name = st.text_input("Введите название папки:")
-
-        col_create, col_back = st.columns(2)
-
-        with col_create:
-            if st.button("✅ Создать папку", type="primary", use_container_width=True):
-                if folder_name:
-                    new_folder_path = os.path.join(st.session_state.disk_current_path, folder_name)
-                    os.makedirs(new_folder_path, exist_ok=True)
-                    st.success(f"Папка '{folder_name}' создана!")
-                    st.session_state.disk_action = "view"
-                    st.rerun()
-
-        with col_back:
-            if st.button("← Назад к файлам", use_container_width=True):
-                st.session_state.disk_action = "view"
-                st.rerun()
-
-    elif st.session_state.disk_action == "search":
-        st.markdown("### 🔍 Поиск файлов")
-
-        search_query = st.text_input("Введите название файла или папки:")
-
-        if search_query:
-            found_items = []
-            for root, dirs, files in os.walk(st.session_state.disk_current_path):
-                for name in dirs + files:
-                    if search_query.lower() in name.lower():
-                        item_path = os.path.join(root, name)
-                        found_items.append({
-                            'name': name,
-                            'path': item_path,
-                            'is_dir': os.path.isdir(item_path),
-                            'size': os.path.getsize(item_path) if os.path.isfile(item_path) else 0
-                        })
-
-            if found_items:
-                st.markdown(f"**Найдено {len(found_items)} результатов:**")
-                for item in found_items[:10]:  # Показываем первые 10
-                    icon = "📁" if item['is_dir'] else get_file_icon(item['name'])
-                    size = format_file_size(item['size']) if not item['is_dir'] else "Папка"
-
-                    col1, col2, col3 = st.columns([3, 2, 1])
-                    with col1:
-                        st.markdown(f"{icon} **{item['name']}**")
-                    with col2:
-                        st.text(size)
-                    with col3:
-                        if not item['is_dir']:
-                            with open(item['path'], 'rb') as f:
-                                st.download_button(
-                                    "📥",
-                                    f.read(),
-                                    item['name'],
-                                    key=f"dl_search_{item['name']}"
-                                )
-            else:
-                st.info("Ничего не найдено")
-
-        if st.button("← Назад к файлам"):
-            st.session_state.disk_action = "view"
-            st.rerun()
-
-    else:
-        # ОСНОВНОЙ РЕЖИМ ПРОСМОТРА ФАЙЛОВ
-        st.markdown("### 📁 Файлы и папки")
-
-        # Быстрая загрузка (всегда доступна)
-        quick_upload = st.file_uploader(
-            "Загрузить файлы (можно перетащить)",
-            accept_multiple_files=True,
-            key="quick_upload"
-        )
-
-        if quick_upload:
-            for file in quick_upload:
-                file_path = os.path.join(st.session_state.disk_current_path, file.name)
-                with open(file_path, "wb") as f:
-                    f.write(file.getbuffer())
-            st.success(f"✅ Загружено {len(quick_upload)} файлов!")
-            st.rerun()
-
-        # Навигация по папкам
-        if st.session_state.disk_current_path != "zornet_cloud":
-            current_parts = st.session_state.disk_current_path.split(os.sep)
-            breadcrumb = []
-            path_so_far = ""
-
-            for part in current_parts:
-                if part:
-                    path_so_far = os.path.join(path_so_far, part) if path_so_far else part
-                    breadcrumb.append((part, path_so_far))
-
-            st.markdown("**Путь:** ", unsafe_allow_html=True)
-            crumb_cols = st.columns(len(breadcrumb) * 2 - 1)
-
-            for i, (name, path) in enumerate(breadcrumb):
-                with crumb_cols[i * 2]:
-                    if st.button(name, key=f"breadcrumb_{i}"):
-                        st.session_state.disk_current_path = path
-                        st.rerun()
-
-                if i < len(breadcrumb) - 1:
-                    with crumb_cols[i * 2 + 1]:
-                        st.markdown("/", unsafe_allow_html=True)
-
-        # Список файлов и папок
-        try:
-            items = os.listdir(st.session_state.disk_current_path)
-        except:
-            items = []
-
-        if not items:
-            st.info("📭 Папка пуста. Загрузите файлы или создайте папку.")
-        else:
-            # Сортируем: сначала папки, потом файлы
-            items.sort(
-                key=lambda x: (not os.path.isdir(os.path.join(st.session_state.disk_current_path, x)), x.lower()))
-
-            # Показываем файлы в сетке
-            cols = st.columns(3)
-            for idx, item in enumerate(items):
-                with cols[idx % 3]:
-                    item_path = os.path.join(st.session_state.disk_current_path, item)
-                    is_dir = os.path.isdir(item_path)
-                    icon = "📁" if is_dir else get_file_icon(item)
-
-                    if is_dir:
-                        st.markdown(f"""
-                        <div class="folder-card">
-                            <div style="font-size: 2.5rem; text-align: center;">{icon}</div>
-                            <div style="text-align: center; font-weight: 600; margin-top: 10px;">{item}</div>
-                            <div style="text-align: center; color: #666; font-size: 0.9em;">Папка</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                        if st.button(f"Открыть", key=f"open_{item}", use_container_width=True):
-                            st.session_state.disk_current_path = item_path
-                            st.rerun()
-
-                    else:
-                        file_size = os.path.getsize(item_path)
-                        st.markdown(f"""
-                        <div class="file-card">
-                            <div style="font-size: 2.5rem; text-align: center;">{icon}</div>
-                            <div style="text-align: center; font-weight: 600; margin-top: 10px;">{item}</div>
-                            <div style="text-align: center; color: #666; font-size: 0.9em;">{format_file_size(file_size)}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                        col1, col2 = st.columns(2)
-                        with col1:
-                            with open(item_path, 'rb') as f:
-                                st.download_button(
-                                    "📥 Скачать",
-                                    f.read(),
-                                    item,
-                                    key=f"dl_{item}",
-                                    use_container_width=True
-                                )
-                        with col2:
-                            if st.button("👁️ Просмотр", key=f"view_{item}", use_container_width=True):
-                                # Превью файла
-                                if item.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
-                                    try:
-                                        image = Image.open(item_path)
-                                        st.image(image, caption=item, use_column_width=True)
-                                    except:
-                                        st.error("Не удалось открыть изображение")
-                                elif item.lower().endswith('.txt'):
-                                    try:
-                                        with open(item_path, 'r', encoding='utf-8') as f:
-                                            content = f.read()
-                                        st.text_area("Содержимое файла", content, height=200)
-                                    except:
-                                        st.error("Не удалось открыть файл")
-                                elif item.lower().endswith('.pdf'):
-                                    st.info(f"PDF файл: {item}")
-                                    with open(item_path, 'rb') as f:
-                                        st.download_button("Скачать PDF", f.read(), item)
-
-# ================= СТРАНИЦА ПРОФИЛЯ (ZORNET ID — REAL AUTH) =================
-elif st.session_state.page == "Профиль":
-    
-    # 1. Стилизация (Убираем все лишние отступы и фиксим "белую ерунду")
-    st.markdown("""
-    <style>
-        /* Главный заголовок: ОГРОМНЫЙ И ЗОЛОТОЙ */
-        .giant-id-title {
-            font-size: 5rem !important;
-            font-weight: 900 !important;
-            text-align: center;
-            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin: 20px 0 40px 0 !important;
-            letter-spacing: -2px;
-        }
-
-        /* Убираем белые рамки вокруг загрузчика и маркдауна */
-        [data-testid="stVerticalBlock"] > div:has(div.stMarkdown) {
-            padding: 0 !important;
-            gap: 0 !important;
-        }
-        
-        .profile-container {
-            background: white;
-            border-radius: 32px;
-            padding: 40px;
-            border: 1px solid #f0f0f0;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-
-        .user-avatar-main {
-            width: 180px;
-            height: 180px;
-            border-radius: 40px; /* Мягкий квадрат как на твоем фото */
-            object-fit: cover;
-            border: 4px solid #DAA520;
-            margin-bottom: 20px;
-        }
-
-        /* Прячем стандартный uploader, оставляя только кнопку */
-        .stFileUploader section {
-            background-color: transparent !important;
-            border: none !important;
-            padding: 0 !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # 2. Логика "Реального" Google Auth
-    # Если ты подключил Google Cloud, тебе придет код в URL
-    if "code" in st.query_params:
-        # Здесь в реальности идет обмен кода на токен, но мы имитируем успех:
-        st.session_state.auth_step = "info_form"
-        st.session_state.user_data["email"] = "zahar.zelenkevv@gmail.com" # Берем из Google API
-
-    # 3. Отрисовка интерфейса
-    st.markdown('<h1 class="giant-id-title">🆔 ZORNET ID</h1>', unsafe_allow_html=True)
-
-    if st.session_state.auth_step == "login_start":
-        # Экран выбора как в Google
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            st.markdown("""
-            <div style="background:white; border:1px solid #dadce0; border-radius:8px; padding:40px; text-align:center;">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_晃logo%E6%9A%AE.png" width="80" style="margin-bottom:20px;">
-                <h2 style="font-weight:400; margin-bottom:10px;">Вход</h2>
-                <p style="color:#202124; margin-bottom:30px;">Переход в приложение ZORNET</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Настоящая кнопка (в будущем замени на ссылку авторизации Google)
-            if st.button("Войти через аккаунт Google", use_container_width=True, type="primary"):
-                st.session_state.auth_step = "info_form"
-                st.session_state.user_data["email"] = "zahar.zelenkevv@gmail.com"
-                st.rerun()
-
-    elif st.session_state.auth_step == "info_form":
-        # Форма ввода своих данных (Имя, Фамилия, Ник)
-        with st.container():
-            st.markdown('<div class="profile-container">', unsafe_allow_html=True)
-            st.subheader("Почти готово")
-            st.caption(f"Авторизован как: {st.session_state.user_data['email']}")
-            
-            col_a, col_b = st.columns(2)
-            with col_a:
-                f_name = st.text_input("Ваше Имя")
-                n_name = st.text_input("Придумайте Никнейм")
-            with col_b:
-                l_name = st.text_input("Ваша Фамилия")
-            
-            if st.button("Создать профиль ZORNET", use_container_width=True):
-                if f_name and l_name and n_name:
-                    st.session_state.user_data.update({"first_name": f_name, "last_name": l_name, "nickname": n_name})
-                    st.session_state.auth_step = "logged_in"
-                    st.rerun()
-            st.markdown('</div>', unsafe_allow_html=True)
-
-    elif st.session_state.auth_step == "logged_in":
-        # ФИНАЛЬНЫЙ ПРОФИЛЬ (Чистый дизайн без "ерунды")
-        user = st.session_state.user_data
-        
-        col_left, col_right = st.columns([1, 2])
-        
-        with col_left:
-            # Контейнер аватара
-            if st.session_state.user_photo:
-                st.image(st.session_state.user_photo, use_container_width=True)
-            else:
-                st.markdown(f"""
-                <div style="width:100%; aspect-ratio:1/1; background:#DAA520; border-radius:40px; display:flex; align-items:center; justify-content:center; font-size:80px; color:white; font-weight:bold;">
-                    {user['first_name'][0]}
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Кнопка загрузки (без белого фона вокруг)
-            uploaded_img = st.file_uploader("Загрузить фото", type=['jpg','png'], label_visibility="collapsed")
-            if uploaded_img:
-                st.session_state.user_photo = uploaded_img
-                st.rerun()
-
-        with col_right:
-            st.markdown(f"""
-            <div style="text-align:left;">
-                <h1 style="margin:10px 0 0 0;">{user['first_name']} {user['last_name']}</h1>
-                <p style="color:#666; font-size:18px;">@{user['nickname']}</p>
-                <hr style="margin:20px 0;">
-                <p><b>Email:</b> {user['email']}</p>
-                <p><b>ID пользователя:</b> ZRN-{user['nickname'].upper()}-2024</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            if st.button("🚪 Выйти из системы", type="secondary"):
-                st.session_state.auth_step = "login_start"
-                st.session_state.user_photo = None
-                st.rerun()
-
-# ================= МЕССЕНДЖЕР =================
+# ================= СТРАНИЦА МЕССЕНДЖЕРА =================
 elif st.session_state.page == "Мессенджер":
     st.markdown('<div class="gold-title">💬 МЕССЕНДЖЕР</div>', unsafe_allow_html=True)
     
-    # Создаем вкладки для разных функций
     tab1, tab2, tab3 = st.tabs(["📨 Личные сообщения", "👥 Группы", "📹 Видеозвонки"])
     
     with tab1:
         st.markdown("### 💬 Личные сообщения")
         
-        # Имитация списка чатов
         chats = [
             {"name": "Алексей", "last_msg": "Привет! Как дела?", "time": "12:30", "unread": 3},
             {"name": "Мария", "last_msg": "Отправила тебе файл", "time": "11:45", "unread": 0},
@@ -1465,7 +746,6 @@ elif st.session_state.page == "Мессенджер":
                 if chat['unread'] > 0:
                     st.markdown(f"<div style='background: red; color: white; border-radius: 50%; width: 20px; height: 20px; text-align: center;'>{chat['unread']}</div>", unsafe_allow_html=True)
         
-        # Поле для нового сообщения
         st.markdown("---")
         new_message = st.text_input("Написать сообщение:", placeholder="Введите текст...")
         if st.button("Отправить", type="primary"):
@@ -1487,7 +767,6 @@ elif st.session_state.page == "Мессенджер":
                 if st.button(f"Присоединиться к {group['name']}", key=f"join_{group['name']}"):
                     st.success(f"Вы присоединились к {group['name']}!")
         
-        # Создание новой группы
         st.markdown("---")
         st.markdown("#### Создать новую группу")
         new_group = st.text_input("Название группы:")
@@ -1498,7 +777,6 @@ elif st.session_state.page == "Мессенджер":
     with tab3:
         st.markdown("### 📹 Видеозвонки")
         
-        # Быстрое подключение к Jitsi Meet
         room_name = st.text_input("Название комнаты:", placeholder="моя-комната-123")
         
         col1, col2 = st.columns(2)
@@ -1515,12 +793,10 @@ elif st.session_state.page == "Мессенджер":
                     jitsi_url = f"https://meet.jit.si/zornet-{room_name}"
                     st.markdown(f"[Присоединиться к комнате]({jitsi_url})")
         
-        # Встраиваем Jitsi прямо в страницу (опционально)
         st.markdown("---")
         st.markdown("#### Прямой доступ к видеокомнате")
         st.info("Совет: Для лучшего качества используйте наушники")
         
-        # Код для встраивания Jitsi
         components.html(f"""
         <iframe 
             allow="camera; microphone; fullscreen; display-capture"
@@ -1530,47 +806,36 @@ elif st.session_state.page == "Мессенджер":
         </iframe>
         """, height=550)
 
-# ================= СОВМЕСТНЫЙ ПРОСМОТР =================
+# ================= СТРАНИЦА СОВМЕСТНОГО ПРОСМОТРА =================
 elif st.session_state.page == "Совместный просмотр":
     st.markdown('<div class="gold-title">🎬 СОВМЕСТНЫЙ ПРОСМОТР</div>', unsafe_allow_html=True)
     
-    # Две колонки: создание комнаты и список комнат
     col1, col2 = st.columns([2, 1])
     
     with col1:
         st.markdown("### Создать комнату для просмотра")
         
-        # URL видео
         video_url = st.text_input(
             "Ссылка на YouTube видео:",
             placeholder="https://www.youtube.com/watch?v=...",
             help="Вставьте ссылку на YouTube видео"
         )
         
-        # Название комнаты
         room_name = st.text_input(
             "Название комнаты:",
             placeholder="Например: Фильм с друзьями",
             value="Моя комната"
         )
         
-        # Пароль (опционально)
         room_password = st.text_input(
             "Пароль (опционально):",
             type="password",
             placeholder="Оставьте пустым для публичной комнаты"
         )
         
-        # Кнопка создания
         if st.button("🎥 Создать комнату", type="primary", use_container_width=True):
             if video_url and room_name:
-                # Генерируем ID комнаты
-                import uuid
                 room_id = str(uuid.uuid4())[:8]
-                
-                # Сохраняем в сессии
-                if "rooms" not in st.session_state:
-                    st.session_state.rooms = []
                 
                 st.session_state.rooms.append({
                     "id": room_id,
@@ -1583,11 +848,9 @@ elif st.session_state.page == "Совместный просмотр":
                 
                 st.success(f"Комната '{room_name}' создана!")
                 
-                # Показываем ссылку
                 watch_url = f"{st.experimental_get_query_params().get('base_url', [''])[0]}/watch/{room_id}"
                 st.markdown(f"**Ссылка для друзей:** `{watch_url}`")
                 
-                # Кнопка для перехода в комнату
                 if st.button("▶️ Перейти в комнату"):
                     st.session_state.watch_room = room_id
                     st.rerun()
@@ -1595,8 +858,8 @@ elif st.session_state.page == "Совместный просмотр":
     with col2:
         st.markdown("### Активные комнаты")
         
-        if "rooms" in st.session_state and st.session_state.rooms:
-            for room in st.session_state.rooms[-5:]:  # Последние 5 комнат
+        if st.session_state.rooms:
+            for room in st.session_state.rooms[-5:]:
                 st.markdown(f"""
                 <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin: 5px 0; border-left: 3px solid #DAA520;">
                     <b>{room['name']}</b><br>
@@ -1611,37 +874,36 @@ elif st.session_state.page == "Совместный просмотр":
         else:
             st.info("🎬 Пока нет активных комнат. Создайте первую!")
     
-    # Если выбрана комната, показываем плеер
     if st.session_state.get("watch_room"):
         st.markdown("---")
         st.markdown("### 🎥 Комната для совместного просмотра")
         
-        # Получаем данные комнаты
         current_room = None
-        if "rooms" in st.session_state:
-            for room in st.session_state.rooms:
-                if room["id"] == st.session_state.watch_room:
-                    current_room = room
-                    break
+        for room in st.session_state.rooms:
+            if room["id"] == st.session_state.watch_room:
+                current_room = room
+                break
         
         if current_room:
             st.markdown(f"**Комната:** {current_room['name']}")
             st.markdown(f"**Владелец:** {current_room['owner']}")
             
-            # Извлекаем ID видео из YouTube URL
-            import re
             video_id_match = re.search(r'(?:v=|\/)([0-9A-Za-z_-]{11}).*', current_room['url'])
             
             if video_id_match:
                 video_id = video_id_match.group(1)
                 
-                # Встраиваем YouTube плеер
                 components.html(f"""
                 <!DOCTYPE html>
                 <html>
                 <head>
                     <style>
-                        body {{ margin: 0; padding: 20px; background: #0f0f0f; }}
+                        body {{ 
+                            margin: 0; 
+                            padding: 20px; 
+                            background: #0f0f0f; 
+                            font-family: Arial, sans-serif;
+                        }}
                         .player-container {{
                             max-width: 1000px;
                             margin: 0 auto;
@@ -1650,17 +912,10 @@ elif st.session_state.page == "Совместный просмотр":
                             overflow: hidden;
                             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
                         }}
-                        .chat-sidebar {{
-                            background: #1a1a1a;
-                            color: white;
-                            padding: 20px;
-                            border-radius: 10px;
-                        }}
                     </style>
                 </head>
                 <body>
                     <div class="player-container">
-                        <!-- YouTube плеер -->
                         <iframe 
                             width="100%" 
                             height="500" 
@@ -1670,7 +925,6 @@ elif st.session_state.page == "Совместный просмотр":
                             allowfullscreen>
                         </iframe>
                         
-                        <!-- Простой чат (заглушка) -->
                         <div style="padding: 20px; background: #1a1a1a; color: white;">
                             <h3 style="margin: 0 0 10px 0;">💬 Чат комнаты</h3>
                             <div id="chat" style="height: 200px; overflow-y: auto; background: #2a2a2a; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
@@ -1693,7 +947,6 @@ elif st.session_state.page == "Совместный просмотр":
                             }}
                         }}
                         
-                        // Автофокус на поле ввода
                         document.getElementById('message').focus();
                     </script>
                 </body>
@@ -1702,11 +955,911 @@ elif st.session_state.page == "Совместный просмотр":
             else:
                 st.error("Неверная ссылка на YouTube видео")
         
-        # Кнопка выхода из комнаты
         if st.button("← Выйти из комнаты"):
             st.session_state.watch_room = None
             st.rerun()
+
+# ================= СТРАНИЦА МУЗЫКИ =================
+elif st.session_state.page == "Музыка":
+    st.markdown('<div class="gold-title">🎵 МУЗЫКА</div>', unsafe_allow_html=True)
+    
+    tab1, tab2, tab3 = st.tabs(["🎧 Совместное прослушивание", "📻 Радиостанции", "🎼 Моя музыка"])
+    
+    with tab1:
+        st.markdown("### 🎧 Создать музыкальную комнату")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            room_name = st.text_input("Название комнаты:", value="Моя музыкальная комната")
             
+            stations = {
+                "Европа Плюс": "https://ep128.hostingradio.ru:8052/ep128",
+                "Русское Радио": "http://online-1.gkvr.ru:8000/rus_radio_64.aac",
+                "Рекорд": "http://air2.radiorecord.ru:805/rr_320",
+                "Relax FM": "http://ic6.101.ru:8000/v1_1",
+                "Наше Радио": "http://nashe1.hostingradio.ru:80/nashe-128.mp3",
+            }
+            
+            selected_station = st.selectbox("Выберите радиостанцию:", list(stations.keys()))
+            
+            if st.button("🎵 Создать комнату", use_container_width=True, type="primary"):
+                room_id = str(uuid.uuid4())[:8]
+                
+                st.session_state.music_rooms.append({
+                    "id": room_id,
+                    "name": room_name,
+                    "station": selected_station,
+                    "stream_url": stations[selected_station],
+                    "owner": st.session_state.get("user_email", "Гость"),
+                    "listeners": 1
+                })
+                
+                st.success(f"Музыкальная комната создана!")
+                st.session_state.current_music_room = room_id
+        
+        with col2:
+            st.markdown("#### Активные комнаты")
+            
+            if st.session_state.music_rooms:
+                for room in st.session_state.music_rooms:
+                    st.markdown(f"""
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                color: white; padding: 15px; border-radius: 10px; margin: 10px 0;">
+                        <b>{room['name']}</b><br>
+                        <small>🎵 {room['station']}</small><br>
+                        <small>👥 {room['listeners']} слушателей</small>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    if st.button(f"Присоединиться", key=f"music_join_{room['id']}", use_container_width=True):
+                        st.session_state.current_music_room = room['id']
+                        st.rerun()
+            else:
+                st.info("Создайте первую музыкальную комнату!")
+        
+        if st.session_state.get("current_music_room"):
+            current_room = None
+            for room in st.session_state.music_rooms:
+                if room["id"] == st.session_state.current_music_room:
+                    current_room = room
+                    break
+            
+            if current_room:
+                st.markdown("---")
+                st.markdown(f"### 🎵 Слушаем: {current_room['station']}")
+                
+                components.html(f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {{ 
+                            margin: 0; 
+                            padding: 20px; 
+                            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                            color: white;
+                            font-family: Arial, sans-serif;
+                        }}
+                        .music-player {{
+                            max-width: 600px;
+                            margin: 0 auto;
+                            background: rgba(255,255,255,0.1);
+                            backdrop-filter: blur(10px);
+                            border-radius: 20px;
+                            padding: 30px;
+                            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                            text-align: center;
+                        }}
+                        .album-art {{
+                            width: 200px;
+                            height: 200px;
+                            background: linear-gradient(45deg, #DAA520, #FFD700);
+                            border-radius: 20px;
+                            margin: 0 auto 20px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 60px;
+                        }}
+                        .controls button {{
+                            background: rgba(255,255,255,0.2);
+                            border: none;
+                            color: white;
+                            padding: 15px;
+                            margin: 5px;
+                            border-radius: 50%;
+                            font-size: 20px;
+                            cursor: pointer;
+                            width: 50px;
+                            height: 50px;
+                        }}
+                    </style>
+                </head>
+                <body>
+                    <div class="music-player">
+                        <div class="album-art">🎵</div>
+                        <h2>{current_room['name']}</h2>
+                        <p>{current_room['station']}</p>
+                        
+                        <audio id="audioPlayer" controls autoplay style="width: 100%; margin: 20px 0;">
+                            <source src="{current_room['stream_url']}" type="audio/mpeg">
+                            Ваш браузер не поддерживает аудиоплеер.
+                        </audio>
+                        
+                        <div class="controls">
+                            <button onclick="document.getElementById('audioPlayer').play()">▶️</button>
+                            <button onclick="document.getElementById('audioPlayer').pause()">⏸️</button>
+                            <button onclick="document.getElementById('audioPlayer').volume += 0.1">🔊</button>
+                            <button onclick="document.getElementById('audioPlayer').volume -= 0.1">🔉</button>
+                        </div>
+                        
+                        <div style="margin-top: 20px; background: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px;">
+                            <h4>👥 Сейчас слушают:</h4>
+                            <p>{current_room['owner']} (создатель)</p>
+                            <p id="otherListeners">Вы</p>
+                        </div>
+                    </div>
+                    
+                    <script>
+                        document.getElementById('audioPlayer').play();
+                    </script>
+                </body>
+                </html>
+                """, height=550)
+                
+                if st.button("← Выйти из комнаты"):
+                    st.session_state.current_music_room = None
+                    st.rerun()
+    
+    with tab2:
+        st.markdown("### 📻 Радиостанции Беларуси")
+        
+        belarus_radio = [
+            ("Радио Би-Эй", "Популярная музыка", "http://stream.belarusradio.by:8000/radio"),
+            ("Радио Минск", "Новости и музыка", "http://radio.minsk.by:8000/minsk"),
+            ("Радио Сталіца", "Белорусские хиты", "http://radiostalica.by:8000/stalica"),
+            ("Радио UNISTAR", "Танцевальная музыка", "http://unistar.by:8000/unistar"),
+            ("Пилот FM", "Рок и альтернатива", "http://pilotfm.by:8000/pilot"),
+        ]
+        
+        for name, desc, url in belarus_radio:
+            with st.expander(f"📻 {name}"):
+                st.write(desc)
+                st.audio(url, format="audio/mp3")
+    
+    with tab3:
+        st.markdown("### 🎼 Моя музыка (из Диска)")
+        
+        if st.session_state.get("auth_status") == "logged_in":
+            user_email = st.session_state.user_data['email']
+            user_folder_name = "".join(filter(str.isalnum, user_email))
+            music_path = os.path.join("zornet_storage", user_folder_name)
+            
+            if os.path.exists(music_path):
+                audio_extensions = ['.mp3', '.wav', '.ogg', '.m4a']
+                audio_files = []
+                
+                for root, dirs, files in os.walk(music_path):
+                    for file in files:
+                        if any(file.lower().endswith(ext) for ext in audio_extensions):
+                            audio_files.append(os.path.join(root, file))
+                
+                if audio_files:
+                    for audio_file in audio_files[:5]:
+                        filename = os.path.basename(audio_file)
+                        st.write(f"🎵 {filename}")
+                        st.audio(audio_file, format="audio/mp3")
+                else:
+                    st.info("Загрузите аудиофайлы в ваш Диск (MP3, WAV)")
+            else:
+                st.info("У вас еще нет своего хранилища")
+        else:
+            st.warning("Войдите в систему, чтобы видеть свою музыку")
+
+# ================= СТРАНИЦА НОВОСТЕЙ =================
+elif st.session_state.page == "Новости":
+    st.markdown('<div class="gold-title">📰 НОВОСТИ</div>', unsafe_allow_html=True)
+    
+    with st.spinner("Загружаю новости..."):
+        news = get_belta_news()
+        
+        for item in news:
+            st.markdown(f"""
+            <div style="
+                background: #f8f9fa;
+                border-left: 4px solid #DAA520;
+                padding: 15px;
+                margin-bottom: 15px;
+                border-radius: 8px;
+            ">
+                <a href="{item.link}" target="_blank" 
+                   style="color:#DAA520; font-size:1.2rem; font-weight:bold; text-decoration:none;">
+                    {item.title}
+                </a>
+                <p style="color:#1a1a1a; margin-top:10px;">{item.summary[:200]}...</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+# ================= СТРАНИЦА ПОГОДЫ =================
+elif st.session_state.page == "Погода":
+    st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
+    
+    default_city = "Минск"
+    
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        city_input = st.text_input(
+            "🔍 Введите ваш город",
+            placeholder="Например: Минск, Гомель, Брест...",
+            key="weather_city_input"
+        )
+    
+    with col2:
+        search_clicked = st.button("Найти", type="primary", use_container_width=True)
+    
+    city_to_show = default_city
+    if search_clicked and city_input:
+        city_to_show = city_input
+    elif 'user_city' in st.session_state:
+        city_to_show = st.session_state.user_city
+    
+    with st.spinner(f"Получаю погоду для {city_to_show}..."):
+        weather_data = get_weather_by_city(city_to_show)
+        
+        if not weather_data:
+            st.error(f"Город '{city_to_show}' не найден. Показываю погоду в Минске.")
+            weather_data = get_weather_by_city(default_city)
+            city_to_show = default_city
+        
+        if weather_data:
+            current = weather_data["current"]
+            
+            st.session_state.user_city = city_to_show
+            st.session_state.weather_data = weather_data
+            
+            st.markdown(f"### 🌤️ Погода в {current['city']}, {current['country']}")
+            
+            col_temp, col_icon = st.columns([2, 1])
+            
+            with col_temp:
+                st.markdown(f"""
+                <div style="text-align: center;">
+                    <div style="font-size: 4rem; font-weight: 800; color: #1a1a1a;">
+                        {current['temp']}°C
+                    </div>
+                    <div style="font-size: 1.5rem; color: #666; margin-top: 10px;">
+                        {get_weather_icon(current['icon'])} {current['description']}
+                    </div>
+                    <div style="font-size: 1rem; color: #888; margin-top: 5px;">
+                        💁 Ощущается как {current['feels_like']}°C
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col_icon:
+                st.markdown(f"""
+                <div style="text-align: center; padding-top: 15px;">
+                    <div style="font-size: 5rem;">
+                        {get_weather_icon(current['icon'])}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            st.markdown("#### 📊 Детали")
+            
+            details = [
+                ("💧 Влажность", f"{current['humidity']}%"),
+                ("💨 Ветер", f"{current['wind_speed']} м/с"),
+                ("🧭 Направление", get_wind_direction(current['wind_deg'])),
+                ("📊 Давление", f"{current['pressure']} гПа"),
+                ("👁️ Видимость", f"{current['visibility']} км"),
+                ("☁️ Облачность", f"{current['clouds']}%"),
+                ("🌅 Восход", current['sunrise']),
+                ("🌇 Закат", current['sunset'])
+            ]
+            
+            for i in range(0, len(details), 2):
+                col1, col2 = st.columns(2)
+                with col1:
+                    name, value = details[i]
+                    st.markdown(f"""
+                    <div style="
+                        background: #f8f9fa;
+                        padding: 12px;
+                        border-radius: 8px;
+                        margin-bottom: 10px;
+                    ">
+                        <div style="color: #666; font-size: 0.9rem;">{name}</div>
+                        <div style="font-size: 1.2rem; font-weight: bold;">{value}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                if i + 1 < len(details):
+                    with col2:
+                        name, value = details[i + 1]
+                        st.markdown(f"""
+                        <div style="
+                            background: #f8f9fa;
+                            padding: 12px;
+                            border-radius: 8px;
+                            margin-bottom: 10px;
+                        ">
+                            <div style="color: #666; font-size: 0.9rem;">{name}</div>
+                            <div style="font-size: 1.2rem; font-weight: bold;">{value}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+            
+            if weather_data.get("forecast"):
+                st.markdown("#### 📅 Прогноз на 5 дней")
+                
+                forecast = weather_data["forecast"]["list"]
+                days = {}
+                
+                for item in forecast:
+                    date = item["dt_txt"].split(" ")[0]
+                    if date not in days:
+                        days[date] = item
+                
+                forecast_dates = list(days.keys())[:5]
+                
+                cols = st.columns(len(forecast_dates))
+                for idx, date in enumerate(forecast_dates):
+                    with cols[idx]:
+                        day = days[date]
+                        day_name = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"][
+                            datetime.datetime.strptime(date, "%Y-%m-%d").weekday()
+                        ]
+                        
+                        st.markdown(f"""
+                        <div style="
+                            background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
+                            border-radius: 8px;
+                            padding: 12px;
+                            text-align: center;
+                            color: white;
+                        ">
+                            <div style="font-weight: bold; margin-bottom: 8px;">{day_name}</div>
+                            <div style="font-size: 2rem; margin: 8px 0;">
+                                {get_weather_icon(day['weather'][0]['icon'])}
+                            </div>
+                            <div style="font-size: 1.2rem; font-weight: bold;">
+                                {round(day['main']['temp'])}°C
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    st.markdown("### 🇧🇾 Города Беларуси")
+    
+    belarus_cities = [
+        ("Минск", "Столица"),
+        ("Гомель", "Второй по величине"),
+        ("Витебск", "Город фестивалей"),
+        ("Могилёв", "Исторический центр"),
+        ("Брест", "Город-герой"),
+        ("Гродно", "Западные ворота"),
+        ("Бобруйск", "Промышленный центр"),
+        ("Барановичи", "Крупный транспортный узел"),
+        ("Борисов", "Древний город"),
+        ("Орша", "Восточные ворота"),
+        ("Пинск", "Столица Полесья"),
+        ("Мозырь", "Нефтяная столица"),
+        ("Солигорск", "Город шахтёров"),
+        ("Новополоцк", "Нефтехимический центр"),
+        ("Лида", "Замковый город")
+    ]
+    
+    cols = st.columns(3)
+    for idx, (city, description) in enumerate(belarus_cities):
+        with cols[idx % 3]:
+            if st.button(f"**{city}**", key=f"city_{city}", help=description, use_container_width=True):
+                st.session_state.user_city = city
+                st.rerun()
+
+# ================= СТРАНИЦА ДИСКА =================
+# ================= СТРАНИЦА ДИСКА (ИСПРАВЛЕННАЯ ПРОВЕРКА) =================
+elif st.session_state.page == "Диск":
+    st.markdown('<div class="gold-title">💾 ДИСК</div>', unsafe_allow_html=True)
+    
+    # 🔴 ИСПРАВЛЕННАЯ ПРОВЕРКА АВТОРИЗАЦИИ
+    if not st.session_state.is_logged_in:
+        st.warning("""
+        ⚠️ **Требуется авторизация**
+        
+        Чтобы пользоваться облачным диском, войдите в ZORNET ID.
+        """)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🆔 Войти в ZORNET ID", type="primary", use_container_width=True):
+                st.session_state.page = "Профиль"
+                st.rerun()
+        with col2:
+            if st.button("🏠 На главную", use_container_width=True):
+                st.session_state.page = "Главная"
+                st.rerun()
+        st.stop()
+    
+    # Если дошли сюда, значит пользователь авторизован
+    user_email = st.session_state.user_data.get('email', 'anonymous@zornet.by')
+    
+    # Создаем безопасное имя папки из email
+    import re
+    safe_email = re.sub(r'[^a-zA-Z0-9]', '_', user_email)
+    user_base_path = os.path.join("zornet_storage", safe_email)
+    
+    # Инициализация пути
+    if "disk_current_path" not in st.session_state:
+        st.session_state.disk_current_path = user_base_path
+    elif not st.session_state.disk_current_path.startswith(user_base_path):
+        # Если путь не принадлежит пользователю, сбрасываем к его корневой папке
+        st.session_state.disk_current_path = user_base_path
+    
+    # Создаем папку пользователя, если не существует
+    os.makedirs(st.session_state.disk_current_path, exist_ok=True)
+    
+    # Показываем информацию о пользователе
+    st.info(f"👤 **Пользователь:** {st.session_state.user_data.get('first_name', 'Пользователь')} | 💾 **Хранилище:** {user_base_path}")
+    
+    st.markdown('<div class="gold-title">💾 ДИСК</div>', unsafe_allow_html=True)
+    
+    if st.session_state.get("auth_status") != "logged_in":
+        st.warning("⚠️ Чтобы пользоваться диском войдите в ZORNET ID")
+        if st.button("Перейти в профиль для входа"):
+            st.session_state.page = "Профиль"
+            st.rerun()
+        st.stop()
+    
+    user_email = st.session_state.user_data['email']
+    user_folder_name = "".join(filter(str.isalnum, user_email))
+    user_base_path = os.path.join("zornet_storage", user_folder_name)
+    
+    if "disk_current_path" not in st.session_state or not st.session_state.disk_current_path.startswith(user_base_path):
+        st.session_state.disk_current_path = user_base_path
+    
+    os.makedirs(st.session_state.disk_current_path, exist_ok=True)
+    
+    def format_file_size(size_bytes):
+        if size_bytes < 1024:
+            return f"{size_bytes} B"
+        elif size_bytes < 1024 * 1024:
+            return f"{size_bytes / 1024:.1f} KB"
+        elif size_bytes < 1024 * 1024 * 1024:
+            return f"{size_bytes / (1024 * 1024):.1f} MB"
+        else:
+            return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
+    
+    def get_disk_stats():
+        total_size = 0
+        file_count = 0
+        folder_count = 0
+        
+        for root, dirs, files in os.walk(st.session_state.disk_current_path):
+            folder_count += len(dirs)
+            for file in files:
+                file_path = os.path.join(root, file)
+                if os.path.exists(file_path):
+                    total_size += os.path.getsize(file_path)
+                    file_count += 1
+        
+        return {
+            'total_size': total_size,
+            'file_count': file_count,
+            'folder_count': folder_count
+        }
+    
+    st.markdown("### 🛠 Панель инструментов")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        btn_upload_class = "disk-btn-active" if st.session_state.disk_action == "upload" else "disk-btn"
+        if st.button("📤 Загрузить", key="btn_upload", use_container_width=True):
+            st.session_state.disk_action = "upload"
+            st.rerun()
+    
+    with col2:
+        btn_folder_class = "disk-btn-active" if st.session_state.disk_action == "new_folder" else "disk-btn"
+        if st.button("📁 Новая папка", key="btn_new_folder", use_container_width=True):
+            st.session_state.disk_action = "new_folder"
+            st.rerun()
+    
+    with col3:
+        btn_search_class = "disk-btn-active" if st.session_state.disk_action == "search" else "disk-btn"
+        if st.button("🔍 Поиск", key="btn_search", use_container_width=True):
+            st.session_state.disk_action = "search"
+            st.rerun()
+    
+    with col4:
+        if st.button("🔄 Обновить", key="btn_refresh", use_container_width=True):
+            st.rerun()
+    
+    stats = get_disk_stats()
+    used_gb = stats['total_size'] / (1024 * 1024 * 1024)
+    used_percent = min(100, (used_gb / 1.0) * 100)
+    
+    st.markdown(f"""
+    <div style="background: white; padding: 15px; border-radius: 10px; margin: 15px 0; border: 1px solid #e0e0e0;">
+        <h4 style="margin: 0 0 10px 0;">📊 Использование хранилища</h4>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+            <span>Использовано: {format_file_size(stats['total_size'])}</span>
+            <span>Лимит: 1.0 GB</span>
+        </div>
+        <div class="storage-bar">
+            <div class="storage-fill" style="width: {used_percent}%;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.9rem;">
+            <span>📁 Папок: {stats['folder_count']}</span>
+            <span>📄 Файлов: {stats['file_count']}</span>
+            <span>📊 Свободно: {format_file_size(1073741824 - stats['total_size'])}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if st.session_state.disk_action == "upload":
+        st.markdown("### 📤 Загрузка файлов")
+        
+        uploaded_files = st.file_uploader(
+            "Выберите файлы для загрузки",
+            accept_multiple_files=True,
+            key="file_uploader"
+        )
+        
+        if uploaded_files:
+            for uploaded_file in uploaded_files:
+                file_path = os.path.join(st.session_state.disk_current_path, uploaded_file.name)
+                with open(file_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+            st.success(f"✅ Загружено {len(uploaded_files)} файлов!")
+            st.session_state.disk_action = "view"
+            st.rerun()
+        
+        col_back1, col_back2 = st.columns(2)
+        with col_back1:
+            if st.button("← Назад к файлам", use_container_width=True):
+                st.session_state.disk_action = "view"
+                st.rerun()
+    
+    elif st.session_state.disk_action == "new_folder":
+        st.markdown("### 📁 Создание новой папки")
+        
+        folder_name = st.text_input("Введите название папки:")
+        
+        col_create, col_back = st.columns(2)
+        
+        with col_create:
+            if st.button("✅ Создать папку", type="primary", use_container_width=True):
+                if folder_name:
+                    new_folder_path = os.path.join(st.session_state.disk_current_path, folder_name)
+                    os.makedirs(new_folder_path, exist_ok=True)
+                    st.success(f"Папка '{folder_name}' создана!")
+                    st.session_state.disk_action = "view"
+                    st.rerun()
+        
+        with col_back:
+            if st.button("← Назад к файлам", use_container_width=True):
+                st.session_state.disk_action = "view"
+                st.rerun()
+    
+    elif st.session_state.disk_action == "search":
+        st.markdown("### 🔍 Поиск файлов")
+        
+        search_query = st.text_input("Введите название файла или папки:")
+        
+        if search_query:
+            found_items = []
+            for root, dirs, files in os.walk(st.session_state.disk_current_path):
+                for name in dirs + files:
+                    if search_query.lower() in name.lower():
+                        item_path = os.path.join(root, name)
+                        found_items.append({
+                            'name': name,
+                            'path': item_path,
+                            'is_dir': os.path.isdir(item_path),
+                            'size': os.path.getsize(item_path) if os.path.isfile(item_path) else 0
+                        })
+            
+            if found_items:
+                st.markdown(f"**Найдено {len(found_items)} результатов:**")
+                for item in found_items[:10]:
+                    icon = "📁" if item['is_dir'] else get_icon(Path(item['name']))
+                    size = format_file_size(item['size']) if not item['is_dir'] else "Папка"
+                    
+                    col1, col2, col3 = st.columns([3, 2, 1])
+                    with col1:
+                        st.markdown(f"{icon} **{item['name']}**")
+                    with col2:
+                        st.text(size)
+                    with col3:
+                        if not item['is_dir']:
+                            with open(item['path'], 'rb') as f:
+                                st.download_button(
+                                    "📥",
+                                    f.read(),
+                                    item['name'],
+                                    key=f"dl_search_{item['name']}"
+                                )
+            else:
+                st.info("Ничего не найдено")
+        
+        if st.button("← Назад к файлам"):
+            st.session_state.disk_action = "view"
+            st.rerun()
+    
+    else:
+        st.markdown("### 📁 Файлы и папки")
+        
+        quick_upload = st.file_uploader(
+            "Загрузить файлы (можно перетащить)",
+            accept_multiple_files=True,
+            key="quick_upload"
+        )
+        
+        if quick_upload:
+            for file in quick_upload:
+                file_path = os.path.join(st.session_state.disk_current_path, file.name)
+                with open(file_path, "wb") as f:
+                    f.write(file.getbuffer())
+            st.success(f"✅ Загружено {len(quick_upload)} файлов!")
+            st.rerun()
+        
+        if st.session_state.disk_current_path != "zornet_cloud":
+            current_parts = st.session_state.disk_current_path.split(os.sep)
+            breadcrumb = []
+            path_so_far = ""
+            
+            for part in current_parts:
+                if part:
+                    path_so_far = os.path.join(path_so_far, part) if path_so_far else part
+                    breadcrumb.append((part, path_so_far))
+            
+            st.markdown("**Путь:** ", unsafe_allow_html=True)
+            crumb_cols = st.columns(len(breadcrumb) * 2 - 1)
+            
+            for i, (name, path) in enumerate(breadcrumb):
+                with crumb_cols[i * 2]:
+                    if st.button(name, key=f"breadcrumb_{i}"):
+                        st.session_state.disk_current_path = path
+                        st.rerun()
+                
+                if i < len(breadcrumb) - 1:
+                    with crumb_cols[i * 2 + 1]:
+                        st.markdown("/", unsafe_allow_html=True)
+        
+        try:
+            items = os.listdir(st.session_state.disk_current_path)
+        except:
+            items = []
+        
+        if not items:
+            st.info("📭 Папка пуста. Загрузите файлы или создайте папку.")
+        else:
+            items.sort(
+                key=lambda x: (not os.path.isdir(os.path.join(st.session_state.disk_current_path, x)), x.lower()))
+            
+            cols = st.columns(3)
+            for idx, item in enumerate(items):
+                with cols[idx % 3]:
+                    item_path = os.path.join(st.session_state.disk_current_path, item)
+                    is_dir = os.path.isdir(item_path)
+                    icon = "📁" if is_dir else get_icon(Path(item))
+                    
+                    if is_dir:
+                        st.markdown(f"""
+                        <div class="folder-card">
+                            <div style="font-size: 2.5rem; text-align: center;">{icon}</div>
+                            <div style="text-align: center; font-weight: 600; margin-top: 10px;">{item}</div>
+                            <div style="text-align: center; color: #666; font-size: 0.9em;">Папка</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        if st.button(f"Открыть", key=f"open_{item}", use_container_width=True):
+                            st.session_state.disk_current_path = item_path
+                            st.rerun()
+                    
+                    else:
+                        file_size = os.path.getsize(item_path)
+                        st.markdown(f"""
+                        <div class="file-card">
+                            <div style="font-size: 2.5rem; text-align: center;">{icon}</div>
+                            <div style="text-align: center; font-weight: 600; margin-top: 10px;">{item}</div>
+                            <div style="text-align: center; color: #666; font-size: 0.9em;">{format_file_size(file_size)}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            with open(item_path, 'rb') as f:
+                                st.download_button(
+                                    "📥 Скачать",
+                                    f.read(),
+                                    item,
+                                    key=f"dl_{item}",
+                                    use_container_width=True
+                                )
+                        with col2:
+                            if st.button("👁️ Просмотр", key=f"view_{item}", use_container_width=True):
+                                if item.lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
+                                    try:
+                                        image = Image.open(item_path)
+                                        st.image(image, caption=item, use_column_width=True)
+                                    except:
+                                        st.error("Не удалось открыть изображение")
+                                elif item.lower().endswith('.txt'):
+                                    try:
+                                        with open(item_path, 'r', encoding='utf-8') as f:
+                                            content = f.read()
+                                        st.text_area("Содержимое файла", content, height=200)
+                                    except:
+                                        st.error("Не удалось открыть файл")
+                                elif item.lower().endswith('.pdf'):
+                                    st.info(f"PDF файл: {item}")
+                                    with open(item_path, 'rb') as f:
+                                        st.download_button("Скачать PDF", f.read(), item)
+
+# ================= СТРАНИЦА ПРОФИЛЯ (ИСПРАВЛЕННАЯ ВЕРСИЯ) =================
+elif st.session_state.page == "Профиль":
+    
+    st.markdown("""
+    <style>
+        .giant-id-title {
+            font-size: 5rem !important;
+            font-weight: 900 !important;
+            text-align: center;
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 20px 0 40px 0 !important;
+            letter-spacing: -2px;
+        }
+
+        [data-testid="stVerticalBlock"] > div:has(div.stMarkdown) {
+            padding: 0 !important;
+            gap: 0 !important;
+        }
+        
+        .profile-container {
+            background: white;
+            border-radius: 32px;
+            padding: 40px;
+            border: 1px solid #f0f0f0;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .user-avatar-main {
+            width: 180px;
+            height: 180px;
+            border-radius: 40px;
+            object-fit: cover;
+            border: 4px solid #DAA520;
+            margin-bottom: 20px;
+        }
+
+        .stFileUploader section {
+            background-color: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Если уже авторизован, показываем профиль
+    if st.session_state.is_logged_in and st.session_state.auth_step == "logged_in":
+        user = st.session_state.user_data
+        
+        col_left, col_right = st.columns([1, 2])
+        
+        with col_left:
+            st.markdown(f"""
+            <div style="width:100%; aspect-ratio:1/1; background:#DAA520; border-radius:40px; display:flex; align-items:center; justify-content:center; font-size:80px; color:white; font-weight:bold;">
+                {user.get('first_name', 'П')[0]}
+            </div>
+            """, unsafe_allow_html=True)
+            
+            uploaded_img = st.file_uploader("Загрузить фото", type=['jpg','png'], label_visibility="collapsed")
+            if uploaded_img:
+                st.session_state.user_photo = uploaded_img
+                st.rerun()
+        
+        with col_right:
+            st.markdown(f"""
+            <div style="text-align:left;">
+                <h1 style="margin:10px 0 0 0;">{user.get('first_name', 'Пользователь')} {user.get('last_name', '')}</h1>
+                <p style="color:#666; font-size:18px;">@{user.get('nickname', 'user')}</p>
+                <hr style="margin:20px 0;">
+                <p><b>Email:</b> {user.get('email', 'Не указан')}</p>
+                <p><b>ID пользователя:</b> ZRN-{user.get('nickname', 'USER').upper()}-2024</p>
+                <p><b>Статус:</b> ✅ Авторизован</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("💾 Перейти в Диск", use_container_width=True):
+                    st.session_state.page = "Диск"
+                    st.rerun()
+            with col2:
+                if st.button("🚪 Выйти", type="secondary", use_container_width=True):
+                    # 🔴 ВАЖНО: Сбрасываем все данные авторизации
+                    st.session_state.auth_step = "login_start"
+                    st.session_state.is_logged_in = False
+                    st.session_state.user_data = {}
+                    st.session_state.user_photo = None
+                    st.success("Вы вышли из системы")
+                    st.rerun()
+    
+    else:
+        # Показываем форму входа/регистрации
+        st.markdown('<h1 class="giant-id-title">🆔 ZORNET ID</h1>', unsafe_allow_html=True)
+        
+        if st.session_state.auth_step == "login_start":
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                st.markdown("""
+                <div style="background:white; border:1px solid #dadce0; border-radius:8px; padding:40px; text-align:center;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" width="80" style="margin-bottom:20px;">
+                    <h2 style="font-weight:400; margin-bottom:10px;">Вход в ZORNET</h2>
+                    <p style="color:#202124; margin-bottom:30px;">Для доступа ко всем функциям</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Простая форма входа (без реального Google API)
+                email = st.text_input("Email:", placeholder="ваш@email.com")
+                password = st.text_input("Пароль:", type="password", placeholder="Введите пароль")
+                
+                if st.button("Войти в аккаунт", use_container_width=True, type="primary"):
+                    if email and password:
+                        # 🔴 ИМИТАЦИЯ УСПЕШНОГО ВХОДА
+                        st.session_state.user_data["email"] = email
+                        st.session_state.auth_step = "info_form"
+                        st.rerun()
+                    else:
+                        st.error("Введите email и пароль")
+                
+                st.markdown("---")
+                st.caption("Нет аккаунта? Используйте тестовые данные:")
+                if st.button("Войти как тестовый пользователь", use_container_width=True):
+                    st.session_state.user_data["email"] = "test@zornet.by"
+                    st.session_state.auth_step = "info_form"
+                    st.rerun()
+        
+        elif st.session_state.auth_step == "info_form":
+            with st.container():
+                st.markdown('<div class="profile-container">', unsafe_allow_html=True)
+                st.subheader("🆕 Завершите регистрацию")
+                st.caption(f"Email: {st.session_state.user_data.get('email', 'Не указан')}")
+                
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    f_name = st.text_input("Ваше Имя", placeholder="Иван")
+                    n_name = st.text_input("Придумайте Никнейм", placeholder="ivan_zornet")
+                with col_b:
+                    l_name = st.text_input("Ваша Фамилия", placeholder="Иванов")
+                
+                if st.button("✅ Завершить регистрацию", use_container_width=True, type="primary"):
+                    if f_name and l_name and n_name:
+                        # 🔴 СОХРАНЯЕМ ДАННЫЕ И АВТОРИЗУЕМ
+                        st.session_state.user_data.update({
+                            "first_name": f_name, 
+                            "last_name": l_name, 
+                            "nickname": n_name,
+                            "email": st.session_state.user_data.get("email", f"{n_name}@zornet.by")
+                        })
+                        st.session_state.auth_step = "logged_in"
+                        st.session_state.is_logged_in = True  # 🔴 КЛЮЧЕВОЙ ФЛАГ
+                        st.success("✅ Регистрация завершена! Теперь вы можете использовать все функции ZORNET.")
+                        st.rerun()
+                    else:
+                        st.error("Заполните все поля")
+                
+                if st.button("← Назад", use_container_width=True):
+                    st.session_state.auth_step = "login_start"
+                    st.rerun()
+                    
+                st.markdown('</div>', unsafe_allow_html=True)
+
 # ================= ИНИЦИАЛИЗАЦИЯ =================
 if __name__ == "__main__":
     init_db()
