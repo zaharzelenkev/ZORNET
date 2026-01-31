@@ -209,13 +209,17 @@ st.markdown("""
 with st.sidebar:
     st.markdown("<h3 style='color:#DAA520;'>🇧🇾 ZORNET</h3>", unsafe_allow_html=True)
 
-    pages = [
-        ("🏠", "ГЛАВНАЯ", "Главная"),
-        ("📰", "НОВОСТИ", "Новости"),
-        ("🌤️", "ПОГОДА", "Погода"),
-        ("💾", "ДИСК", "Диск"),
-        ("👤", "ПРОФИЛЬ", "Профиль"),
-    ]
+    # В САЙДБАРЕ (строки ~60-80 в твоем коде)
+pages = [
+    ("🏠", "ГЛАВНАЯ", "Главная"),
+    ("💬", "МЕССЕНДЖЕР", "Мессенджер"),      # НОВОЕ
+    ("🎬", "СОВМЕСТНЫЙ ПРОСМОТР", "Совместный просмотр"),  # НОВОЕ
+    ("🎵", "МУЗЫКА", "Музыка"),            # НОВОЕ
+    ("📰", "НОВОСТИ", "Новости"),
+    ("🌤️", "ПОГОДА", "Погода"),
+    ("💾", "ДИСК", "Диск"),
+    ("👤", "ПРОФИЛЬ", "Профиль"),
+]
 
     for i, (icon, text, page) in enumerate(pages):
         if st.button(f"{icon} {text}", key=f"nav_{i}_{page}", use_container_width=True):
@@ -1430,6 +1434,280 @@ elif st.session_state.page == "Профиль":
                 st.session_state.user_photo = None
                 st.rerun()
 
+# ================= МЕССЕНДЖЕР =================
+elif st.session_state.page == "Мессенджер":
+    st.markdown('<div class="gold-title">💬 МЕССЕНДЖЕР</div>', unsafe_allow_html=True)
+    
+    # Создаем вкладки для разных функций
+    tab1, tab2, tab3 = st.tabs(["📨 Личные сообщения", "👥 Группы", "📹 Видеозвонки"])
+    
+    with tab1:
+        st.markdown("### 💬 Личные сообщения")
+        
+        # Имитация списка чатов
+        chats = [
+            {"name": "Алексей", "last_msg": "Привет! Как дела?", "time": "12:30", "unread": 3},
+            {"name": "Мария", "last_msg": "Отправила тебе файл", "time": "11:45", "unread": 0},
+            {"name": "Команда ZORNET", "last_msg": "Обновление системы", "time": "10:20", "unread": 1},
+            {"name": "Иван Петров", "last_msg": "Давай созвонимся", "time": "Вчера", "unread": 0},
+        ]
+        
+        for chat in chats:
+            col1, col2 = st.columns([4, 1])
+            with col1:
+                st.markdown(f"""
+                <div style="padding: 10px; border-radius: 10px; background: #f8f9fa; margin: 5px 0;">
+                    <b>{chat['name']}</b><br>
+                    <span style="color: #666; font-size: 0.9em;">{chat['last_msg']}</span>
+                </div>
+                """, unsafe_allow_html=True)
+            with col2:
+                st.text(chat['time'])
+                if chat['unread'] > 0:
+                    st.markdown(f"<div style='background: red; color: white; border-radius: 50%; width: 20px; height: 20px; text-align: center;'>{chat['unread']}</div>", unsafe_allow_html=True)
+        
+        # Поле для нового сообщения
+        st.markdown("---")
+        new_message = st.text_input("Написать сообщение:", placeholder="Введите текст...")
+        if st.button("Отправить", type="primary"):
+            if new_message:
+                st.success("Сообщение отправлено!")
+    
+    with tab2:
+        st.markdown("### 👥 Групповые чаты")
+        
+        groups = [
+            {"name": "Работа", "members": 12, "last": "Обсуждение проекта"},
+            {"name": "Друзья", "members": 8, "last": "Встреча в субботу"},
+            {"name": "Семья", "members": 5, "last": "Фото с отпуска"},
+        ]
+        
+        for group in groups:
+            with st.expander(f"📢 {group['name']} ({group['members']} участников)"):
+                st.text(f"Последнее: {group['last']}")
+                if st.button(f"Присоединиться к {group['name']}", key=f"join_{group['name']}"):
+                    st.success(f"Вы присоединились к {group['name']}!")
+        
+        # Создание новой группы
+        st.markdown("---")
+        st.markdown("#### Создать новую группу")
+        new_group = st.text_input("Название группы:")
+        if st.button("Создать группу"):
+            if new_group:
+                st.success(f"Группа '{new_group}' создана!")
+    
+    with tab3:
+        st.markdown("### 📹 Видеозвонки")
+        
+        # Быстрое подключение к Jitsi Meet
+        room_name = st.text_input("Название комнаты:", placeholder="моя-комната-123")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🎥 Создать комнату", use_container_width=True):
+                if room_name:
+                    jitsi_url = f"https://meet.jit.si/zornet-{room_name}"
+                    st.success(f"Комната создана!")
+                    st.markdown(f"[Перейти в комнату]({jitsi_url})")
+        
+        with col2:
+            if st.button("🔗 Присоединиться", use_container_width=True):
+                if room_name:
+                    jitsi_url = f"https://meet.jit.si/zornet-{room_name}"
+                    st.markdown(f"[Присоединиться к комнате]({jitsi_url})")
+        
+        # Встраиваем Jitsi прямо в страницу (опционально)
+        st.markdown("---")
+        st.markdown("#### Прямой доступ к видеокомнате")
+        st.info("Совет: Для лучшего качества используйте наушники")
+        
+        # Код для встраивания Jitsi
+        components.html(f"""
+        <iframe 
+            allow="camera; microphone; fullscreen; display-capture"
+            src="https://meet.jit.si/zornet-meet-demo"
+            style="height: 500px; width: 100%; border: none; border-radius: 10px;"
+            allowfullscreen>
+        </iframe>
+        """, height=550)
+
+# ================= СОВМЕСТНЫЙ ПРОСМОТР =================
+elif st.session_state.page == "Совместный просмотр":
+    st.markdown('<div class="gold-title">🎬 СОВМЕСТНЫЙ ПРОСМОТР</div>', unsafe_allow_html=True)
+    
+    # Две колонки: создание комнаты и список комнат
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        st.markdown("### Создать комнату для просмотра")
+        
+        # URL видео
+        video_url = st.text_input(
+            "Ссылка на YouTube видео:",
+            placeholder="https://www.youtube.com/watch?v=...",
+            help="Вставьте ссылку на YouTube видео"
+        )
+        
+        # Название комнаты
+        room_name = st.text_input(
+            "Название комнаты:",
+            placeholder="Например: Фильм с друзьями",
+            value="Моя комната"
+        )
+        
+        # Пароль (опционально)
+        room_password = st.text_input(
+            "Пароль (опционально):",
+            type="password",
+            placeholder="Оставьте пустым для публичной комнаты"
+        )
+        
+        # Кнопка создания
+        if st.button("🎥 Создать комнату", type="primary", use_container_width=True):
+            if video_url and room_name:
+                # Генерируем ID комнаты
+                import uuid
+                room_id = str(uuid.uuid4())[:8]
+                
+                # Сохраняем в сессии
+                if "rooms" not in st.session_state:
+                    st.session_state.rooms = []
+                
+                st.session_state.rooms.append({
+                    "id": room_id,
+                    "name": room_name,
+                    "url": video_url,
+                    "password": room_password,
+                    "owner": st.session_state.get("user_email", "Гость"),
+                    "created": datetime.datetime.now().strftime("%H:%M")
+                })
+                
+                st.success(f"Комната '{room_name}' создана!")
+                
+                # Показываем ссылку
+                watch_url = f"{st.experimental_get_query_params().get('base_url', [''])[0]}/watch/{room_id}"
+                st.markdown(f"**Ссылка для друзей:** `{watch_url}`")
+                
+                # Кнопка для перехода в комнату
+                if st.button("▶️ Перейти в комнату"):
+                    st.session_state.watch_room = room_id
+                    st.rerun()
+    
+    with col2:
+        st.markdown("### Активные комнаты")
+        
+        if "rooms" in st.session_state and st.session_state.rooms:
+            for room in st.session_state.rooms[-5:]:  # Последние 5 комнат
+                st.markdown(f"""
+                <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin: 5px 0; border-left: 3px solid #DAA520;">
+                    <b>{room['name']}</b><br>
+                    <small>Создал: {room['owner']}</small><br>
+                    <small>В {room['created']}</small>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                if st.button(f"Присоединиться", key=f"join_{room['id']}", use_container_width=True):
+                    st.session_state.watch_room = room['id']
+                    st.rerun()
+        else:
+            st.info("🎬 Пока нет активных комнат. Создайте первую!")
+    
+    # Если выбрана комната, показываем плеер
+    if st.session_state.get("watch_room"):
+        st.markdown("---")
+        st.markdown("### 🎥 Комната для совместного просмотра")
+        
+        # Получаем данные комнаты
+        current_room = None
+        if "rooms" in st.session_state:
+            for room in st.session_state.rooms:
+                if room["id"] == st.session_state.watch_room:
+                    current_room = room
+                    break
+        
+        if current_room:
+            st.markdown(f"**Комната:** {current_room['name']}")
+            st.markdown(f"**Владелец:** {current_room['owner']}")
+            
+            # Извлекаем ID видео из YouTube URL
+            import re
+            video_id_match = re.search(r'(?:v=|\/)([0-9A-Za-z_-]{11}).*', current_room['url'])
+            
+            if video_id_match:
+                video_id = video_id_match.group(1)
+                
+                # Встраиваем YouTube плеер
+                components.html(f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {{ margin: 0; padding: 20px; background: #0f0f0f; }}
+                        .player-container {{
+                            max-width: 1000px;
+                            margin: 0 auto;
+                            background: black;
+                            border-radius: 15px;
+                            overflow: hidden;
+                            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                        }}
+                        .chat-sidebar {{
+                            background: #1a1a1a;
+                            color: white;
+                            padding: 20px;
+                            border-radius: 10px;
+                        }}
+                    </style>
+                </head>
+                <body>
+                    <div class="player-container">
+                        <!-- YouTube плеер -->
+                        <iframe 
+                            width="100%" 
+                            height="500" 
+                            src="https://www.youtube.com/embed/{video_id}?autoplay=1&controls=1"
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowfullscreen>
+                        </iframe>
+                        
+                        <!-- Простой чат (заглушка) -->
+                        <div style="padding: 20px; background: #1a1a1a; color: white;">
+                            <h3 style="margin: 0 0 10px 0;">💬 Чат комнаты</h3>
+                            <div id="chat" style="height: 200px; overflow-y: auto; background: #2a2a2a; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+                                <div>👤 Система: Добро пожаловать в комнату!</div>
+                                <div>👤 {current_room['owner']}: Привет всем!</div>
+                            </div>
+                            <input type="text" id="message" placeholder="Введите сообщение..." style="width: 70%; padding: 8px; border-radius: 5px; border: none;">
+                            <button onclick="sendMessage()" style="padding: 8px 15px; background: #DAA520; color: white; border: none; border-radius: 5px; margin-left: 10px;">Отправить</button>
+                        </div>
+                    </div>
+                    
+                    <script>
+                        function sendMessage() {{
+                            var msg = document.getElementById('message').value;
+                            if (msg.trim() !== '') {{
+                                var chat = document.getElementById('chat');
+                                chat.innerHTML += '<div>👤 Вы: ' + msg + '</div>';
+                                document.getElementById('message').value = '';
+                                chat.scrollTop = chat.scrollHeight;
+                            }}
+                        }}
+                        
+                        // Автофокус на поле ввода
+                        document.getElementById('message').focus();
+                    </script>
+                </body>
+                </html>
+                """, height=650)
+            else:
+                st.error("Неверная ссылка на YouTube видео")
+        
+        # Кнопка выхода из комнаты
+        if st.button("← Выйти из комнаты"):
+            st.session_state.watch_room = None
+            st.rerun()
+            
 # ================= ИНИЦИАЛИЗАЦИЯ =================
 if __name__ == "__main__":
     init_db()
