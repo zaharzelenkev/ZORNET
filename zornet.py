@@ -3,1573 +3,529 @@ import sqlite3
 import datetime
 import os
 import pytz
-import json
 import requests
 import feedparser
 from PIL import Image
 from pathlib import Path
-import mimetypes
-from duckduckgo_search import DDGS
-from huggingface_hub import InferenceClient
-import streamlit.components.v1 as components
+import hashlib
 import uuid
 import re
-import secrets
-import hashlib
-from google.oauth2 import id_token
-from google.auth.transport import requests as google_requests
+import time
 
-# ================= НАСТРОЙКИ =================
+# ================= НАСТРОЙКИ СТРАНИЦЫ =================
 st.set_page_config(
     page_title="ZORNET",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    page_icon="🇧🇾"
 )
 
-# ================= СЕССИЯ =================
-if "page" not in st.session_state:
-    st.session_state.page = "Главная"
-if "ai_messages" not in st.session_state:
-    st.session_state.ai_messages = []
-if "weather_data" not in st.session_state:
-    st.session_state.weather_data = None
-if "user_city" not in st.session_state:
-    st.session_state.user_city = None
-if "rooms" not in st.session_state:
-    st.session_state.rooms = []
-if "music_rooms" not in st.session_state:
-    st.session_state.music_rooms = []
-if "watch_room" not in st.session_state:
-    st.session_state.watch_room = None
-if "current_music_room" not in st.session_state:
-    st.session_state.current_music_room = None
-if "auth_step" not in st.session_state:
-    st.session_state.auth_step = "login_start"
-if "user_data" not in st.session_state:
-    st.session_state.user_data = {}
-if "user_photo" not in st.session_state:
-    st.session_state.user_photo = None
-if "disk_current_path" not in st.session_state:
-    st.session_state.disk_current_path = "zornet_cloud"
-if "disk_action" not in st.session_state:
-    st.session_state.disk_action = "view"
-if "auth_status" not in st.session_state:
-    st.session_state.auth_status = "not_logged_in"
-if "is_logged_in" not in st.session_state:
-    st.session_state.is_logged_in = False
-
-# ================= GOOGLE OAUTH НАСТРОЙКИ =================
-GOOGLE_CLIENT_ID = st.secrets.get("GOOGLE_CLIENT_ID", "")
-GOOGLE_CLIENT_SECRET = st.secrets.get("GOOGLE_CLIENT_SECRET", "")
-GOOGLE_REDIRECT_URI = st.secrets.get("GOOGLE_REDIRECT_URI", "")
-
-# ================= ОБНОВЛЕННЫЕ CSS СТИЛИ (ТВОЙ ДИЗАЙН) =================
+# ================= CSS СТИЛИ (FIXED) =================
 st.markdown("""
 <style>
-    /* 1. Делаем хедер прозрачным, чтобы он не мешал, но кнопка в нем жила */
-    [data-testid="stHeader"] {
-        background: rgba(0,0,0,0) !important;
-        color: white !important;
+    /* Убираем лишние отступы сверху (белая полоса) */
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
     }
-
-    /* 2. Находим родную кнопку сайдбара и переносим её вправо */
-    button[data-testid="stSidebarCollapse"] {
-        position: fixed !important;
-        right: 20px !important;
-        top: 15px !important;
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-        border-radius: 8px !important;
-        width: 45px !important;
-        height: 45px !important;
-        z-index: 10000 !important;
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
-        border: 1px solid rgba(255,255,255,0.2) !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
-    }
-
-    button[data-testid="stSidebarCollapse"] svg {
-        display: none !important;
+    header {
+        visibility: hidden !important;
     }
     
-    button[data-testid="stSidebarCollapse"]::after {
-        content: "☰" !important;
-        color: white !important;
-        font-size: 24px !important;
-        font-weight: bold !important;
+    /* Глобальные стили */
+    .stApp {
+        background-color: #f8f9fa;
     }
 
-    [data-testid="stSidebar"] button[data-testid="stSidebarCollapse"] {
-        right: auto !important;
-        left: 10px !important;
-        top: 10px !important;
-        position: relative !important;
+    /* Кнопка меню справа */
+    button[data-testid="stSidebarCollapse"] {
+        display: none !important;
     }
 
-    div[data-testid="stVerticalBlock"] > div:has(div.stMarkdown) {
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-
-    /* ГЛАВНЫЙ ЗАГОЛОВОК */
+    /* Заголовки */
     .gold-title {
         font-family: 'Helvetica Neue', sans-serif;
-        font-size: 4rem;
+        font-size: 3rem;
         font-weight: 800;
         text-align: center;
         background: linear-gradient(to bottom, #DAA520, #B8860B);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        letter-spacing: 4px;
+        letter-spacing: 2px;
         text-transform: uppercase;
-        margin: 10px 0 30px 0;
+        margin: 0 0 20px 0;
     }
 
-    /* КНОПКИ ГЛАВНОЙ */
-    div.stButton > button {
-        background: #f8f9fa !important;
-        border: 1px solid #dee2e6 !important;
-        color: #1a1a1a !important;
-        padding: 20px !important; 
-        border-radius: 12px !important;
-        font-weight: bold !important;
-        width: 100% !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
+    /* Карточки */
+    .card {
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        border: 1px solid #e0e0e0;
     }
 
-    /* ЗОЛОТАЯ КНОПКА AI */
-    .gold-btn {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-        border: none !important;
-        color: white !important;
-        border-radius: 12px !important;
-        padding: 14px 28px !important;
-        font-weight: 600 !important;
-        font-size: 16px !important;
-        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3) !important;
-    }
-
-    /* ВРЕМЯ В ЗОЛОТОЙ РАМКЕ */
-    .time-widget {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-        border-radius: 12px;
-        padding: 12px 15px;
-        text-align: center;
-        color: white;
-        font-weight: 600;
-        font-size: 16px;
-        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
-    }
-
-    /* РЕЗУЛЬТАТЫ ПОИСКА */
-    .search-result {
-        background: #f8f9fa;
-        padding: 15px;
+    /* Сообщения */
+    .msg-container {
+        height: 500px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column-reverse; /* Чтобы новые были внизу при прокрутке */
+        padding: 10px;
+        background: #e5ddd5;
         border-radius: 10px;
-        margin-bottom: 10px;
-        border-left: 4px solid #DAA520;
     }
-
-    /* ЧАТ AI */
-    .user-message {
-        background: #f0f0f0;
-        padding: 12px 18px;
-        border-radius: 18px;
+    
+    .msg-bubble {
+        padding: 10px 15px;
+        border-radius: 10px;
+        margin-bottom: 8px;
         max-width: 70%;
+        position: relative;
+        word-wrap: break-word;
+    }
+    
+    .msg-me {
+        background-color: #dcf8c6;
+        align-self: flex-end;
         margin-left: auto;
-        margin-bottom: 15px;
     }
-
-    .ai-message {
-        background: #f9f9f9;
-        padding: 12px 18px;
-        border-radius: 18px;
-        max-width: 70%;
+    
+    .msg-other {
+        background-color: #ffffff;
+        align-self: flex-start;
         margin-right: auto;
-        margin-bottom: 15px;
-        border-left: 4px solid #DAA520;
     }
 
-    /* СТИЛИ ДЛЯ ПОГОДЫ */
-    .weather-widget {
-        background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
-        border-radius: 15px;
-        padding: 20px;
-        color: white;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 15px rgba(6, 147, 227, 0.3);
-    }
-
-    .weather-temp {
-        font-size: 3.5rem;
-        font-weight: 800;
-        line-height: 1;
-    }
-
-    .weather-description {
-        font-size: 1.2rem;
-        margin-bottom: 15px;
-    }
-
-    .weather-details {
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 10px;
-        padding: 15px;
-        margin-top: 15px;
-    }
-
-    .weather-icon {
-        font-size: 4rem;
-        text-align: center;
-        margin-bottom: 10px;
-    }
-
-    .forecast-day {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        padding: 15px;
-        text-align: center;
-    }
-    
-    /* Стили для диска */
-    .disk-container {
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
-        margin: 10px 0;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    }
-    
-    .disk-header {
+    /* Кнопки */
+    .stButton > button {
         background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-        border-radius: 12px;
-        padding: 25px;
-        color: white;
-        margin-bottom: 20px;
-    }
-    
-    .disk-btn {
-        background: white !important;
-        border: 2px solid #DAA520 !important;
-        color: #B8860B !important;
-        padding: 10px 20px !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-        transition: all 0.3s ease !important;
-    }
-    
-    .disk-btn:hover {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
         color: white !important;
-        border-color: transparent !important;
+        border: none;
+        border-radius: 8px;
     }
-    
-    .disk-btn-active {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-        color: white !important;
-        border-color: transparent !important;
-    }
-    
-    .file-card {
-        background: #f8f9fa;
-        border-radius: 10px;
-        padding: 15px;
-        margin: 10px 0;
-        border-left: 4px solid #DAA520;
-        transition: all 0.3s ease;
-    }
-    
-    .file-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
-    
-    .folder-card {
-        background: linear-gradient(135deg, #fff9e6 0%, #ffe699 100%);
-        border-radius: 10px;
-        padding: 15px;
-        margin: 10px 0;
-        border: 2px solid #ffd966;
-    }
-    
-    .storage-bar {
-        height: 8px;
-        background: #e9ecef;
-        border-radius: 4px;
-        overflow: hidden;
-        margin: 10px 0;
-    }
-    
-    .storage-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #DAA520, #FFD700);
-        border-radius: 4px;
-    }
-    
-    /* Стили для профиля */
-    .giant-id-title {
-        font-size: 5rem !important;
-        font-weight: 900 !important;
-        text-align: center;
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin: 20px 0 40px 0 !important;
-        letter-spacing: -2px;
-    }
-    
-    .profile-container {
-        background: white;
-        border-radius: 32px;
-        padding: 40px;
-        border: 1px solid #f0f0f0;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
-        text-align: center;
-    }
-    
-    .user-avatar-main {
-        width: 180px;
-        height: 180px;
-        border-radius: 40px;
-        object-fit: cover;
-        border: 4px solid #DAA520;
-        margin-bottom: 20px;
-    }
-    
-    .stFileUploader section {
-        background-color: transparent !important;
-        border: none !important;
-        padding: 0 !important;
-    }
-    
-    /* Google Login Button */
-    .google-login-btn {
-        background: white !important;
-        border: 2px solid #dee2e6 !important;
-        color: #1a1a1a !important;
-        padding: 15px 25px !important;
-        border-radius: 12px !important;
-        font-weight: 600 !important;
-        width: 100% !important;
-        margin: 10px 0 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        gap: 12px !important;
-    }
-    
-    .google-login-btn:hover {
-        border-color: #DAA520 !important;
-        background: #f8f9fa !important;
+    .stButton > button:hover {
+        opacity: 0.9;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# ================= ФУНКЦИИ GOOGLE OAUTH =================
-def verify_google_token(token):
-    """Верифицирует Google ID токен"""
-    try:
-        # Замените YOUR_GOOGLE_CLIENT_ID на реальный ID из Google Cloud Console
-        idinfo = id_token.verify_oauth2_token(
-            token, google_requests.Request(), GOOGLE_CLIENT_ID)
-        
-        if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-            raise ValueError('Wrong issuer.')
-        
-        return idinfo
-    except ValueError:
-        return None
-
-def get_google_auth_url():
-    """Генерирует URL для авторизации через Google"""
-    # Google OAuth 2.0 endpoint
-    auth_url = "https://accounts.google.com/o/oauth2/v2/auth"
-    
-    # Параметры запроса
-    params = {
-        "client_id": GOOGLE_CLIENT_ID,
-        "redirect_uri": GOOGLE_REDIRECT_URI,
-        "response_type": "code",
-        "scope": "openid email profile",
-        "access_type": "offline",
-        "prompt": "select_account",
-        "state": secrets.token_urlsafe(16)
-    }
-    
-    # Собираем URL
-    query_string = "&".join([f"{k}={v}" for k, v in params.items()])
-    return f"{auth_url}?{query_string}"
-
 # ================= БАЗА ДАННЫХ =================
 def init_db():
-    conn = sqlite3.connect("zornet.db")
+    """Инициализация БД и создание таблиц, если их нет"""
+    conn = sqlite3.connect("zornet.db", check_same_thread=False)
     c = conn.cursor()
     
-    # Пользователи - ОБЯЗАТЕЛЬНО сначала
+    # Пользователи
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
-            username TEXT UNIQUE,
+            username TEXT UNIQUE NOT NULL,
             first_name TEXT,
             last_name TEXT,
-            avatar TEXT,
-            google_id TEXT UNIQUE,
-            password_hash TEXT,
+            password_hash TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
     
-    # Сообщения
+    # Личные сообщения
     c.execute("""
-        CREATE TABLE IF NOT EXISTS messages (
+        CREATE TABLE IF NOT EXISTS private_messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            room_id TEXT,
-            user_id INTEGER,
+            sender_id INTEGER,
+            receiver_id INTEGER,
             content TEXT,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id)
+            FOREIGN KEY (sender_id) REFERENCES users (id),
+            FOREIGN KEY (receiver_id) REFERENCES users (id)
         )
     """)
     
-    # Комнаты
+    # Комнаты просмотра
     c.execute("""
         CREATE TABLE IF NOT EXISTS rooms (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            room_id TEXT UNIQUE,
+            room_uid TEXT UNIQUE,
             name TEXT,
-            youtube_url TEXT,
-            password_hash TEXT,
-            owner_id INTEGER,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (owner_id) REFERENCES users (id)
-        )
-    """)
-    
-    conn.commit()
-    conn.close()
-
-def create_database():
-    """Создает базу данных и таблицы с нуля"""
-    import os
-    
-    # Удаляем старую базу если есть
-    if os.path.exists("zornet.db"):
-        os.remove("zornet.db")
-        print("Старая база удалена")
-    
-    # Создаем новую
-    conn = sqlite3.connect("zornet.db")
-    c = conn.cursor()
-    
-    # Таблица пользователей
-    c.execute("""
-        CREATE TABLE users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
-            username TEXT UNIQUE,
-            first_name TEXT,
-            last_name TEXT,
-            avatar TEXT,
-            google_id TEXT UNIQUE,
-            password_hash TEXT,
+            video_id TEXT,
+            password TEXT,
+            owner_username TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
     
-    # Таблица сообщений
+    # Сообщения комнат
     c.execute("""
-        CREATE TABLE messages (
+        CREATE TABLE IF NOT EXISTS room_messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            room_id TEXT,
-            user_id INTEGER,
+            room_uid TEXT,
+            username TEXT,
             content TEXT,
-            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id)
+            timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
     
-    # Таблица комнат
-    c.execute("""
-        CREATE TABLE rooms (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            room_id TEXT UNIQUE,
-            name TEXT,
-            youtube_url TEXT,
-            password_hash TEXT,
-            owner_id INTEGER,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (owner_id) REFERENCES users (id)
-        )
-    """)
-    
-    conn.commit()
-    conn.close()
-    print("✅ База данных создана!")
-    
-    # Создаем тестового пользователя
-    conn = sqlite3.connect("zornet.db")
-    c = conn.cursor()
-    
-    test_password_hash = hashlib.sha256("test123".encode()).hexdigest()
-    
-    try:
-        c.execute("""
-            INSERT INTO users (email, username, first_name, last_name, password_hash)
-            VALUES (?, ?, ?, ?, ?)
-        """, ("test@zornet.by", "test_user", "Тестовый", "Пользователь", test_password_hash))
-        conn.commit()
-        print("✅ Тестовый пользователь создан: test@zornet.by / test123")
-    except:
-        print("Тестовый пользователь уже существует")
-    
-    conn.close()
-    return True
-
-def register_user(email, username, first_name, last_name, password=None, google_id=None, avatar=None):
-    """Регистрация пользователя с правильной обработкой ошибок"""
-    conn = sqlite3.connect("zornet.db")
-    c = conn.cursor()
-    
-    try:
-        # 1. СОЗДАЕМ ТАБЛИЦУ
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email TEXT UNIQUE NOT NULL,
-                username TEXT UNIQUE,
-                first_name TEXT,
-                last_name TEXT,
-                avatar TEXT,
-                google_id TEXT UNIQUE,
-                password_hash TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        conn.commit()
-        
-        # 2. ПРОВЕРЯЕМ, СУЩЕСТВУЕТ ЛИ УЖЕ ПОЛЬЗОВАТЕЛЬ
-        c.execute("SELECT COUNT(*) FROM users WHERE email = ? OR username = ?", (email, username))
-        count = c.fetchone()[0]
-        
-        if count > 0:
-            conn.close()
-            return "exists"  # Пользователь уже существует
-        
-        # 3. ХЕШИРУЕМ ПАРОЛЬ
-        password_hash = None
-        if password:
-            password_hash = hashlib.sha256(password.encode()).hexdigest()
-        
-        # 4. ВСТАВКА ПОЛЬЗОВАТЕЛЯ
-        c.execute("""
-            INSERT INTO users (email, username, first_name, last_name, avatar, google_id, password_hash)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (email, username, first_name, last_name, avatar, google_id, password_hash))
-        
-        conn.commit()
-        conn.close()
-        return "success"  # Успешная регистрация
-        
-    except sqlite3.IntegrityError as e:
-        # Дубликат email или username
-        conn.close()
-        return "exists"
-    except Exception as e:
-        print(f"Registration error: {e}")
-        conn.close()
-        return "error"  # Другая ошибка
-
-def login_user(email, password):
-    """Вход пользователя по email и паролю"""
-    conn = sqlite3.connect("zornet.db")
-    c = conn.cursor()
-    
-    try:
-        # 1. СОЗДАЕМ ТАБЛИЦУ ЕСЛИ НЕ СУЩЕСТВУЕТ
-        c.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                email TEXT UNIQUE NOT NULL,
-                username TEXT UNIQUE,
-                first_name TEXT,
-                last_name TEXT,
-                avatar TEXT,
-                google_id TEXT UNIQUE,
-                password_hash TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        conn.commit()
-        
-        # 2. ХЕШИРУЕМ ПАРОЛЬ
-        password_hash = hashlib.sha256(password.encode()).hexdigest()
-        
-        # 3. ИЩЕМ ПОЛЬЗОВАТЕЛЯ
-        c.execute("""
-            SELECT id, email, username, first_name, last_name, avatar 
-            FROM users 
-            WHERE email = ? AND password_hash = ?
-        """, (email, password_hash))
-        
-        user = c.fetchone()
-        
-        if user:
-            conn.close()
-            return {
-                "id": user[0],
-                "email": user[1],
-                "username": user[2],
-                "first_name": user[3],
-                "last_name": user[4],
-                "avatar": user[5]
-            }
-        else:
-            # 4. ПОЛЬЗОВАТЕЛЬ НЕ НАЙДЕН - возвращаем None
-            conn.close()
-            return None
-        
-    except Exception as e:
-        print(f"Login error: {e}")
-        conn.close()
-        return None
-
-def get_user_by_google_id(google_id):
-    """Поиск пользователя по Google ID"""
-    conn = sqlite3.connect("zornet.db")
-    c = conn.cursor()
-    
-    c.execute("""
-        SELECT id, email, username, first_name, last_name, avatar 
-        FROM users 
-        WHERE google_id = ?
-    """, (google_id,))
-    
-    user = c.fetchone()
-    conn.close()
-    
-    if user:
-        return {
-            "id": user[0],
-            "email": user[1],
-            "username": user[2],
-            "first_name": user[3],
-            "last_name": user[4],
-            "avatar": user[5]
-        }
-    return None
-
-def get_user_by_email(email):
-    """Поиск пользователя по email"""
-    conn = sqlite3.connect("zornet.db")
-    c = conn.cursor()
-    
-    c.execute("""
-        SELECT id, email, username, first_name, last_name, avatar 
-        FROM users 
-        WHERE email = ?
-    """, (email,))
-    
-    user = c.fetchone()
-    conn.close()
-    
-    if user:
-        return {
-            "id": user[0],
-            "email": user[1],
-            "username": user[2],
-            "first_name": user[3],
-            "last_name": user[4],
-            "avatar": user[5]
-        }
-    return None
-
-# ================= САЙДБАР =================
-with st.sidebar:
-    st.markdown("<h3 style='color:#DAA520;'>🇧🇾 ZORNET</h3>", unsafe_allow_html=True)
-    
-    pages = [
-        ("🏠", "ГЛАВНАЯ", "Главная"),
-        ("💬", "МЕССЕНДЖЕР", "Мессенджер"),
-        ("🎬", "СОВМЕСТНЫЙ ПРОСМОТР", "Совместный просмотр"),
-        ("💾", "ДИСК", "Диск"),
-        ("📰", "НОВОСТИ", "Новости"),
-        ("🌤️", "ПОГОДА", "Погода"),
-        ("👤", "ПРОФИЛЬ", "Профиль"),
-    ]
-    
-    for i, (icon, text, page) in enumerate(pages):
-        if st.button(f"{icon} {text}", key=f"nav_{i}_{page}", use_container_width=True):
-            st.session_state.page = page
-            st.rerun()
-
-# ================= ПРОВЕРКА АВТОРИЗАЦИИ =================
-def check_auth():
-    """Проверяет авторизацию пользователя"""
-    if not st.session_state.is_logged_in:
-        # Если не авторизован и не на странице входа
-        if st.session_state.page not in ["Профиль", "Вход"]:
-            st.session_state.page = "Профиль"
-            st.rerun()
-        return False
-    return True
-
-# ================= СТРАНИЦА ВХОДА/РЕГИСТРАЦИИ =================
-if st.session_state.page == "Профиль" and not st.session_state.is_logged_in:
-    st.markdown("""
-    <style>
-        .login-container {
-            max-width: 500px;
-            margin: 50px auto;
-            padding: 40px;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            border: 1px solid #e0e0e0;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    st.markdown('<div class="gold-title">ZORNET ID</div>', unsafe_allow_html=True)
-    
-    st.markdown('<div class="login-container">', unsafe_allow_html=True)
-    
-    tab1, tab2 = st.tabs(["Вход", "Регистрация"])
-    
-    with tab1:
-        st.markdown("### Вход в аккаунт")
-        
-        email = st.text_input("Email", placeholder="email@example.com", key="login_email")
-        password = st.text_input("Пароль", type="password", placeholder="********", key="login_password")
-        
-        if st.button("Войти", type="primary", use_container_width=True):
-            if email and password:
-                user = login_user(email, password)
-                if user:
-                    st.session_state.user_data = user
-                    st.session_state.is_logged_in = True
-                    st.session_state.auth_status = "logged_in"
-                    st.session_state.page = "Главная"
-                    st.success("✅ Вход выполнен!")
-                    st.rerun()
-                else:
-                    st.error("Неверный email или пароль")
-            else:
-                st.error("Заполните все поля")
-    
-    with tab2:
-        st.markdown("### Регистрация")
-        
-        first_name = st.text_input("Имя", placeholder="Иван", key="reg_first_name")
-        last_name = st.text_input("Фамилия", placeholder="Иванов", key="reg_last_name")
-        email = st.text_input("Email", placeholder="email@example.com", key="reg_email")
-        username = st.text_input("Никнейм", placeholder="ivan_zornet", key="reg_username")
-        password = st.text_input("Пароль", type="password", placeholder="********", key="reg_password")
-        password_confirm = st.text_input("Повторите пароль", type="password", placeholder="********", key="reg_password_confirm")
-        
-        if st.button("Создать аккаунт", type="primary", use_container_width=True):
-            if not all([first_name, email, username, password, password_confirm]):
-                st.error("Заполните все поля")
-            elif password != password_confirm:
-                st.error("Пароли не совпадают")
-            elif len(password) < 6:
-                st.error("Пароль должен быть не менее 6 символов")
-            else:
-                # Простая регистрация без БД
-                st.session_state.user_data = {
-                    "id": 1,
-                    "email": email,
-                    "username": username,
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "avatar": None
-                }
-                st.session_state.is_logged_in = True
-                st.session_state.auth_status = "logged_in"
-                st.success("✅ Аккаунт создан!")
-                st.session_state.page = "Главная"
-                st.rerun()
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    st.stop()
-
-# ================= ФУНКЦИИ ПОГОДЫ =================
-def get_weather_icon(condition_code):
-    icons = {
-        "01d": "☀️", "01n": "🌙",
-        "02d": "⛅", "02n": "⛅",
-        "03d": "☁️", "03n": "☁️",
-        "04d": "☁️", "04n": "☁️",
-        "09d": "🌧️", "09n": "🌧️",
-        "10d": "🌦️", "10n": "🌦️",
-        "11d": "⛈️", "11n": "⛈️",
-        "13d": "❄️", "13n": "❄️",
-        "50d": "🌫️", "50n": "🌫️",
-    }
-    return icons.get(condition_code, "🌡️")
-
-def get_wind_direction(degrees):
-    directions = ["С", "СВ", "В", "ЮВ", "Ю", "ЮЗ", "З", "СЗ"]
-    index = round(degrees / 45) % 8
-    return directions[index]
-
-def get_weather_by_coords(lat, lon):
-    API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"
-    
-    try:
-        url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
-        response = requests.get(url, timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            
-            forecast_url = f"https://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={API_KEY}&units=metric&lang=ru"
-            forecast_response = requests.get(forecast_url, timeout=10)
-            forecast_data = forecast_response.json() if forecast_response.status_code == 200 else None
-            
-            return {
-                "current": {
-                    "temp": round(data["main"]["temp"]),
-                    "feels_like": round(data["main"]["feels_like"]),
-                    "humidity": data["main"]["humidity"],
-                    "pressure": data["main"]["pressure"],
-                    "description": data["weather"][0]["description"].capitalize(),
-                    "icon": data["weather"][0]["icon"],
-                    "wind_speed": data["wind"]["speed"],
-                    "wind_deg": data["wind"].get("deg", 0),
-                    "clouds": data["clouds"]["all"],
-                    "visibility": data.get("visibility", 10000) / 1000,
-                    "city": data["name"],
-                    "country": data["sys"]["country"],
-                    "sunrise": datetime.datetime.fromtimestamp(data["sys"]["sunrise"]).strftime('%H:%M'),
-                    "sunset": datetime.datetime.fromtimestamp(data["sys"]["sunset"]).strftime('%H:%M')
-                },
-                "forecast": forecast_data
-            }
-        else:
-            st.error(f"Ошибка API: {response.status_code}")
-            return None
-    except Exception as e:
-        st.error(f"Ошибка получения погоды: {e}")
-        return None
-
-def get_weather_by_city(city_name):
-    API_KEY = "20ebdd8243b8a3a29abe332fefdadb44"
-    
-    try:
-        geocode_url = f"http://api.openweathermap.org/geo/1.0/direct?q={city_name}&limit=1&appid={API_KEY}"
-        geocode_response = requests.get(geocode_url, timeout=10)
-        
-        if geocode_response.status_code == 200 and geocode_response.json():
-            city_data = geocode_response.json()[0]
-            lat = city_data["lat"]
-            lon = city_data["lon"]
-            
-            return get_weather_by_coords(lat, lon)
-        else:
-            st.error("Город не найден")
-            return None
-    except Exception as e:
-        st.error(f"Ошибка: {e}")
-        return None
-
-# ================= ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ДЛЯ ДИСКА =================
-def get_icon(file_path):
-    ext = file_path.suffix.lower()
-    if file_path.is_dir():
-        return "📁"
-    if ext in [".jpg", ".jpeg", ".png", ".gif"]:
-        return "🖼️"
-    if ext == ".pdf":
-        return "📄"
-    if ext in [".doc", ".docx"]:
-        return "📝"
-    if ext in [".mp3", ".wav"]:
-        return "🎵"
-    if ext in [".mp4", ".avi", ".mov"]:
-        return "🎬"
-    return "📦"
-
-# ================= ФУНКЦИИ ПОИСКА =================
-def search_zornet(query, num_results=5):
-    results = []
-    
-    try:
-        with DDGS() as ddgs:
-            ddgs_results = list(ddgs.text(query, max_results=num_results, region='wt-wt'))
-            
-            if ddgs_results:
-                for r in ddgs_results[:num_results]:
-                    results.append({
-                        "title": r.get("title", query),
-                        "url": r.get("href", f"https://www.google.com/search?q={query}"),
-                        "snippet": r.get("body", f"Результаты по запросу: {query}")[:180] + "...",
-                    })
-                return results
-    except Exception as e:
-        st.error(f"Ошибка поиска: {e}")
-    
-    fallback_results = [
-        {
-            "title": f"{query} - поиск в Google",
-            "url": f"https://www.google.com/search?q={query}",
-            "snippet": f"Нажмите для поиска '{query}' в Google."
-        },
-        {
-            "title": f"{query} в Википедии",
-            "url": f"https://ru.wikipedia.org/wiki/{query}",
-            "snippet": f"Ищите информацию о '{query}' в Википедии."
-        },
-    ]
-    
-    return fallback_results[:num_results]
-
-# ================= ДИСК ФУНКЦИИ =================
-def init_disk_db():
-    conn = sqlite3.connect("zornet_disk.db")
-    c = conn.cursor()
+    # Файлы
     c.execute("""
         CREATE TABLE IF NOT EXISTS files (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+            owner_username TEXT,
+            filename TEXT,
+            filepath TEXT,
             size INTEGER,
             uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    
     conn.commit()
-    conn.close()
+    return conn
 
-def get_disk_files():
-    conn = sqlite3.connect("zornet_disk.db")
+conn = init_db()
+
+# ================= СЕССИЯ =================
+if "user" not in st.session_state:
+    st.session_state.user = None
+if "page" not in st.session_state:
+    st.session_state.page = "Вход"
+if "current_chat_user" not in st.session_state:
+    st.session_state.current_chat_user = None
+if "watch_room_uid" not in st.session_state:
+    st.session_state.watch_room_uid = None
+
+# ================= ФУНКЦИИ LOGIC =================
+
+def hash_pass(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def login(email, password):
     c = conn.cursor()
-    c.execute("SELECT name, size, uploaded_at FROM files ORDER BY uploaded_at DESC LIMIT 10")
-    files = c.fetchall()
-    conn.close()
-    return files
+    pwd_hash = hash_pass(password)
+    c.execute("SELECT id, email, username, first_name, last_name FROM users WHERE email=? AND password_hash=?", (email, pwd_hash))
+    return c.fetchone()
 
-def save_file_to_db(filename, size):
-    conn = sqlite3.connect("zornet_disk.db")
+def register(email, username, first_name, last_name, password):
     c = conn.cursor()
-    c.execute("INSERT INTO files (name, size) VALUES (?, ?)", (filename, size))
-    conn.commit()
-    conn.close()
-
-# ================= НОВОСТИ =================
-def get_belta_news():
     try:
-        headers = {"User-Agent": "ZORNET/1.0"}
-        response = requests.get("https://www.belta.by/rss", headers=headers, timeout=10)
-        feed = feedparser.parse(response.content)
-        return feed.entries[:5]
-    except:
-        return [
-            {"title": "Новости Беларуси", "link": "#", "summary": "Следите за обновлениями"},
-            {"title": "Экономические новости", "link": "#", "summary": "Развитие экономики страны"},
-            {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
-        ]
+        pwd_hash = hash_pass(password)
+        c.execute("INSERT INTO users (email, username, first_name, last_name, password_hash) VALUES (?, ?, ?, ?, ?)",
+                  (email, username, first_name, last_name, pwd_hash))
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
 
-# ================= СТРАНИЦА ГЛАВНАЯ =================
-if st.session_state.page == "Главная":
-    # Проверяем авторизацию
-    if not check_auth():
-        st.stop()
+def get_user_by_username(username):
+    c = conn.cursor()
+    c.execute("SELECT id, username, first_name, last_name FROM users WHERE username=?", (username,))
+    return c.fetchone()
+
+def send_private_message(sender_id, receiver_id, content):
+    c = conn.cursor()
+    c.execute("INSERT INTO private_messages (sender_id, receiver_id, content) VALUES (?, ?, ?)", 
+              (sender_id, receiver_id, content))
+    conn.commit()
+
+def get_private_messages(user1_id, user2_id):
+    c = conn.cursor()
+    c.execute("""
+        SELECT sender_id, content, timestamp FROM private_messages 
+        WHERE (sender_id=? AND receiver_id=?) OR (sender_id=? AND receiver_id=?)
+        ORDER BY timestamp ASC
+    """, (user1_id, user2_id, user2_id, user1_id))
+    return c.fetchall()
+
+def get_my_contacts(user_id):
+    """Находит пользователей, с которыми была переписка"""
+    c = conn.cursor()
+    c.execute("""
+        SELECT DISTINCT u.id, u.username, u.first_name 
+        FROM users u
+        JOIN private_messages pm ON (u.id = pm.sender_id OR u.id = pm.receiver_id)
+        WHERE (pm.sender_id = ? OR pm.receiver_id = ?) AND u.id != ?
+    """, (user_id, user_id, user_id))
+    return c.fetchall()
+
+# ================= ИНТЕРФЕЙС =================
+
+# --- САЙДБАР ---
+with st.sidebar:
+    st.markdown("<h2 style='color:#DAA520; text-align:center;'>ZORNET</h2>", unsafe_allow_html=True)
     
-    st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
+    if st.session_state.user:
+        user = st.session_state.user
+        st.success(f"Вы вошли как: **{user[2]}**")
+        
+        menu_items = {
+            "Главная": "🏠",
+            "Мессенджер": "💬",
+            "Совместный просмотр": "🎬",
+            "Диск": "💾",
+            "Новости": "📰",
+            "Погода": "🌤️"
+        }
+        
+        for name, icon in menu_items.items():
+            if st.button(f"{icon} {name}", key=f"menu_{name}", use_container_width=True):
+                st.session_state.page = name
+                st.rerun()
+                
+        st.markdown("---")
+        if st.button("🚪 Выйти", use_container_width=True):
+            st.session_state.user = None
+            st.session_state.page = "Вход"
+            st.rerun()
+    else:
+        st.info("Пожалуйста, войдите или зарегистрируйтесь.")
+
+# --- СТРАНИЦА ВХОДА/РЕГИСТРАЦИИ ---
+if not st.session_state.user:
+    st.markdown("<div class='gold-title'>ZORNET ID</div>", unsafe_allow_html=True)
     
-    current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk')).strftime('%H:%M')
+    tab1, tab2 = st.tabs(["Вход", "Регистрация"])
     
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    with tab1:
+        with st.form("login_form"):
+            email = st.text_input("Email")
+            password = st.text_input("Пароль", type="password")
+            submit = st.form_submit_button("Войти")
+            
+            if submit:
+                user = login(email, password)
+                if user:
+                    st.session_state.user = user
+                    st.session_state.page = "Главная"
+                    st.rerun()
+                else:
+                    st.error("Неверный email или пароль")
+
+    with tab2:
+        with st.form("reg_form"):
+            new_email = st.text_input("Email")
+            new_username = st.text_input("Никнейм (для поиска)")
+            new_fname = st.text_input("Имя")
+            new_lname = st.text_input("Фамилия")
+            new_pass = st.text_input("Пароль", type="password")
+            new_pass2 = st.text_input("Повторите пароль", type="password")
+            reg_submit = st.form_submit_button("Создать аккаунт")
+            
+            if reg_submit:
+                if new_pass != new_pass2:
+                    st.error("Пароли не совпадают")
+                elif len(new_pass) < 6:
+                    st.error("Пароль слишком короткий")
+                else:
+                    if register(new_email, new_username, new_fname, new_lname, new_pass):
+                        st.success("Аккаунт создан! Теперь войдите.")
+                    else:
+                        st.error("Такой email или никнейм уже занят.")
+
+# --- ГЛАВНАЯ ---
+elif st.session_state.page == "Главная":
+    st.markdown("<div class='gold-title'>ZORNET</div>", unsafe_allow_html=True)
+    user = st.session_state.user
     
+    col1, col2 = st.columns(2)
     with col1:
-        st.button(f"🕒 {current_time}\nМинск", use_container_width=True)
-    with col2:
-        if st.button("⛅ Погода", use_container_width=True):
-            st.session_state.page = "Погода"
-            st.rerun()
-    with col3:
-        st.button("💵 3.20\nBYN/USD", use_container_width=True)
-    with col4:
-        if st.button("🤖 ZORNET AI", use_container_width=True):
-            st.session_state.page = "ZORNET AI"
-            st.rerun()
-    with col5:
-        if st.button("💬 Мессенджер", use_container_width=True):
-            st.session_state.page = "Мессенджер"
-            st.rerun()
-    with col6:
-        if st.button("🎬 Совм. просмотр", use_container_width=True):
-            st.session_state.page = "Совместный просмотр"
-            st.rerun()
-    
-    st.markdown("---")
-    
-    # Информация о пользователе
-    user = st.session_state.user_data
-    st.info(f"👤 **{user.get('first_name', 'Пользователь')} {user.get('last_name', '')}** | ✉️ {user.get('email', '')} | 🆔 @{user.get('username', 'user')}")
-    
-    components.html("""
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: transparent;
-            font-family: 'Helvetica Neue', sans-serif;
-            display: flex;
-            justify-content: center;
-        }
-        
-        .search-container {
-            width: 100%;
-            max-width: 600px;
-            padding: 10px;
-            box-sizing: border-box;
-            text-align: center;
-        }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 18px 25px;
-            font-size: 18px;
-            border: 2px solid #e0e0e0;
-            border-radius: 30px;
-            outline: none;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            background-color: #ffffff;
-            color: #333;
-            box-sizing: border-box;
-            -webkit-appearance: none;
-        }
-
-        input[type="text"]:focus {
-            border-color: #DAA520;
-            box-shadow: 0 0 15px rgba(218, 165, 32, 0.2);
-        }
-
-        button {
-            margin-top: 20px;
-            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-            color: white;
-            border: none;
-            padding: 14px 40px;
-            border-radius: 25px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
-            transition: transform 0.2s, box-shadow 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            -webkit-appearance: none;
-            width: 100%;
-            max-width: 250px;
-        }
-
-        button:hover {
-            transform: scale(1.03);
-            box-shadow: 0 6px 20px rgba(218, 165, 32, 0.6);
-        }
-        
-        button:active {
-            transform: scale(0.98);
-        }
-    </style>
-    </head>
-    <body>
-        <div class="search-container">
-            <form action="https://www.google.com/search" method="get" target="_top">
-                <input type="text" name="q" placeholder="🔍 Введите запрос..." required autocomplete="off">
-                <br>
-                <button type="submit">ИСКАТЬ</button>
-            </form>
+        st.markdown(f"""
+        <div class="card">
+            <h3>👋 Добро пожаловать, {user[3]}!</h3>
+            <p>Это ваша персональная панель управления.</p>
         </div>
-    </body>
-    </html>
-    """, height=220)
+        """, unsafe_allow_html=True)
+    
+    with col2:
+         st.markdown(f"""
+        <div class="card">
+            <h3>🕒 Время (Минск)</h3>
+            <p style="font-size: 2rem; font-weight: bold; color: #DAA520;">
+                {datetime.datetime.now(pytz.timezone('Europe/Minsk')).strftime('%H:%M')}
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
-# ================= МЕССЕНДЖЕР (Telegram стиль) =================
+# --- МЕССЕНДЖЕР (РЕАЛЬНЫЙ) ---
 elif st.session_state.page == "Мессенджер":
-    if not check_auth():
-        st.stop()
+    st.markdown("<div class='gold-title'>💬 МЕССЕНДЖЕР</div>", unsafe_allow_html=True)
     
-    st.markdown('<div class="gold-title">💬 МЕССЕНДЖЕР</div>', unsafe_allow_html=True)
+    col_contacts, col_chat = st.columns([1, 3])
     
-    # Telegram-like стили
-    st.markdown("""
-    <style>
-        .messenger-container {
-            display: flex;
-            height: 700px;
-            background: white;
-            border-radius: 16px;
-            border: 1px solid #e0e0e0;
-            overflow: hidden;
-        }
-        
-        .contacts-sidebar {
-            width: 350px;
-            border-right: 1px solid #e0e0e0;
-            background: #f8f9fa;
-            overflow-y: auto;
-        }
-        
-        .chat-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .chat-header {
-            padding: 16px 20px;
-            border-bottom: 1px solid #e0e0e0;
-            background: white;
-        }
-        
-        .messages-container {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            background: #f0f2f5;
-        }
-        
-        .message-input-area {
-            padding: 16px 20px;
-            border-top: 1px solid #e0e0e0;
-            background: white;
-        }
-        
-        .contact-item {
-            padding: 12px 16px;
-            border-bottom: 1px solid #e0e0e0;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        
-        .contact-item:hover {
-            background: #e9ecef;
-        }
-        
-        .contact-item.active {
-            background: #e3f2fd;
-        }
-        
-        .message-bubble {
-            max-width: 70%;
-            padding: 10px 14px;
-            border-radius: 18px;
-            margin-bottom: 8px;
-            word-wrap: break-word;
-        }
-        
-        .message-bubble.you {
-            background: #DCF8C6;
-            margin-left: auto;
-            border-bottom-right-radius: 4px;
-        }
-        
-        .message-bubble.other {
-            background: white;
-            margin-right: auto;
-            border-bottom-left-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    # Контакты (в реальном приложении из БД)
-    contacts = [
-        {"id": 1, "name": "Марина", "last_msg": "Жду руководства", "time": "16:01", "unread": 2, "online": True},
-        {"id": 2, "name": "Алексей", "last_msg": "Линукс слишком жесткий", "time": "16:01", "unread": 0, "online": True},
-        {"id": 3, "name": "Ирина", "last_msg": "С октября где-то он", "time": "16:24", "unread": 0, "online": False},
-        {"id": 4, "name": "Дмитрий", "last_msg": "Я еще ставлю его", "time": "16:06", "unread": 1, "online": True},
-    ]
-    
-    # Две колонки: контакты и чат
-    col_contacts, col_chat = st.columns([1, 2])
+    my_id = st.session_state.user[0]
     
     with col_contacts:
-        st.markdown("### Контакты")
+        st.markdown("### 🔎 Поиск")
+        search_user = st.text_input("Введите никнейм:", placeholder="Например: admin")
+        if search_user:
+            found_user = get_user_by_username(search_user)
+            if found_user:
+                if found_user[0] == my_id:
+                    st.warning("Это вы!")
+                else:
+                    if st.button(f"Написать {found_user[1]}", key="start_chat"):
+                        st.session_state.current_chat_user = found_user
+                        st.rerun()
+            else:
+                st.error("Пользователь не найден")
         
-        # Поиск контактов
-        search_query = st.text_input("🔍 Поиск...", placeholder="Имя или сообщение")
+        st.markdown("---")
+        st.markdown("### 👥 Чаты")
+        contacts = get_my_contacts(my_id)
+        if not contacts:
+            st.info("Пока нет чатов")
         
-        # Список контактов
-        for contact in contacts:
-            if search_query and search_query.lower() not in contact["name"].lower() and search_query.lower() not in contact["last_msg"].lower():
-                continue
+        for c_user in contacts:
+            c_id, c_username, c_fname = c_user
+            btn_label = f"{c_fname} (@{c_username})"
+            # Подсветка активного
+            type_btn = "primary" if st.session_state.current_chat_user and st.session_state.current_chat_user[0] == c_id else "secondary"
             
-            is_active = st.session_state.get("current_chat_id") == contact["id"]
-            
-            st.markdown(f"""
-            <div class="contact-item {'active' if is_active else ''}" 
-                 onclick="window.location='?page=Мессенджер&chat={contact['id']}'">
-                <div style="display: flex; justify-content: space-between;">
-                    <div style="font-weight: 600; color: #333;">{contact['name']}</div>
-                    <div style="font-size: 12px; color: #666;">{contact['time']}</div>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-                    <div style="font-size: 14px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                        {contact['last_msg']}
-                    </div>
-                    {contact['unread'] > 0 and f'<div style="background: #DAA520; color: white; border-radius: 50%; width: 20px; height: 20px; text-align: center; line-height: 20px; font-size: 12px;">{contact["unread"]}</div>' or ''}
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-    
+            if st.button(btn_label, key=f"contact_{c_id}", type=type_btn, use_container_width=True):
+                st.session_state.current_chat_user = (c_id, c_username, c_fname, "") # Формат кортежа как в поиске
+                st.rerun()
+
     with col_chat:
-        if st.session_state.get("current_chat_id"):
-            current_contact = next((c for c in contacts if c["id"] == st.session_state.current_chat_id), None)
+        target = st.session_state.current_chat_user
+        if target:
+            st.markdown(f"### Чат с **{target[1]}**")
             
-            if current_contact:
-                # Заголовок чата
-                st.markdown(f"""
-                <div class="chat-header">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="
-                            width: 40px;
-                            height: 40px;
-                            border-radius: 50%;
-                            background: linear-gradient(135deg, #DAA520, #B8860B);
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            color: white;
-                            font-weight: bold;
-                        ">
-                            {current_contact['name'][0]}
-                        </div>
-                        <div>
-                            <div style="font-weight: 600; font-size: 18px;">{current_contact['name']}</div>
-                            <div style="font-size: 14px; color: #666;">
-                                {current_contact['online'] and '🟢 онлайн' or '⚫ был(а) недавно'}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Сообщения
-                messages = [
-                    {"sender": "other", "text": "Привет! Как дела?", "time": "16:01"},
-                    {"sender": "you", "text": "Привет! Все отлично, работаю над ZORNET", "time": "16:02"},
-                    {"sender": "other", "text": "Круто! Когда покажешь?", "time": "16:03"},
-                    {"sender": "you", "text": "Скоро, сейчас финальные правки", "time": "16:04"},
-                ]
-                
-                st.markdown('<div class="messages-container">', unsafe_allow_html=True)
+            # Контейнер сообщений
+            messages = get_private_messages(my_id, target[0])
+            
+            # Используем container с фиксированной высотой (эмуляция CSS выше)
+            with st.container(height=500):
                 for msg in messages:
+                    sender_id, content, timestamp = msg
+                    is_me = (sender_id == my_id)
+                    align = "text-align: right; background: #DAA520; color: white;" if is_me else "text-align: left; background: white; color: black; border: 1px solid #ddd;"
+                    
                     st.markdown(f"""
-                    <div class="message-bubble {msg['sender']}">
-                        <div>{msg['text']}</div>
-                        <div style="font-size: 11px; color: #666; text-align: right; margin-top: 4px;">{msg['time']}</div>
+                    <div style='{align} padding: 10px; border-radius: 10px; margin-bottom: 5px; width: fit-content; margin-left: {'auto' if is_me else '0'};'>
+                        {content}
+                        <div style='font-size: 0.7em; opacity: 0.8;'>{timestamp[11:16]}</div>
                     </div>
                     """, unsafe_allow_html=True)
-                st.markdown('</div>', unsafe_allow_html=True)
-                
-                # Поле ввода
-                new_message = st.text_input("💬 Введите сообщение...", key="chat_input", label_visibility="collapsed")
-                
-                col_send, col_attach, col_voice = st.columns([6, 1, 1])
-                with col_send:
-                    if st.button("Отправить", type="primary", use_container_width=True):
-                        if new_message:
-                            st.success("Сообщение отправлено!")
-                            st.rerun()
-                with col_attach:
-                    st.button("📎", help="Прикрепить файл", use_container_width=True)
-                with col_voice:
-                    st.button("🎤", help="Голосовое сообщение", use_container_width=True)
-        else:
-            st.info("👈 Выберите чат из списка слева")
-
-# ================= СОВМЕСТНЫЙ ПРОСМОТР =================
-elif st.session_state.page == "Совместный просмотр":
-    if not check_auth():
-        st.stop()
-    
-    st.markdown('<div class="gold-title">🎬 СОВМЕСТНЫЙ ПРОСМОТР</div>', unsafe_allow_html=True)
-    
-    # Две колонки: создание комнаты и список комнат
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        st.markdown("### Создать комнату для просмотра")
-        
-        # URL видео
-        video_url = st.text_input(
-            "Ссылка на YouTube видео:",
-            placeholder="https://www.youtube.com/watch?v=...",
-            help="Вставьте ссылку на YouTube видео"
-        )
-        
-        # Название комнаты
-        room_name = st.text_input(
-            "Название комнаты:",
-            placeholder="Например: Фильм с друзьями",
-            value="Моя комната"
-        )
-        
-        # Пароль (обязательно)
-        col_pass1, col_pass2 = st.columns(2)
-        with col_pass1:
-            room_password = st.text_input(
-                "Пароль для комнаты:",
-                type="password",
-                placeholder="Обязательно",
-                help="Без пароля комната не будет создана"
-            )
-        with col_pass2:
-            confirm_password = st.text_input(
-                "Подтвердите пароль:",
-                type="password",
-                placeholder="Повторите пароль"
-            )
-        
-        # Кнопка создания
-        if st.button("🎥 Создать комнату", type="primary", use_container_width=True):
-            if video_url and room_name and room_password:
-                if room_password != confirm_password:
-                    st.error("Пароли не совпадают!")
-                else:
-                    # Генерируем ID комнаты
-                    room_id = str(uuid.uuid4())[:8]
-                    
-                    # Извлекаем ID видео
-                    video_id_match = re.search(r'(?:v=|\/)([0-9A-Za-z_-]{11}).*', video_url)
-                    
-                    if video_id_match:
-                        video_id = video_id_match.group(1)
-                        
-                        # Сохраняем в сессии
-                        st.session_state.rooms.append({
-                            "id": room_id,
-                            "name": room_name,
-                            "video_id": video_id,
-                            "password": room_password,
-                            "owner": st.session_state.user_data.get("username", "Гость"),
-                            "created": datetime.datetime.now().strftime("%H:%M"),
-                            "users": [st.session_state.user_data.get("username", "Гость")]
-                        })
-                        
-                        st.success(f"Комната '{room_name}' создана!")
-                        
-                        # Показываем ссылку
-                        st.markdown(f"**ID комнаты:** `{room_id}`")
-                        st.markdown(f"**Пароль:** `{room_password}`")
-                        
-                        # Кнопка для перехода в комнату
-                        if st.button("▶️ Перейти в комнату"):
-                            st.session_state.watch_room = room_id
-                            st.rerun()
-                    else:
-                        st.error("Неверная ссылка на YouTube видео")
-            else:
-                st.error("Заполните все поля, включая пароль!")
-    
-    with col2:
-        st.markdown("### Присоединиться к комнате")
-        
-        join_room_id = st.text_input("ID комнаты:", placeholder="Введите ID комнаты")
-        join_password = st.text_input("Пароль:", type="password", placeholder="Введите пароль")
-        
-        if st.button("🔗 Присоединиться", use_container_width=True):
-            if join_room_id and join_password:
-                # Ищем комнату
-                room_found = False
-                for room in st.session_state.rooms:
-                    if room["id"] == join_room_id:
-                        if room.get("password") == join_password:
-                            # Добавляем пользователя в комнату
-                            if st.session_state.user_data.get("username") not in room["users"]:
-                                room["users"].append(st.session_state.user_data.get("username", "Гость"))
-                            
-                            st.session_state.watch_room = room["id"]
-                            st.success("Вы присоединились к комнате!")
-                            st.rerun()
-                        else:
-                            st.error("Неверный пароль")
-                        room_found = True
-                        break
-                
-                if not room_found:
-                    st.error("Комната не найдена")
-            else:
-                st.error("Введите ID комнаты и пароль")
-        
-        st.markdown("---")
-        st.markdown("#### Активные комнаты")
-        
-        if st.session_state.rooms:
-            for room in st.session_state.rooms[-3:]:  # Последние 3 комнаты
-                st.markdown(f"""
-                <div style="background: #f8f9fa; padding: 10px; border-radius: 8px; margin: 5px 0; border-left: 3px solid #DAA520;">
-                    <b>{room['name']}</b><br>
-                    <small>Создал: {room['owner']}</small><br>
-                    <small>👥 {len(room['users'])} участников</small>
-                </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.info("🎬 Пока нет активных комнат")
-    
-    # Если выбрана комната, показываем плеер
-    if st.session_state.get("watch_room"):
-        st.markdown("---")
-        st.markdown("### 🎥 Комната для совместного просмотра")
-        
-        # Получаем данные комнаты
-        current_room = None
-        for room in st.session_state.rooms:
-            if room["id"] == st.session_state.watch_room:
-                current_room = room
-                break
-        
-        if current_room:
-            st.markdown(f"**Комната:** {current_room['name']}")
-            st.markdown(f"**Владелец:** {current_room['owner']}")
-            st.markdown(f"**Участники:** {', '.join(current_room['users'])}")
             
-            # YouTube плеер с синхронизацией
-            components.html(f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body {{ 
-                        margin: 0; 
-                        padding: 20px; 
-                        background: white;
-                        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-                    }}
-                    .watch-container {{
-                        max-width: 1000px;
-                        margin: 0 auto;
-                        background: white;
-                        border-radius: 16px;
-                        overflow: hidden;
-                        border: 1px solid #e0e0e0;
-                    }}
-                    .chat-messages {{
-                        height: 300px;
-                        overflow-y: auto;
-                        padding: 20px;
-                        background: #f8f9fa;
-                        border-top: 1px solid #e0e0e0;
-                    }}
-                    .message {{
-                        margin-bottom: 12px;
-                        padding: 10px 14px;
-                        border-radius: 18px;
-                        max-width: 80%;
-                        word-wrap: break-word;
-                    }}
-                    .message-you {{
-                        background: #DCF8C6;
-                        margin-left: auto;
-                        border-bottom-right-radius: 4px;
-                    }}
-                    .message-other {{
-                        background: white;
-                        margin-right: auto;
-                        border-bottom-left-radius: 4px;
-                        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                    }}
-                </style>
-            </head>
-            <body>
-                <div class="watch-container">
-                    <!-- YouTube плеер -->
-                    <iframe 
-                        width="100%" 
-                        height="500" 
-                        src="https://www.youtube.com/embed/{current_room['video_id']}?autoplay=1&controls=1&modestbranding=1"
-                        frameborder="0" 
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                        allowfullscreen
-                        style="border-bottom: 1px solid #e0e0e0;">
-                    </iframe>
-                    
-                    <!-- Чат комнаты -->
-                    <div style="padding: 20px; background: white;">
-                        <h3 style="margin: 0 0 15px 0; color: #333;">💬 Чат комнаты</h3>
-                        
-                        <div class="chat-messages" id="chatMessages">
-                            <div class="message message-other">
-                                <div style="font-weight: 600; color: #DAA520;">{current_room['owner']}</div>
-                                <div>Добро пожаловать в комнату!</div>
-                                <div style="font-size: 12px; color: #666; text-align: right;">{current_room['created']}</div>
-                            </div>
-                        </div>
-                        
-                        <div style="display: flex; gap: 10px; margin-top: 15px;">
-                            <input type="text" id="chatInput" 
-                                   placeholder="Напишите сообщение..." 
-                                   style="
-                                        flex: 1;
-                                        padding: 12px 16px;
-                                        border: 2px solid #e0e0e0;
-                                        border-radius: 25px;
-                                        outline: none;
-                                        font-size: 14px;
-                                   ">
-                            <button onclick="sendMessage()" style="
-                                background: #DAA520;
-                                color: white;
-                                border: none;
-                                border-radius: 25px;
-                                padding: 0 24px;
-                                font-weight: 600;
-                                cursor: pointer;
-                                transition: background 0.2s;
-                            ">
-                                Отправить
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            # Форма отправки
+            with st.form("send_msg_form", clear_on_submit=True):
+                col_input, col_btn = st.columns([5, 1])
+                with col_input:
+                    txt = st.text_input("Сообщение", label_visibility="collapsed", placeholder="Напишите сообщение...")
+                with col_btn:
+                    sent = st.form_submit_button("➤")
                 
-                <script>
-                    function sendMessage() {{
-                        var input = document.getElementById('chatInput');
-                        var message = input.value.trim();
-                        
-                        if (message) {{
-                            var chat = document.getElementById('chatMessages');
-                            var newMsg = document.createElement('div');
-                            newMsg.className = 'message message-you';
-                            newMsg.innerHTML = `
-                                <div style="font-weight: 600; color: #333;">Вы</div>
-                                <div>${{message}}</div>
-                                <div style="font-size: 12px; color: #666; text-align: right;">${{new Date().toLocaleTimeString([], {{hour: '2-digit', minute:'2-digit'}})}}</div>
-                            `;
-                            chat.appendChild(newMsg);
-                            input.value = '';
-                            chat.scrollTop = chat.scrollHeight;
-                        }}
-                    }}
-                    
-                    // Автофокус на поле ввода
-                    document.getElementById('chatInput').focus();
-                    
-                    // Отправка по Enter
-                    document.getElementById('chatInput').addEventListener('keypress', function(e) {{
-                        if (e.key === 'Enter') {{
-                            sendMessage();
-                        }}
-                    }});
-                </script>
-            </body>
-            </html>
-            """, height=900)
-        
-        # Кнопка выхода из комнаты
-        if st.button("← Выйти из комнаты", use_container_width=True):
-            st.session_state.watch_room = None
+                if sent and txt:
+                    send_private_message(my_id, target[0], txt)
+                    st.rerun()
+            
+            # Автообновление (костыль для Streamlit)
+            time.sleep(2)
             st.rerun()
+            
+        else:
+            st.info("👈 Выберите пользователя слева или найдите его через поиск.")
+
+# --- СОВМЕСТНЫЙ ПРОСМОТР ---
+elif st.session_state.page == "Совместный просмотр":
+    
+    # Если мы уже в комнате
+    if st.session_state.watch_room_uid:
+        room_uid = st.session_state.watch_room_uid
+        c = conn.cursor()
+        c.execute("SELECT name, video_id, owner_username FROM rooms WHERE room_uid=?", (room_uid,))
+        room_data = c.fetchone()
+        
+        if not room_data:
+            st.error("Комната удалена.")
+            st.session_state.watch_room_uid = None
+            st.rerun()
+            
+        st.markdown(f"<div class='gold-title'>📺 {room_data[0]}</div>", unsafe_allow_html=True)
+        if st.button("← Выйти из комнаты"):
+            st.session_state.watch_room_uid = None
+            st.rerun()
+            
+        col_video, col_rchat = st.columns([3, 1])
+        
+        with col_video:
+            st.video(f"https://youtu.be/{room_data[1]}")
+            
+        with col_rchat:
+            st.markdown("### Чат комнаты")
+            
+            # Чтение сообщений
+            c.execute("SELECT username, content, timestamp FROM room_messages WHERE room_uid=? ORDER BY timestamp ASC", (room_uid,))
+            r_msgs = c.fetchall()
+            
+            with st.container(height=400):
+                for rm in r_msgs:
+                    st.markdown(f"**{rm[0]}:** {rm[1]}")
+            
+            # Отправка
+            with st.form("room_chat"):
+                rmsg = st.text_input("Сообщение")
+                if st.form_submit_button("Отправить") and rmsg:
+                    c.execute("INSERT INTO room_messages (room_uid, username, content) VALUES (?, ?, ?)", 
+                              (room_uid, st.session_state.user[2], rmsg))
+                    conn.commit()
+                    st.rerun()
+            
+            time.sleep(2)
+            st.rerun()
+
+    # Если мы в лобби
+    else:
+        st.markdown("<div class='gold-title'>🎬 КИНОЗАЛ</div>", unsafe_allow_html=True)
+        
+        col_create, col_join = st.columns(2)
+        
+        with col_create:
+            st.markdown("### Создать комнату")
+            with st.form("create_room"):
+                r_name = st.text_input("Название комнаты")
+                r_url = st.text_input("Ссылка YouTube")
+                r_pass = st.text_input("Пароль комнаты")
+                r_create = st.form_submit_button("Создать и войти")
+                
+                if r_create and r_url and r_pass:
+                    # Парсинг ID видео
+                    vid_match = re.search(r'(?:v=|\/)([0-9A-Za-z_-]{11}).*', r_url)
+                    if vid_match:
+                        vid = vid_match.group(1)
+                        uid = str(uuid.uuid4())[:8]
+                        
+                        try:
+                            c = conn.cursor()
+                            c.execute("INSERT INTO rooms (room_uid, name, video_id, password, owner_username) VALUES (?, ?, ?, ?, ?)",
+                                      (uid, r_name, vid, r_pass, st.session_state.user[2]))
+                            
+                            # ПЕРВОЕ СООБЩЕНИЕ (ПРИВЕТСТВИЕ)
+                            welcome_msg = f"👋 Добро пожаловать! ID: **{uid}**, Пароль: **{r_pass}**. Передай другу!"
+                            c.execute("INSERT INTO room_messages (room_uid, username, content) VALUES (?, ?, ?)",
+                                      (uid, "ZORNET BOT", welcome_msg))
+                            
+                            conn.commit()
+                            
+                            # СРАЗУ ЗАХОДИМ
+                            st.session_state.watch_room_uid = uid
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Ошибка: {e}")
+                    else:
+                        st.error("Некорректная ссылка YouTube")
+
+        with col_join:
+            st.markdown("### Войти в комнату")
+            j_uid = st.text_input("ID комнаты")
+            j_pass = st.text_input("Пароль", type="password")
+            if st.button("Присоединиться"):
+                c = conn.cursor()
+                c.execute("SELECT password FROM rooms WHERE room_uid=?", (j_uid,))
+                res = c.fetchone()
+                if res and res[0] == j_pass:
+                    st.session_state.watch_room_uid = j_uid
+                    st.rerun()
+                else:
+                    st.error("Неверный ID или пароль")
 
 # ================= СТРАНИЦА ДИСКА =================
 elif st.session_state.page == "Диск":
