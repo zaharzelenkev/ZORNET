@@ -528,7 +528,7 @@ def create_database():
     return True
 
 def register_user(email, username, first_name, last_name, password=None, google_id=None, avatar=None):
-    """Регистрация пользователя"""
+    """Регистрация пользователя с правильной обработкой ошибок"""
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
     
@@ -549,29 +549,37 @@ def register_user(email, username, first_name, last_name, password=None, google_
         """)
         conn.commit()
         
-        # 2. ХЕШИРУЕМ ПАРОЛЬ (если есть)
+        # 2. ПРОВЕРЯЕМ, СУЩЕСТВУЕТ ЛИ УЖЕ ПОЛЬЗОВАТЕЛЬ
+        c.execute("SELECT COUNT(*) FROM users WHERE email = ? OR username = ?", (email, username))
+        count = c.fetchone()[0]
+        
+        if count > 0:
+            conn.close()
+            return "exists"  # Пользователь уже существует
+        
+        # 3. ХЕШИРУЕМ ПАРОЛЬ
         password_hash = None
         if password:
             password_hash = hashlib.sha256(password.encode()).hexdigest()
         
-        # 3. ВСТАВКА ПОЛЬЗОВАТЕЛЯ
+        # 4. ВСТАВКА ПОЛЬЗОВАТЕЛЯ
         c.execute("""
-            INSERT INTO users (email, username, first_name, last_name, avatar, google_id, password_hash, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            INSERT INTO users (email, username, first_name, last_name, avatar, google_id, password_hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (email, username, first_name, last_name, avatar, google_id, password_hash))
         
         conn.commit()
         conn.close()
-        return True
+        return "success"  # Успешная регистрация
         
     except sqlite3.IntegrityError as e:
-        print(f"Registration error (дубликат): {e}")
+        # Дубликат email или username
         conn.close()
-        return False
+        return "exists"
     except Exception as e:
         print(f"Registration error: {e}")
         conn.close()
-        return False
+        return "error"  # Другая ошибка
 
 def login_user(email, password):
     """Вход пользователя по email и паролю"""
@@ -863,19 +871,23 @@ if st.session_state.page == "Профиль" and not st.session_state.is_logged_
                         avatar_path = f"avatars/{username}_{int(datetime.datetime.now().timestamp())}.jpg"
                         with open(avatar_path, "wb") as f:
                             f.write(avatar.getbuffer())
-                    
-                    if register_user(email, username, first_name, last_name, password, None, avatar_path):
-                        # Автоматически входим после регистрации
-                        user = login_user(email, password)
-                        if user:
-                            st.session_state.user_data = user
-                            st.session_state.is_logged_in = True
-                            st.session_state.auth_status = "logged_in"
-                            st.success("✅ Аккаунт успешно создан!")
-                            st.session_state.page = "Главная"
-                            st.rerun()
-                    else:
-                        st.error("Пользователь с таким email или никнеймом уже существует")
+
+result = register_user(email, username, first_name, last_name, password, None, avatar_path)
+
+if result == "success":
+    # Автоматически входим после регистрации
+    user = login_user(email, password)
+    if user:
+        st.session_state.user_data = user
+        st.session_state.is_logged_in = True
+        st.session_state.auth_status = "logged_in"
+        st.success("✅ Аккаунт успешно создан!")
+        st.session_state.page = "Главная"
+        st.rerun()
+elif result == "exists":
+    st.error("Пользователь с таким email или никнеймом уже существует")
+else:
+    st.error("Ошибка при создании аккаунта. Попробуйте еще раз.")
             
             if back_clicked:
                 st.session_state.auth_step = "login_start"
