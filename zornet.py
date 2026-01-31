@@ -226,7 +226,6 @@ pages = [
             st.session_state.page = page
             st.rerun()
 
-
 # ================= ФУНКЦИИ ПОГОДЫ =================
 def get_weather_icon(condition_code):
     """Возвращает эмодзи для погодных условий"""
