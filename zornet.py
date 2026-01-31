@@ -803,7 +803,7 @@ if st.session_state.page == "Профиль" and not st.session_state.is_logged_
                 with col_register:
                     register_clicked = st.form_submit_button("Регистрация", use_container_width=True)
                 
-                if register_submitted:
+if register_submitted:
     if not all([first_name, email, username, password, password_confirm]):
         st.error("Заполните все обязательные поля")
     elif password != password_confirm:
