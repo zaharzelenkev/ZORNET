@@ -733,15 +733,9 @@ if st.session_state.page == "Главная":
             st.rerun()
     with col3:
         st.button("💵 3.20\nBYN/USD", use_container_width=True)
-    with col4:
-        st.button("🤖 ZORNET AI", use_container_width=True, disabled=True)
     with col5:
         if st.button("💬 Мессенджер", use_container_width=True):
             st.session_state.page = "Мессенджер"
-            st.rerun()
-    with col6:
-        if st.button("🎬 Совм. просмотр", use_container_width=True):
-            st.session_state.page = "Совместный просмотр"
             st.rerun()
     
     st.markdown("---")
