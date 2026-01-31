@@ -590,7 +590,6 @@ def get_belta_news():
         ]
 
 # ================= СТРАНИЦА ГЛАВНАЯ =================
-# ================= СТРАНИЦА ГЛАВНАЯ =================
 if st.session_state.page == "Главная":
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
     
@@ -604,7 +603,7 @@ if st.session_state.page == "Главная":
             st.session_state.page = "Профиль"
             st.rerun()
     
-    current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk')
+    current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk'))
     
     with col1:
         st.button(f"🕒 {current_time.strftime('%H:%M')}\nМинск", use_container_width=True)
