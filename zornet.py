@@ -721,21 +721,65 @@ def get_belta_news():
 if st.session_state.page == "Главная":
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
     
-    current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk')).strftime('%H:%M')
+    # Функция для получения курса доллара с НБ РБ
+    @st.cache_data(ttl=3600)  # Кэшируем на 1 час
+    def get_usd_rate():
+        try:
+            # API НБ РБ для получения курсов валют
+            url = "https://www.nbrb.by/api/exrates/rates/USD?parammode=2"
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                usd_rate = data['Cur_OfficialRate']
+                date_str = data['Date'][:10]
+                return {
+                    "rate": usd_rate,
+                    "date": date_str,
+                    "success": True
+                }
+        except Exception as e:
+            print(f"Ошибка получения курса: {e}")
+        
+        # Если не удалось получить данные, возвращаем дефолтное значение
+        return {
+            "rate": 3.20,
+            "date": datetime.datetime.now().strftime("%Y-%m-%d"),
+            "success": False
+        }
+    
+    # Получаем текущий курс
+    usd_data = get_usd_rate()
+    usd_rate = usd_data["rate"]
+    rate_date = usd_data["date"]
+    
+    # Преобразуем дату в читаемый формат
+    try:
+        rate_date_obj = datetime.datetime.strptime(rate_date, "%Y-%m-%d")
+        formatted_date = rate_date_obj.strftime("%d.%m.%Y")
+    except:
+        formatted_date = rate_date
     
     # Создаем 4 колонки одинаковой ширины для верхней панели
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.button(f"🕒 {current_time}\nМинск", use_container_width=True)
+        if st.button(f"💵 USD: {usd_rate}\nBYN ({formatted_date})", 
+                    use_container_width=True,
+                    help=f"Курс USD/BYN от НБ РБ на {formatted_date}"):
+            # Можно добавить дополнительную информацию при клике
+            st.session_state.show_rate_info = not st.session_state.get('show_rate_info', False)
+            st.rerun()
+    
     with col2:
         if st.button("⛅ Погода", use_container_width=True):
             st.session_state.page = "Погода"
             st.rerun()
+    
     with col3:
         if st.button("💬 Мессенджер", use_container_width=True):
             st.session_state.page = "Мессенджер"
             st.rerun()
+    
     with col4:
         if st.button("📰 Новости", use_container_width=True):
             st.session_state.page = "Новости"
@@ -764,8 +808,39 @@ if st.session_state.page == "Главная":
             white-space: pre-line !important;
             text-align: center !important;
         }
+        
+        /* Стиль для информации о курсе */
+        .rate-info {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #DAA520;
+        }
     </style>
     """, unsafe_allow_html=True)
+    
+    # Показываем дополнительную информацию о курсе если нужно
+    if st.session_state.get('show_rate_info', False):
+        st.markdown(f"""
+        <div class="rate-info">
+            <h4>💱 Информация о курсе USD/BYN</h4>
+            <p><strong>Курс НБ РБ:</strong> {usd_rate} BYN за 1 USD</p>
+            <p><strong>Дата установки курса:</strong> {formatted_date}</p>
+            <p><strong>Источник:</strong> Национальный банк Республики Беларусь</p>
+            <p><em>Данные обновляются ежедневно в рабочие дни</em></p>
+            <button onclick="window.open('https://www.nbrb.by/statistics/rates/ratesdaily', '_blank')" 
+                    style="background:#DAA520;color:white;border:none;padding:8px 16px;border-radius:5px;cursor:pointer;">
+                Подробнее на сайте НБ РБ
+            </button>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Кнопка для обновления курса вручную
+    if st.button("🔄 Обновить курс USD", type="secondary"):
+        # Очищаем кэш для принудительного обновления
+        st.cache_data.clear()
+        st.rerun()
     
     if st.session_state.is_logged_in:
         user = st.session_state.user_data
