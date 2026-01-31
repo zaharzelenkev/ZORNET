@@ -843,12 +843,12 @@ if register_clicked:
 st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
     
-    # Страница регистрации
-    elif st.session_state.auth_step == "register":
-        st.markdown('<div class="login-page">', unsafe_allow_html=True)
-        st.markdown('<div class="login-card">', unsafe_allow_html=True)
+# Страница регистрации
+elif st.session_state.auth_step == "register":
+    st.markdown('<div class="login-page">', unsafe_allow_html=True)
+    st.markdown('<div class="login-card">', unsafe_allow_html=True)
         
-        st.markdown("### Регистрация")
+    st.markdown("### Регистрация")
         
         with st.form("register_form"):
             col_name1, col_name2 = st.columns(2)
