@@ -79,7 +79,7 @@ header:after {
 
 </style>
 """, unsafe_allow_html=True)
-    stApp > header {
+    .stApp > header {
         display: none !important;
     }
     
