@@ -72,7 +72,6 @@ header:after {
 }
 </style>
 """, unsafe_allow_html=True)
-    /* Убираем белую полосу под заголовком */
     .stApp > header {
         display: none !important;
     }
