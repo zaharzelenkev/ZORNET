@@ -63,28 +63,16 @@ if "room_password" not in st.session_state:
 # ================= ИСПРАВЛЕННЫЕ CSS СТИЛИ (убрали белый треугольник) =================
 st.markdown("""
 <style>
-        /* Убираем белую полосу под заголовком и треугольник */
+    /* Убираем белую полосу под заголовком и треугольник */
+    .stApp > header {
+        background-color: transparent !important;
+    }
+    
     [data-testid="stHeader"] {
         background: transparent !important;
-    }
-    
-    [data-testid="stHeader"]::before {
-        content: none !important;
-    }
-    
-    /* Убираем белую полосу полностью */
-    header[data-testid="stHeader"] {
-        display: none !important;
-    }
-    
-    /* Убираем отступы сверху */
-    .stApp {
-        margin-top: -50px !important;
-    }
-    
-    /* Убираем треугольник/стрелку в сайдбаре */
-    [data-testid="stSidebar"] {
-        padding-top: 0 !important;
+        height: 0 !important;
+        min-height: 0 !important;
+        padding: 0 !important;
     }
     
     /* Убираем белый треугольник/стрелку в сайдбаре */
@@ -572,15 +560,16 @@ def register_user(email, username, first_name, last_name, password):
     c = conn.cursor()
     
     try:
-        # Проверяем email
-        c.execute("SELECT id FROM users WHERE email = ?", (email,))
-        if c.fetchone():
-            return {"success": False, "message": "Email уже используется"}
+        # Проверяем, существует ли уже пользователь
+        c.execute("SELECT id FROM users WHERE email = ? OR username = ?", (email, username))
+        existing = c.fetchone()
         
-        # Проверяем username
-        c.execute("SELECT id FROM users WHERE username = ?", (username,))
-        if c.fetchone():
-            return {"success": False, "message": "Никнейм уже занят"}
+        if existing:
+            c.execute("SELECT email FROM users WHERE email = ?", (email,))
+            if c.fetchone():
+                return {"success": False, "message": "Email уже используется"}
+            else:
+                return {"success": False, "message": "Никнейм уже занят"}
         
         password_hash = hashlib.sha256(password.encode()).hexdigest()
         
@@ -591,8 +580,8 @@ def register_user(email, username, first_name, last_name, password):
         
         conn.commit()
         return {"success": True, "message": "Аккаунт создан!"}
-    except Exception as e:
-        return {"success": False, "message": f"Ошибка: {str(e)}"}
+    except sqlite3.Error as e:
+        return {"success": False, "message": f"Ошибка регистрации: {str(e)}"}
     finally:
         conn.close()
 
@@ -1148,7 +1137,7 @@ elif st.session_state.page == "Мессенджер":
                                 Напишите первое сообщение ниже
                             </div>
                         </div>
-                        """, unsafe_allow_html=True)
+                        """.format(partner['first_name']=partner['first_name']), unsafe_allow_html=True)
                     
                     # Показываем сообщения
                     for msg in chat_history:
@@ -1881,42 +1870,21 @@ elif st.session_state.page == "Новости":
 # ================= СТРАНИЦА ПОГОДЫ (ПРОСТО И РАБОЧЕ) =================
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
-    
-    # ПРОСТОЙ ПОИСК КАК НА ГЛАВНОЙ
-    st.markdown("""
-    <div style="text-align: center; margin: 20px 0;">
-        <input type="text" id="cityInput" placeholder="🔍 Введите город..." 
-               style="width: 70%; padding: 12px; border: 2px solid #6ecbf5; 
-                      border-radius: 25px; font-size: 16px;">
-        <button onclick="setCity()" 
-                style="margin-left: 10px; padding: 12px 24px; background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%); 
-                       color: white; border: none; border-radius: 25px; cursor: pointer;">
-            Найти
-        </button>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # JavaScript для передачи города
-    components.html("""
-    <script>
-    function setCity() {
-        var city = document.getElementById('cityInput').value;
-        if (city) {
-            window.parent.postMessage({
-                type: 'streamlit:setComponentValue',
-                value: city
-            }, '*');
-        }
-    }
-    </script>
-    """, height=0)
-    
-    # Получаем город
-    city_input = st.text_input("", key="weather_city", label_visibility="collapsed")
 
-# И далее используй city_input как обычно
-if city_input:
-    city_to_show = city_input
+    # По умолчанию показываем Минск
+    default_city = "Минск"
+
+    # Поисковая строка
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        city_input = st.text_input(
+            "🔍 Введите ваш город",
+            placeholder="Например: Минск, Гомель, Брест...",
+            key="weather_city_input"
+        )
+
+    with col2:
+        search_clicked = st.button("Найти", type="primary", use_container_width=True)
 
     # Определяем какой город показывать
     city_to_show = default_city
@@ -2105,18 +2073,14 @@ elif st.session_state.page == "Профиль":
         </div>
         """, unsafe_allow_html=True)
         
-    if st.button("🚪 Выйти из аккаунта", type="primary", use_container_width=True):
-            # СОХРАНЯЕМ только важные данные
-            current_page = st.session_state.get("page", "Главная")
-            
-            # Полностью очищаем session_state
-            st.session_state.clear()
-            
-            # Восстанавливаем минимальные данные
-            st.session_state.page = current_page
+        if st.button("🚪 Выйти из аккаунта", type="primary", use_container_width=True):
+            # Очищаем сессию
+            for key in list(st.session_state.keys()):
+                if key not in ["page"]:
+                    del st.session_state[key]
+            st.session_state.page = "Главная"
             st.session_state.is_logged_in = False
             st.session_state.user_data = {}
-            
             st.rerun()
     
     else:
