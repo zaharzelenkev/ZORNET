@@ -58,7 +58,6 @@ if "chat_partner" not in st.session_state:
 # ================= ОБНОВЛЕННЫЕ CSS СТИЛИ =================
 st.markdown(r"""
 <style>
-
 /* убираем верхний белый хедер */
 .stApp > header {
     display: none;
@@ -77,377 +76,371 @@ header:after {
     padding-top: 0rem !important;
 }
 
-</style>
-""", unsafe_allow_html=True)
-.stApp > header {
+/* Делаем хедер прозрачным */
+[data-testid="stHeader"] {
+    background: rgba(0,0,0,0) !important;
+    color: white !important;
+}
+
+/* Кнопка сайдбара */
+button[data-testid="stSidebarCollapse"] {
+    position: fixed !important;
+    right: 20px !important;
+    top: 15px !important;
+    background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+    border-radius: 8px !important;
+    width: 45px !important;
+    height: 45px !important;
+    z-index: 10000 !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+}
+
+button[data-testid="stSidebarCollapse"] svg {
     display: none !important;
 }
-    
-    /* Делаем хедер прозрачным */
-    [data-testid="stHeader"] {
-        background: rgba(0,0,0,0) !important;
-        color: white !important;
-    }
 
-    /* Кнопка сайдбара */
-    button[data-testid="stSidebarCollapse"] {
-        position: fixed !important;
-        right: 20px !important;
-        top: 15px !important;
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-        border-radius: 8px !important;
-        width: 45px !important;
-        height: 45px !important;
-        z-index: 10000 !important;
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
-        border: 1px solid rgba(255,255,255,0.2) !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
-    }
+button[data-testid="stSidebarCollapse"]::after {
+    content: "☰" !important;
+    color: white !important;
+    font-size: 24px !important;
+    font-weight: bold !important;
+}
 
-    button[data-testid="stSidebarCollapse"] svg {
-        display: none !important;
-    }
-    
-    button[data-testid="stSidebarCollapse"]::after {
-        content: "☰" !important;
-        color: white !important;
-        font-size: 24px !important;
-        font-weight: bold !important;
-    }
+[data-testid="stSidebar"] button[data-testid="stSidebarCollapse"] {
+    right: auto !important;
+    left: 10px !important;
+    top: 10px !important;
+    position: relative !important;
+}
 
-    [data-testid="stSidebar"] button[data-testid="stSidebarCollapse"] {
-        right: auto !important;
-        left: 10px !important;
-        top: 10px !important;
-        position: relative !important;
-    }
+div[data-testid="stVerticalBlock"] > div:has(div.stMarkdown) {
+    padding: 0 !important;
+    margin: 0 !important;
+}
 
-    div[data-testid="stVerticalBlock"] > div:has(div.stMarkdown) {
-        padding: 0 !important;
-        margin: 0 !important;
-    }
+/* ГЛАВНЫЙ ЗАГОЛОВОК */
+.gold-title {
+    font-family: 'Helvetica Neue', sans-serif;
+    font-size: 4rem;
+    font-weight: 800;
+    text-align: center;
+    background: linear-gradient(to bottom, #DAA520, #B8860B);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin: 10px 0 30px 0;
+}
 
-    /* ГЛАВНЫЙ ЗАГОЛОВОК */
-    .gold-title {
-        font-family: 'Helvetica Neue', sans-serif;
-        font-size: 4rem;
-        font-weight: 800;
-        text-align: center;
-        background: linear-gradient(to bottom, #DAA520, #B8860B);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        letter-spacing: 4px;
-        text-transform: uppercase;
-        margin: 10px 0 30px 0;
-    }
+/* КНОПКИ ГЛАВНОЙ */
+div.stButton > button {
+    background: #f8f9fa !important;
+    border: 1px solid #dee2e6 !important;
+    color: #1a1a1a !important;
+    padding: 20px !important; 
+    border-radius: 12px !important;
+    font-weight: bold !important;
+    width: 100% !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
+}
 
-    /* КНОПКИ ГЛАВНОЙ */
-    div.stButton > button {
-        background: #f8f9fa !important;
-        border: 1px solid #dee2e6 !important;
-        color: #1a1a1a !important;
-        padding: 20px !important; 
-        border-radius: 12px !important;
-        font-weight: bold !important;
-        width: 100% !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
-    }
+/* ЗОЛОТАЯ КНОПКА AI */
+.gold-btn {
+    background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+    border: none !important;
+    color: white !important;
+    border-radius: 12px !important;
+    padding: 14px 28px !important;
+    font-weight: 600 !important;
+    font-size: 16px !important;
+    box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3) !important;
+}
 
-    /* ЗОЛОТАЯ КНОПКА AI */
-    .gold-btn {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-        border: none !important;
-        color: white !important;
-        border-radius: 12px !important;
-        padding: 14px 28px !important;
-        font-weight: 600 !important;
-        font-size: 16px !important;
-        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3) !important;
-    }
+/* ВРЕМЯ В ЗОЛОТОЙ РАМКЕ */
+.time-widget {
+    background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+    border-radius: 12px;
+    padding: 12px 15px;
+    text-align: center;
+    color: white;
+    font-weight: 600;
+    font-size: 16px;
+    box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
+}
 
-    /* ВРЕМЯ В ЗОЛОТОЙ РАМКЕ */
-    .time-widget {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-        border-radius: 12px;
-        padding: 12px 15px;
-        text-align: center;
-        color: white;
-        font-weight: 600;
-        font-size: 16px;
-        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
-    }
+/* РЕЗУЛЬТАТЫ ПОИСКА */
+.search-result {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    border-left: 4px solid #DAA520;
+}
 
-    /* РЕЗУЛЬТАТЫ ПОИСКА */
-    .search-result {
-        background: #f8f9fa;
-        padding: 15px;
-        border-radius: 10px;
-        margin-bottom: 10px;
-        border-left: 4px solid #DAA520;
-    }
+/* ЧАТ AI */
+.user-message {
+    background: #f0f0f0;
+    padding: 12px 18px;
+    border-radius: 18px;
+    max-width: 70%;
+    margin-left: auto;
+    margin-bottom: 15px;
+}
 
-    /* ЧАТ AI */
-    .user-message {
-        background: #f0f0f0;
-        padding: 12px 18px;
-        border-radius: 18px;
-        max-width: 70%;
-        margin-left: auto;
-        margin-bottom: 15px;
-    }
+.ai-message {
+    background: #f9f9f9;
+    padding: 12px 18px;
+    border-radius: 18px;
+    max-width: 70%;
+    margin-right: auto;
+    margin-bottom: 15px;
+    border-left: 4px solid #DAA520;
+}
 
-    .ai-message {
-        background: #f9f9f9;
-        padding: 12px 18px;
-        border-radius: 18px;
-        max-width: 70%;
-        margin-right: auto;
-        margin-bottom: 15px;
-        border-left: 4px solid #DAA520;
-    }
+/* СТИЛИ ДЛЯ ПОГОДЫ */
+.weather-widget {
+    background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
+    border-radius: 15px;
+    padding: 20px;
+    color: white;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(6, 147, 227, 0.3);
+}
 
-    /* СТИЛИ ДЛЯ ПОГОДЫ */
-    .weather-widget {
-        background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
-        border-radius: 15px;
-        padding: 20px;
-        color: white;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 15px rgba(6, 147, 227, 0.3);
-    }
+.weather-temp {
+    font-size: 3.5rem;
+    font-weight: 800;
+    line-height: 1;
+}
 
-    .weather-temp {
-        font-size: 3.5rem;
-        font-weight: 800;
-        line-height: 1;
-    }
+.weather-description {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+}
 
-    .weather-description {
-        font-size: 1.2rem;
-        margin-bottom: 15px;
-    }
+.weather-details {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    padding: 15px;
+    margin-top: 15px;
+}
 
-    .weather-details {
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 10px;
-        padding: 15px;
-        margin-top: 15px;
-    }
+.weather-icon {
+    font-size: 4rem;
+    text-align: center;
+    margin-bottom: 10px;
+}
 
-    .weather-icon {
-        font-size: 4rem;
-        text-align: center;
-        margin-bottom: 10px;
-    }
+.forecast-day {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+}
 
-    .forecast-day {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        padding: 15px;
-        text-align: center;
-    }
-    
-    /* Стили для диска */
-    .disk-container {
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
-        margin: 10px 0;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    }
-    
-    .disk-header {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-        border-radius: 12px;
-        padding: 25px;
-        color: white;
-        margin-bottom: 20px;
-    }
-    
-    .disk-btn {
-        background: white !important;
-        border: 2px solid #DAA520 !important;
-        color: #B8860B !important;
-        padding: 10px 20px !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-        transition: all 0.3s ease !important;
-    }
-    
-    .disk-btn:hover {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-        color: white !important;
-        border-color: transparent !important;
-    }
-    
-    .disk-btn-active {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-        color: white !important;
-        border-color: transparent !important;
-    }
-    
-    .file-card {
-        background: #f8f9fa;
-        border-radius: 10px;
-        padding: 15px;
-        margin: 10px 0;
-        border-left: 4px solid #DAA520;
-        transition: all 0.3s ease;
-    }
-    
-    .file-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
-    
-    .folder-card {
-        background: linear-gradient(135deg, #fff9e6 0%, #ffe699 100%);
-        border-radius: 10px;
-        padding: 15px;
-        margin: 10px 0;
-        border: 2px solid #ffd966;
-    }
-    
-    .storage-bar {
-        height: 8px;
-        background: #e9ecef;
-        border-radius: 4px;
-        overflow: hidden;
-        margin: 10px 0;
-    }
-    
-    .storage-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #DAA520, #FFD700);
-        border-radius: 4px;
-    }
-    
-    /* Стили для профиля */
-    .giant-id-title {
-        font-size: 5rem !important;
-        font-weight: 900 !important;
-        text-align: center;
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin: 20px 0 40px 0 !important;
-        letter-spacing: -2px;
-    }
-    
-    .profile-container {
-        background: white;
-        border-radius: 32px;
-        padding: 40px;
-        border: 1px solid #f0f0f0;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
-        text-align: center;
-    }
-    
-    .user-avatar-main {
-        width: 180px;
-        height: 180px;
-        border-radius: 40px;
-        object-fit: cover;
-        border: 4px solid #DAA520;
-        margin-bottom: 20px;
-    }
-    
-    .stFileUploader section {
-        background-color: transparent !important;
-        border: none !important;
-        padding: 0 !important;
-    }
-    
-    /* Мессенджер стили */
-    .messenger-container {
-        display: flex;
-        height: 700px;
-        background: white;
-        border-radius: 16px;
-        border: 1px solid #e0e0e0;
-        overflow: hidden;
-    }
-    
-    .contacts-sidebar {
-        width: 350px;
-        border-right: 1px solid #e0e0e0;
-        background: #f8f9fa;
-        overflow-y: auto;
-    }
-    
-    .chat-area {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-    }
-    
-    .chat-header {
-        padding: 16px 20px;
-        border-bottom: 1px solid #e0e0e0;
-        background: white;
-    }
-    
-    .messages-container {
-        flex: 1;
-        padding: 20px;
-        overflow-y: auto;
-        background: #f0f2f5;
-    }
-    
-    .message-input-area {
-        padding: 16px 20px;
-        border-top: 1px solid #e0e0e0;
-        background: white;
-    }
-    
-    .contact-item {
-        padding: 12px 16px;
-        border-bottom: 1px solid #e0e0e0;
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-    
-    .contact-item:hover {
-        background: #e9ecef;
-    }
-    
-    .contact-item.active {
-        background: #e3f2fd;
-    }
-    
-    .message-bubble {
-        max-width: 70%;
-        padding: 10px 14px;
-        border-radius: 18px;
-        margin-bottom: 8px;
-        word-wrap: break-word;
-    }
-    
-    .message-bubble.you {
-        background: #DCF8C6;
-        margin-left: auto;
-        border-bottom-right-radius: 4px;
-    }
-    
-    .message-bubble.other {
-        background: white;
-        margin-right: auto;
-        border-bottom-left-radius: 4px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    
-    /* Логин контейнер */
-    .login-container {
-        max-width: 500px;
-        margin: 50px auto;
-        padding: 40px;
-        background: white;
-        border-radius: 20px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        border: 1px solid #e0e0e0;
-    }
+/* Стили для диска */
+.disk-container {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    margin: 10px 0;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.disk-header {
+    background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+    border-radius: 12px;
+    padding: 25px;
+    color: white;
+    margin-bottom: 20px;
+}
+
+.disk-btn {
+    background: white !important;
+    border: 2px solid #DAA520 !important;
+    color: #B8860B !important;
+    padding: 10px 20px !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+}
+
+.disk-btn:hover {
+    background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+    color: white !important;
+    border-color: transparent !important;
+}
+
+.disk-btn-active {
+    background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+    color: white !important;
+    border-color: transparent !important;
+}
+
+.file-card {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 15px;
+    margin: 10px 0;
+    border-left: 4px solid #DAA520;
+    transition: all 0.3s ease;
+}
+
+.file-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.folder-card {
+    background: linear-gradient(135deg, #fff9e6 0%, #ffe699 100%);
+    border-radius: 10px;
+    padding: 15px;
+    margin: 10px 0;
+    border: 2px solid #ffd966;
+}
+
+.storage-bar {
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 10px 0;
+}
+
+.storage-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #DAA520, #FFD700);
+    border-radius: 4px;
+}
+
+/* Стили для профиля */
+.giant-id-title {
+    font-size: 5rem !important;
+    font-weight: 900 !important;
+    text-align: center;
+    background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 20px 0 40px 0 !important;
+    letter-spacing: -2px;
+}
+
+.profile-container {
+    background: white;
+    border-radius: 32px;
+    padding: 40px;
+    border: 1px solid #f0f0f0;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.user-avatar-main {
+    width: 180px;
+    height: 180px;
+    border-radius: 40px;
+    object-fit: cover;
+    border: 4px solid #DAA520;
+    margin-bottom: 20px;
+}
+
+.stFileUploader section {
+    background-color: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
+/* Мессенджер стили */
+.messenger-container {
+    display: flex;
+    height: 700px;
+    background: white;
+    border-radius: 16px;
+    border: 1px solid #e0e0e0;
+    overflow: hidden;
+}
+
+.contacts-sidebar {
+    width: 350px;
+    border-right: 1px solid #e0e0e0;
+    background: #f8f9fa;
+    overflow-y: auto;
+}
+
+.chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e0e0e0;
+    background: white;
+}
+
+.messages-container {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background: #f0f2f5;
+}
+
+.message-input-area {
+    padding: 16px 20px;
+    border-top: 1px solid #e0e0e0;
+    background: white;
+}
+
+.contact-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid #e0e0e0;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.contact-item:hover {
+    background: #e9ecef;
+}
+
+.contact-item.active {
+    background: #e3f2fd;
+}
+
+.message-bubble {
+    max-width: 70%;
+    padding: 10px 14px;
+    border-radius: 18px;
+    margin-bottom: 8px;
+    word-wrap: break-word;
+}
+
+.message-bubble.you {
+    background: #DCF8C6;
+    margin-left: auto;
+    border-bottom-right-radius: 4px;
+}
+
+.message-bubble.other {
+    background: white;
+    margin-right: auto;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Логин контейнер */
+.login-container {
+    max-width: 500px;
+    margin: 50px auto;
+    padding: 40px;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    border: 1px solid #e0e0e0;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -510,10 +503,11 @@ def init_db():
     conn.close()
 
 def register_user(email, username, first_name, last_name, password):
-    email = email.strip().lower()
-username = username.strip().lower()
-password = password.strip()
     """Регистрация пользователя"""
+    email = email.strip().lower()
+    username = username.strip().lower()
+    password = password.strip()
+    
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
     
@@ -795,6 +789,7 @@ if st.session_state.page == "Главная":
     </style>
     """, unsafe_allow_html=True)
 
+if not st.session_state.is_logged_in:
         st.warning("⚠️ Вы не авторизованы. Перейдите в профиль для входа.")
     
     # ВАШ СУЩЕСТВУЮЩИЙ HTML КОД ДЛЯ ПОИСКА...
@@ -1053,12 +1048,12 @@ elif st.session_state.page == "Мессенджер":
                         })
                         
                         st.rerun()
-        else:
-    st.markdown("""
-    <div style="height:400px;display:flex;align-items:center;justify-content:center;color:#999;font-size:20px;">
-    Введите ник пользователя слева, чтобы начать чат
-    </div>
-    """, unsafe_allow_html=True)
+else:
+            st.markdown("""
+            <div style="height:400px;display:flex;align-items:center;justify-content:center;color:#999;font-size:20px;">
+            Введите ник пользователя слева, чтобы начать чат
+            </div>
+            """, unsafe_allow_html=True)
 
 # ================= СОВМЕСТНЫЙ ПРОСМОТР =================
 elif st.session_state.page == "Совместный просмотр":
