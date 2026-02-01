@@ -1041,186 +1041,118 @@ elif st.session_state.page == "Совместный просмотр":
         if st.button("Перейти к входу"):
             st.session_state.page = "Профиль"
             st.rerun()
+    else:
+        if st.session_state.get("watch_room"):
+            room_id = st.session_state.watch_room
+            room_data = None
+            
+            for room in st.session_state.rooms:
+                if room["id"] == room_id:
+                    room_data = room
+                    break
+            
+            if room_data:
+                video_url = room_data.get("youtube_url", "")
+                video_id_match = re.search(r'(?:v=|\/)([0-9A-Za-z_-]{11}).*', video_url)
+                video_id = video_id_match.group(1) if video_id_match else ""
+                
+                st.markdown(f"### 🎥 {room_data['name']}")
+                st.markdown(f"**ID комнаты:** `{room_id}` | **Пароль:** `{room_data['password']}`")
+                
+                if video_id:
+                    components.html(f"""
+                    <iframe width="100%" height="500" src="https://www.youtube.com/embed/{video_id}?autoplay=1&controls=1"
+                            frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; 
+                            gyroscope; picture-in-picture" allowfullscreen>
+                    </iframe>
+                    """, height=550)
+                
+                st.markdown("### 💬 Чат комнаты")
+                
+                room_chat_key = f"room_chat_{room_id}"
+                if room_chat_key not in st.session_state:
+                    st.session_state[room_chat_key] = [{
+                        "sender": "Система",
+                        "message": f"Добро пожаловать в комнату '{room_data['name']}'! ID: {room_id}, Пароль: {room_data['password']}",
+                        "time": datetime.datetime.now().strftime("%H:%M")
+                    }]
+                
+                chat_container = st.container(height=200)
+                with chat_container:
+                    for msg in st.session_state[room_chat_key]:
+                        if msg["sender"] == "Система":
+                            st.markdown(f"""
+                            <div style="background: #e3f2fd; padding: 10px; border-radius: 10px; margin: 5px 0; border-left: 4px solid #DAA520;">
+                                <div><strong>{msg['sender']}:</strong> {msg['message']}</div>
+                                <div style="font-size: 11px; color: #666; text-align: right;">{msg['time']}</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        else:
+                            st.markdown(f"""
+                            <div style="background: #f8f9fa; padding: 10px; border-radius: 10px; margin: 5px 0;">
+                                <div><strong>{msg['sender']}:</strong> {msg['message']}</div>
+                                <div style="font-size: 11px; color: #666; text-align: right;">{msg['time']}</div>
+                            </div>
+                            """, unsafe_allow_html=True)
+                
+                col_msg, col_send = st.columns([5, 1])
+                with col_msg:
+                    room_message = st.text_input("Сообщение...", key=f"room_msg", label_visibility="collapsed")
+                with col_send:
+                    if st.button("Отправить", use_container_width=True):
+                        if room_message:
+                            username = st.session_state.user_data.get("username", "Гость")
+                            st.session_state[room_chat_key].append({
+                                "sender": username,
+                                "message": room_message,
+                                "time": datetime.datetime.now().strftime("%H:%M")
+                            })
+                            st.rerun()
+                
+                if st.button("← Выйти из комнаты", use_container_width=True):
+                    st.session_state.watch_room = None
+                    st.rerun()
+                
+                st.stop()
     
-    # Если есть активная комната, показываем её
-    if st.session_state.get("watch_room"):
-        room_id = st.session_state.watch_room
-        room_data = None
-        
-        # Ищем комнату
-        for room in st.session_state.rooms:
-            if room["id"] == room_id:
-                room_data = room
-                break
-        
-        if room_data:
-            # Извлекаем ID видео
-            video_url = room_data.get("youtube_url", "")
-            video_id_match = re.search(r'(?:v=|\/)([0-9A-Za-z_-]{11}).*', video_url)
-            video_id = video_id_match.group(1) if video_id_match else ""
-            
-            st.markdown(f"### 🎥 {room_data['name']}")
-            st.markdown(f"**ID комнаты:** `{room_id}` | **Пароль:** `{room_data['password']}`")
-            
-            # YouTube плеер
-            components.html(f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    body {{ margin: 0; padding: 20px; background: white; }}
-                </style>
-            </head>
-            <body>
-                <iframe 
-                    width="100%" 
-                    height="500" 
-                    src="https://www.youtube.com/embed/{video_id}?autoplay=1&controls=1"
-                    frameborder="0" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                    allowfullscreen>
-                </iframe>
-            </body>
-            </html>
-            """, height=550)
-            
-            # Чат комнаты
-            st.markdown("### 💬 Чат комнаты")
-            
-            # Инициализируем чат комнаты с приветственным сообщением
-            if f"room_chat_{room_id}" not in st.session_state:
-                st.session_state[f"room_chat_{room_id}"] = [{
-                    "sender": "Система",
-                    "message": f"Добро пожаловать в комнату '{room_data['name']}'! ID: {room_id}, Пароль: {room_data['password']}",
-                    "time": datetime.datetime.now().strftime("%H:%M")
-                }]
-            
-            # Показываем сообщения
-            chat_container = st.container(height=200)
-            with chat_container:
-                for msg in st.session_state[f"room_chat_{room_id}"]:
-                    if msg["sender"] == "Система":
-                        st.markdown(f"""
-                        <div style="
-                            background: #e3f2fd;
-                            padding: 10px;
-                            border-radius: 10px;
-                            margin: 5px 0;
-                            border-left: 4px solid #DAA520;
-                        ">
-                            <div><strong>{msg['sender']}:</strong> {msg['message']}</div>
-                            <div style="font-size: 11px; color: #666; text-align: right;">{msg['time']}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"""
-                        <div style="
-                            background: #f8f9fa;
-                            padding: 10px;
-                            border-radius: 10px;
-                            margin: 5px 0;
-                        ">
-                            <div><strong>{msg['sender']}:</strong> {msg['message']}</div>
-                            <div style="font-size: 11px; color: #666; text-align: right;">{msg['time']}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-            
-            # Поле ввода
-            col_msg, col_send = st.columns([5, 1])
-            with col_msg:
-                room_message = st.text_input("Сообщение в чат...", key=f"room_msg_{room_id}", label_visibility="collapsed")
-            with col_send:
-                if st.button("Отправить", use_container_width=True):
-                    if room_message:
-                        username = st.session_state.user_data.get("username", "Гость")
-                        st.session_state[f"room_chat_{room_id}"].append({
-                            "sender": username,
-                            "message": room_message,
-                            "time": datetime.datetime.now().strftime("%H:%M")
-                        })
-                        st.rerun()
-            
-            # Кнопка выхода
-            if st.button("← Выйти из комнаты", use_container_width=True):
-                st.session_state.watch_room = None
-                st.rerun()
-            
-            st.stop()
-    
-    # Создание/присоединение к комнате
     col_create, col_join = st.columns(2)
     
     with col_create:
         st.markdown("### Создать комнату")
-        
         room_name = st.text_input("Название комнаты:", value="Моя комната")
         youtube_url = st.text_input("YouTube ссылка:", placeholder="https://www.youtube.com/watch?v=...")
         room_password = st.text_input("Пароль:", type="password")
         
         if st.button("🎥 Создать комнату", type="primary", use_container_width=True):
             if room_name and youtube_url and room_password:
-                # Генерируем ID
                 room_id = str(uuid.uuid4())[:8]
-                
-                # Сохраняем комнату
                 st.session_state.rooms.append({
                     "id": room_id,
                     "name": room_name,
                     "youtube_url": youtube_url,
                     "password": room_password,
-                    "owner": st.session_state.user_data.get("username", "Гость") if st.session_state.is_logged_in else "Гость",
+                    "owner": st.session_state.user_data.get("username", "Гость"),
                     "created": datetime.datetime.now().strftime("%H:%M")
                 })
-                
-                # Автоматически переходим в комнату
                 st.session_state.watch_room = room_id
-                st.success(f"Комната создана! ID: {room_id}")
                 st.rerun()
-            else:
-                st.error("Заполните все поля")
     
     with col_join:
         st.markdown("### Присоединиться к комнате")
-        
         join_id = st.text_input("ID комнаты:", placeholder="Введите ID")
         join_password = st.text_input("Пароль для входа:", type="password")
         
         if st.button("🔗 Присоединиться", use_container_width=True):
             if join_id and join_password:
-                # Ищем комнату
                 room_found = False
                 for room in st.session_state.rooms:
                     if room["id"] == join_id and room["password"] == join_password:
                         st.session_state.watch_room = room["id"]
-                        st.success("Вы присоединились к комнате!")
                         st.rerun()
                         room_found = True
                         break
-                
                 if not room_found:
                     st.error("Комната не найдена или неверный пароль")
-            else:
-                st.error("Введите ID и пароль")
-        
-        st.markdown("---")
-        st.markdown("#### Активные комнаты")
-        
-        if st.session_state.rooms:
-            for room in st.session_state.rooms[-5:]:
-                st.markdown(f"""
-                <div style="
-                    background: #f8f9fa;
-                    padding: 10px;
-                    border-radius: 8px;
-                    margin: 5px 0;
-                    border-left: 3px solid #DAA520;
-                ">
-                    <strong>{room['name']}</strong><br>
-                    <small>ID: {room['id']} | 👤 {room['owner']}</small>
-                </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.info("🎬 Нет активных комнат")
 
 # ================= ПРОФЕССИОНАЛЬНЫЙ ОБЛАЧНЫЙ ДИСК ZORNET DISK =================
 elif st.session_state.page == "Диск":
