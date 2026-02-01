@@ -1137,7 +1137,7 @@ elif st.session_state.page == "Мессенджер":
                                 Напишите первое сообщение ниже
                             </div>
                         </div>
-                        """.format(partner['first_name']=partner['first_name']), unsafe_allow_html=True)
+                        """, unsafe_allow_html=True)
                     
                     # Показываем сообщения
                     for msg in chat_history:
@@ -1874,17 +1874,120 @@ elif st.session_state.page == "Погода":
     # По умолчанию показываем Минск
     default_city = "Минск"
 
-    # Поисковая строка
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        city_input = st.text_input(
-            "🔍 Введите ваш город",
-            placeholder="Например: Минск, Гомель, Брест...",
-            key="weather_city_input"
-        )
+    components.html("""
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: transparent;
+        font-family: 'Helvetica Neue', sans-serif;
+        display: flex;
+        justify-content: center;
+    }
+    
+    .weather-search-container {
+        width: 100%;
+        max-width: 600px;
+        padding: 10px;
+        box-sizing: border-box;
+        text-align: center;
+    }
 
-    with col2:
-        search_clicked = st.button("Найти", type="primary", use_container_width=True)
+    input[type="text"] {
+        width: 100%;
+        padding: 18px 25px;
+        font-size: 18px;
+        border: 2px solid #e0e0e0;
+        border-radius: 30px;
+        outline: none;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        background-color: #ffffff;
+        color: #333;
+        box-sizing: border-box;
+        -webkit-appearance: none;
+    }
+
+    input[type="text"]:focus {
+        border-color: #6ecbf5;
+        box-shadow: 0 0 15px rgba(110, 203, 245, 0.3);
+    }
+
+    button {
+        margin-top: 20px;
+        background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
+        color: white;
+        border: none;
+        padding: 14px 40px;
+        border-radius: 25px;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(110, 203, 245, 0.4);
+        transition: transform 0.2s, box-shadow 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        -webkit-appearance: none;
+        width: 100%;
+        max-width: 250px;
+    }
+
+    button:hover {
+        transform: scale(1.03);
+        box-shadow: 0 6px 20px rgba(110, 203, 245, 0.6);
+    }
+    
+    button:active {
+        transform: scale(0.98);
+    }
+</style>
+</head>
+<body>
+    <div class="weather-search-container">
+        <form id="weatherForm">
+            <input type="text" id="cityInput" placeholder="🔍 Введите город..." required autocomplete="off">
+            <br>
+            <button type="button" onclick="searchWeather()">ПОКАЗАТЬ ПОГОДУ</button>
+        </form>
+    </div>
+    
+    <script>
+    function searchWeather() {
+        var city = document.getElementById('cityInput').value;
+        if (city) {
+            // Сохраняем город в Streamlit session state
+            window.parent.postMessage({
+                type: 'streamlit:setComponentValue',
+                value: city
+            }, '*');
+            
+            // Можно добавить визуальную обратную связь
+            document.getElementById('cityInput').style.borderColor = '#6ecbf5';
+            document.getElementById('cityInput').style.boxShadow = '0 0 15px rgba(110, 203, 245, 0.3)';
+        }
+    }
+    
+    // Поиск при нажатии Enter
+    document.getElementById('cityInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            searchWeather();
+        }
+    });
+    </script>
+</body>
+</html>
+""", height=150)
+
+# Получаем введенный город через компонент
+city_input = st.text_input("", key="weather_city", label_visibility="collapsed", placeholder="Введите город...")
+
+# И далее используй city_input как обычно
+if city_input:
+    city_to_show = city_input
 
     # Определяем какой город показывать
     city_to_show = default_city
