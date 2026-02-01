@@ -2105,7 +2105,7 @@ elif st.session_state.page == "Профиль":
         </div>
         """, unsafe_allow_html=True)
         
-                if st.button("🚪 Выйти из аккаунта", type="primary", use_container_width=True):
+    if st.button("🚪 Выйти из аккаунта", type="primary", use_container_width=True):
             # СОХРАНЯЕМ только важные данные
             current_page = st.session_state.get("page", "Главная")
             
