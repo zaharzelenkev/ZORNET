@@ -56,7 +56,7 @@ if "chat_partner" not in st.session_state:
     st.session_state.chat_partner = None
 
 # ================= ОБНОВЛЕННЫЕ CSS СТИЛИ =================
-st.markdown("""
+st.markdown(r"""
 <style>
 
 /* убираем верхний белый хедер */
