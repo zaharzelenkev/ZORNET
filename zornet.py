@@ -79,9 +79,9 @@ header:after {
 
 </style>
 """, unsafe_allow_html=True)
-    .stApp > header {
-        display: none !important;
-    }
+.stApp > header {
+    display: none !important;
+}
     
     /* Делаем хедер прозрачным */
     [data-testid="stHeader"] {
