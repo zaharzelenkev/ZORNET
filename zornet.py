@@ -538,9 +538,8 @@ def login_user(email, password):
     
     try:
         email = email.strip().lower()
-password = password.strip()
-
-password_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
+        password = password.strip()
+        password_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
         
         c.execute("""
             SELECT id, email, username, first_name, last_name
