@@ -530,7 +530,7 @@ def register_user(email, username, first_name, last_name, password):
             return {"success": False, "message": "Ошибка регистрации"}
     finally:
         conn.close()
-
+        
 def login_user(email, password):
     """Вход пользователя"""
     conn = sqlite3.connect("zornet.db")
