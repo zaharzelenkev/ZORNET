@@ -446,8 +446,6 @@ div.stButton > button {
 </style>
 """, unsafe_allow_html=True)
 
-init_db()
-
 # ================= БАЗА ДАННЫХ =================
 def init_db():
     conn = sqlite3.connect("zornet.db")
