@@ -58,6 +58,20 @@ if "chat_partner" not in st.session_state:
 # ================= ОБНОВЛЕННЫЕ CSS СТИЛИ =================
 st.markdown("""
 <style>
+/* Убираем белый треугольник / стрелку */
+div[data-testid="stDecoration"],
+div[data-testid="stToolbar"],
+header:before,
+header:after {
+    display:none !important;
+}
+
+/* убираем верхний отступ полностью */
+.block-container {
+    padding-top: 0rem !important;
+}
+</style>
+""", unsafe_allow_html=True)
     /* Убираем белую полосу под заголовком */
     .stApp > header {
         display: none !important;
@@ -431,6 +445,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+init_db()
+
 # ================= БАЗА ДАННЫХ =================
 def init_db():
     conn = sqlite3.connect("zornet.db")
@@ -488,6 +504,9 @@ def init_db():
     conn.close()
 
 def register_user(email, username, first_name, last_name, password):
+    email = email.strip().lower()
+username = username.strip().lower()
+password = password.strip()
     """Регистрация пользователя"""
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
@@ -518,7 +537,10 @@ def login_user(email, password):
     c = conn.cursor()
     
     try:
-        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        email = email.strip().lower()
+password = password.strip()
+
+password_hash = hashlib.sha256(password.encode("utf-8")).hexdigest()
         
         c.execute("""
             SELECT id, email, username, first_name, last_name
@@ -766,11 +788,7 @@ if st.session_state.page == "Главная":
         }
     </style>
     """, unsafe_allow_html=True)
-    
-    if st.session_state.is_logged_in:
-        user = st.session_state.user_data
-        st.info(f"👤 **{user.get('first_name', 'Пользователь')} {user.get('last_name', '')}** | ✉️ {user.get('email', '')} | 🆔 @{user.get('username', 'user')}")
-    else:
+
         st.warning("⚠️ Вы не авторизованы. Перейдите в профиль для входа.")
     
     # ВАШ СУЩЕСТВУЮЩИЙ HTML КОД ДЛЯ ПОИСКА...
@@ -869,7 +887,7 @@ elif st.session_state.page == "Мессенджер":
         st.stop()
     
     # Две колонки: поиск пользователя и чат
-    col_search, col_chat = st.columns([1, 2])
+    col_search, col_chat = st.columns([1, 2], gap="small")
     
     with col_search:
         st.markdown("### Найти пользователя")
@@ -1011,7 +1029,7 @@ elif st.session_state.page == "Мессенджер":
                     label_visibility="collapsed"
                 )
             with col_send:
-                if st.button("📤", use_container_width=True, type="primary"):
+                if st.button("Отправить", use_container_width=True):
                     if new_message:
                         # Сохраняем в БД
                         save_chat_message(
@@ -1030,7 +1048,11 @@ elif st.session_state.page == "Мессенджер":
                         
                         st.rerun()
         else:
-            st.info("👈 Выберите пользователя для начала общения")
+    st.markdown("""
+    <div style="height:400px;display:flex;align-items:center;justify-content:center;color:#999;font-size:20px;">
+    Введите ник пользователя слева, чтобы начать чат
+    </div>
+    """, unsafe_allow_html=True)
 
 # ================= СОВМЕСТНЫЙ ПРОСМОТР =================
 elif st.session_state.page == "Совместный просмотр":
@@ -1126,7 +1148,22 @@ elif st.session_state.page == "Совместный просмотр":
         if st.button("🎥 Создать комнату", type="primary", use_container_width=True):
             if room_name and youtube_url and room_password:
                 room_id = str(uuid.uuid4())[:8]
-                st.session_state.rooms.append({
+                conn = sqlite3.connect("zornet.db")
+c = conn.cursor()
+
+room_id = str(uuid.uuid4())[:8]
+password_hash = hashlib.sha256(room_password.encode()).hexdigest()
+
+c.execute("""
+INSERT INTO watch_rooms (room_id,name,youtube_url,password_hash,owner_username)
+VALUES (?,?,?,?,?)
+""",(room_id,room_name,youtube_url,password_hash,st.session_state.user_data["username"]))
+
+conn.commit()
+conn.close()
+
+st.session_state.watch_room = room_id
+st.rerun()
                     "id": room_id,
                     "name": room_name,
                     "youtube_url": youtube_url,
@@ -1135,7 +1172,16 @@ elif st.session_state.page == "Совместный просмотр":
                     "created": datetime.datetime.now().strftime("%H:%M")
                 })
                 st.session_state.watch_room = room_id
-                st.rerun()
+
+room_chat_key = f"room_chat_{room_id}"
+
+st.session_state[room_chat_key] = [{
+    "sender": "Система",
+    "message": f"Добро пожаловать! ID: {room_id} Пароль: {room_password}",
+    "time": datetime.datetime.now().strftime("%H:%M")
+}]
+
+st.rerun()
     
     with col_join:
         st.markdown("### Присоединиться к комнате")
@@ -1145,14 +1191,21 @@ elif st.session_state.page == "Совместный просмотр":
         if st.button("🔗 Присоединиться", use_container_width=True):
             if join_id and join_password:
                 room_found = False
-                for room in st.session_state.rooms:
-                    if room["id"] == join_id and room["password"] == join_password:
-                        st.session_state.watch_room = room["id"]
-                        st.rerun()
-                        room_found = True
-                        break
-                if not room_found:
-                    st.error("Комната не найдена или неверный пароль")
+                conn=sqlite3.connect("zornet.db")
+c=conn.cursor()
+
+hashp=hashlib.sha256(join_password.encode()).hexdigest()
+
+c.execute("SELECT room_id FROM watch_rooms WHERE room_id=? AND password_hash=?",(join_id,hashp))
+room=c.fetchone()
+
+conn.close()
+
+if room:
+    st.session_state.watch_room=join_id
+    st.rerun()
+else:
+    st.error("Комната не найдена")
 
 # ================= ПРОФЕССИОНАЛЬНЫЙ ОБЛАЧНЫЙ ДИСК ZORNET DISK =================
 elif st.session_state.page == "Диск":
