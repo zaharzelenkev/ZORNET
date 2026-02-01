@@ -63,16 +63,28 @@ if "room_password" not in st.session_state:
 # ================= ИСПРАВЛЕННЫЕ CSS СТИЛИ (убрали белый треугольник) =================
 st.markdown("""
 <style>
-    /* Убираем белую полосу под заголовком и треугольник */
-    .stApp > header {
-        background-color: transparent !important;
-    }
-    
+        /* Убираем белую полосу под заголовком и треугольник */
     [data-testid="stHeader"] {
         background: transparent !important;
-        height: 0 !important;
-        min-height: 0 !important;
-        padding: 0 !important;
+    }
+    
+    [data-testid="stHeader"]::before {
+        content: none !important;
+    }
+    
+    /* Убираем белую полосу полностью */
+    header[data-testid="stHeader"] {
+        display: none !important;
+    }
+    
+    /* Убираем отступы сверху */
+    .stApp {
+        margin-top: -50px !important;
+    }
+    
+    /* Убираем треугольник/стрелку в сайдбаре */
+    [data-testid="stSidebar"] {
+        padding-top: 0 !important;
     }
     
     /* Убираем белый треугольник/стрелку в сайдбаре */
@@ -560,16 +572,15 @@ def register_user(email, username, first_name, last_name, password):
     c = conn.cursor()
     
     try:
-        # Проверяем, существует ли уже пользователь
-        c.execute("SELECT id FROM users WHERE email = ? OR username = ?", (email, username))
-        existing = c.fetchone()
+        # Проверяем email
+        c.execute("SELECT id FROM users WHERE email = ?", (email,))
+        if c.fetchone():
+            return {"success": False, "message": "Email уже используется"}
         
-        if existing:
-            c.execute("SELECT email FROM users WHERE email = ?", (email,))
-            if c.fetchone():
-                return {"success": False, "message": "Email уже используется"}
-            else:
-                return {"success": False, "message": "Никнейм уже занят"}
+        # Проверяем username
+        c.execute("SELECT id FROM users WHERE username = ?", (username,))
+        if c.fetchone():
+            return {"success": False, "message": "Никнейм уже занят"}
         
         password_hash = hashlib.sha256(password.encode()).hexdigest()
         
@@ -580,8 +591,8 @@ def register_user(email, username, first_name, last_name, password):
         
         conn.commit()
         return {"success": True, "message": "Аккаунт создан!"}
-    except sqlite3.Error as e:
-        return {"success": False, "message": f"Ошибка регистрации: {str(e)}"}
+    except Exception as e:
+        return {"success": False, "message": f"Ошибка: {str(e)}"}
     finally:
         conn.close()
 
@@ -1870,120 +1881,38 @@ elif st.session_state.page == "Новости":
 # ================= СТРАНИЦА ПОГОДЫ (ПРОСТО И РАБОЧЕ) =================
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
-
-    # По умолчанию показываем Минск
-    default_city = "Минск"
-
-    components.html("""
-<!DOCTYPE html>
-<html>
-<head>
-<style>
-    body {
-        margin: 0;
-        padding: 0;
-        background-color: transparent;
-        font-family: 'Helvetica Neue', sans-serif;
-        display: flex;
-        justify-content: center;
-    }
     
-    .weather-search-container {
-        width: 100%;
-        max-width: 600px;
-        padding: 10px;
-        box-sizing: border-box;
-        text-align: center;
-    }
-
-    input[type="text"] {
-        width: 100%;
-        padding: 18px 25px;
-        font-size: 18px;
-        border: 2px solid #e0e0e0;
-        border-radius: 30px;
-        outline: none;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-        background-color: #ffffff;
-        color: #333;
-        box-sizing: border-box;
-        -webkit-appearance: none;
-    }
-
-    input[type="text"]:focus {
-        border-color: #6ecbf5;
-        box-shadow: 0 0 15px rgba(110, 203, 245, 0.3);
-    }
-
-    button {
-        margin-top: 20px;
-        background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
-        color: white;
-        border: none;
-        padding: 14px 40px;
-        border-radius: 25px;
-        font-size: 16px;
-        font-weight: 700;
-        cursor: pointer;
-        box-shadow: 0 4px 15px rgba(110, 203, 245, 0.4);
-        transition: transform 0.2s, box-shadow 0.2s;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        -webkit-appearance: none;
-        width: 100%;
-        max-width: 250px;
-    }
-
-    button:hover {
-        transform: scale(1.03);
-        box-shadow: 0 6px 20px rgba(110, 203, 245, 0.6);
-    }
-    
-    button:active {
-        transform: scale(0.98);
-    }
-</style>
-</head>
-<body>
-    <div class="weather-search-container">
-        <form id="weatherForm">
-            <input type="text" id="cityInput" placeholder="🔍 Введите город..." required autocomplete="off">
-            <br>
-            <button type="button" onclick="searchWeather()">ПОКАЗАТЬ ПОГОДУ</button>
-        </form>
+    # ПРОСТОЙ ПОИСК КАК НА ГЛАВНОЙ
+    st.markdown("""
+    <div style="text-align: center; margin: 20px 0;">
+        <input type="text" id="cityInput" placeholder="🔍 Введите город..." 
+               style="width: 70%; padding: 12px; border: 2px solid #6ecbf5; 
+                      border-radius: 25px; font-size: 16px;">
+        <button onclick="setCity()" 
+                style="margin-left: 10px; padding: 12px 24px; background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%); 
+                       color: white; border: none; border-radius: 25px; cursor: pointer;">
+            Найти
+        </button>
     </div>
+    """, unsafe_allow_html=True)
     
+    # JavaScript для передачи города
+    components.html("""
     <script>
-    function searchWeather() {
+    function setCity() {
         var city = document.getElementById('cityInput').value;
         if (city) {
-            // Сохраняем город в Streamlit session state
             window.parent.postMessage({
                 type: 'streamlit:setComponentValue',
                 value: city
             }, '*');
-            
-            // Можно добавить визуальную обратную связь
-            document.getElementById('cityInput').style.borderColor = '#6ecbf5';
-            document.getElementById('cityInput').style.boxShadow = '0 0 15px rgba(110, 203, 245, 0.3)';
         }
     }
-    
-    // Поиск при нажатии Enter
-    document.getElementById('cityInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            searchWeather();
-        }
-    });
     </script>
-</body>
-</html>
-""", height=150)
-
-# Получаем введенный город через компонент
-city_input = st.text_input("", key="weather_city", label_visibility="collapsed", placeholder="Введите город...")
+    """, height=0)
+    
+    # Получаем город
+    city_input = st.text_input("", key="weather_city", label_visibility="collapsed")
 
 # И далее используй city_input как обычно
 if city_input:
@@ -2176,14 +2105,18 @@ elif st.session_state.page == "Профиль":
         </div>
         """, unsafe_allow_html=True)
         
-        if st.button("🚪 Выйти из аккаунта", type="primary", use_container_width=True):
-            # Очищаем сессию
-            for key in list(st.session_state.keys()):
-                if key not in ["page"]:
-                    del st.session_state[key]
-            st.session_state.page = "Главная"
+                if st.button("🚪 Выйти из аккаунта", type="primary", use_container_width=True):
+            # СОХРАНЯЕМ только важные данные
+            current_page = st.session_state.get("page", "Главная")
+            
+            # Полностью очищаем session_state
+            st.session_state.clear()
+            
+            # Восстанавливаем минимальные данные
+            st.session_state.page = current_page
             st.session_state.is_logged_in = False
             st.session_state.user_data = {}
+            
             st.rerun()
     
     else:
