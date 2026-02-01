@@ -1660,45 +1660,129 @@ elif st.session_state.page == "Новости":
 # ================= СТРАНИЦА ПОГОДЫ (ПРОСТО И РАБОЧЕ) =================
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
+    
+    # ЗОЛОТОЙ ПОИСК ДЛЯ ПОГОДЫ
+    components.html("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: transparent;
+            font-family: 'Helvetica Neue', sans-serif;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .weather-search-container {
+            width: 100%;
+            max-width: 600px;
+            padding: 10px;
+            box-sizing: border-box;
+            text-align: center;
+        }
 
-    # По умолчанию показываем Минск
-    default_city = "Минск"
+        input[type="text"] {
+            width: 100%;
+            padding: 18px 25px;
+            font-size: 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 30px;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            background-color: #ffffff;
+            color: #333;
+            box-sizing: border-box;
+            -webkit-appearance: none;
+        }
 
-    # Поисковая строка
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        city_input = st.text_input(
-            "🔍 Введите ваш город",
-            placeholder="Например: Минск, Гомель, Брест...",
-            key="weather_city_input"
-        )
+        input[type="text"]:focus {
+            border-color: #DAA520;
+            box-shadow: 0 0 15px rgba(218, 165, 32, 0.2);
+        }
 
-    with col2:
-        search_clicked = st.button("Найти", type="primary", use_container_width=True)
+        button {
+            margin-top: 20px;
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            -webkit-appearance: none;
+            width: 100%;
+            max-width: 250px;
+        }
 
+        button:hover {
+            transform: scale(1.03);
+            box-shadow: 0 6px 20px rgba(218, 165, 32, 0.6);
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+    </style>
+    </head>
+    <body>
+        <div class="weather-search-container">
+            <input type="text" id="cityInput" placeholder="🔍 Введите город..." autocomplete="off">
+            <br>
+            <button onclick="searchWeather()">ПОКАЗАТЬ ПОГОДУ</button>
+        </div>
+        
+        <script>
+        function searchWeather() {
+            var city = document.getElementById('cityInput').value;
+            if (city) {
+                window.parent.postMessage({
+                    type: 'streamlit:setComponentValue',
+                    value: city
+                }, '*');
+            }
+        }
+        
+        document.getElementById('cityInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                searchWeather();
+            }
+        });
+        </script>
+    </body>
+    </html>
+    """, height=150)
+    
+    # Получаем город
+    city_input = st.text_input("", key="weather_city_input", label_visibility="collapsed")
+    
     # Определяем какой город показывать
-    city_to_show = default_city
-    if search_clicked and city_input:
+    city_to_show = "Минск"
+    if city_input:
         city_to_show = city_input
-    elif 'user_city' in st.session_state:
+    elif st.session_state.user_city:
         city_to_show = st.session_state.user_city
-
-    # Получаем погоду для города
+    
+    # Получаем погоду
     with st.spinner(f"Получаю погоду для {city_to_show}..."):
         weather_data = get_weather_by_city(city_to_show)
-
+        
         if not weather_data:
-            # Если город не найден, показываем Минск
-            st.error(f"Город '{city_to_show}' не найден. Показываю погоду в Минске.")
-            weather_data = get_weather_by_city(default_city)
-            city_to_show = default_city
-
+            weather_data = get_weather_by_city("Минск")
+            city_to_show = "Минск"
+        
         if weather_data:
             current = weather_data["current"]
-
-            # Сохраняем город в сессии
             st.session_state.user_city = city_to_show
-            st.session_state.weather_data = weather_data
 
             # Показываем город
             st.markdown(f"### 🌤️ Погода в {current['city']}, {current['country']}")
@@ -1849,7 +1933,7 @@ elif st.session_state.page == "Погода":
                 st.session_state.user_city = city
                 st.rerun()
 
-# ================= СТРАНИЦА ПРОФИЛЯ =================
+# ================= ПРОФИЛЬ =================
 elif st.session_state.page == "Профиль":
     if st.session_state.is_logged_in:
         st.markdown('<div class="giant-id-title">ZORNET ID</div>', unsafe_allow_html=True)
@@ -1864,9 +1948,8 @@ elif st.session_state.page == "Профиль":
         """, unsafe_allow_html=True)
         
         if st.button("🚪 Выйти из аккаунта", type="primary", use_container_width=True):
-            # Очищаем сессию
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
+            st.session_state.is_logged_in = False
+            st.session_state.user_data = {}
             st.session_state.page = "Главная"
             st.rerun()
     
@@ -1879,7 +1962,6 @@ elif st.session_state.page == "Профиль":
         
         with tab1:
             st.markdown("### Вход в аккаунт")
-            
             login_email = st.text_input("Email", key="login_email")
             login_password = st.text_input("Пароль", type="password", key="login_password")
             
@@ -1894,12 +1976,9 @@ elif st.session_state.page == "Профиль":
                         st.rerun()
                     else:
                         st.error("Неверный email или пароль")
-                else:
-                    st.error("Заполните все поля")
         
         with tab2:
             st.markdown("### Регистрация")
-            
             reg_email = st.text_input("Email", key="reg_email")
             reg_username = st.text_input("Никнейм", key="reg_username")
             reg_first_name = st.text_input("Имя", key="reg_first_name")
@@ -1918,7 +1997,6 @@ elif st.session_state.page == "Профиль":
                     result = register_user(reg_email, reg_username, reg_first_name, reg_last_name, reg_password)
                     if result["success"]:
                         st.success("✅ Аккаунт создан! Теперь войдите в систему.")
-                        st.session_state.page = "Профиль"
                         st.rerun()
                     else:
                         st.error(result["message"])
