@@ -1085,115 +1085,13 @@ if st.session_state.page == "Главная":
     # Заголовок и кнопка добавления в одной строке
     col_title, col_add = st.columns([3, 1])
     
+    with col_title:
+        st.markdown("### 📌 Быстрые ссылки")
+    
     with col_add:
         if st.button("➕ Добавить", key="add_link_btn", type="secondary", use_container_width=True):
             st.session_state.show_add_link = not st.session_state.show_add_link
             st.rerun()
-
-    # Отображение быстрых ссылок
-    st.markdown("#### 📌 Ваши ссылки")
-    
-    quick_links = st.session_state.quick_links
-    
-    if not quick_links:
-        st.info("📭 Нет быстрых ссылок. Нажмите 'Добавить', чтобы создать первую!")
-    else:
-        # CSS стили для карточек с рамкой
-        st.markdown("""
-        <style>
-        /* Стиль для карточки с рамкой */
-        .link-card-frame {
-            background: white;
-            border-radius: 12px;
-            padding: 20px 15px 15px 15px;
-            margin: 5px 0;
-            border: 2px solid #DAA520;
-            text-align: center;
-            transition: all 0.3s ease;
-            position: relative;
-            min-height: 140px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            box-shadow: 0 3px 10px rgba(218, 165, 32, 0.1);
-        }
-        
-        .link-card-frame:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 20px rgba(218, 165, 32, 0.2);
-            border-color: #B8860B;
-        }
-        
-        /* Центрирование содержимого */
-        .center-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-        
-        # Показываем ссылки в сетке 4x2
-        for i in range(0, len(quick_links), 4):
-            cols = st.columns(4)
-            row_links = quick_links[i:i+4]
-            
-            for j, link in enumerate(row_links):
-                with cols[j]:
-                    # Создаем уникальный ключ для удаления
-                    delete_key = f"delete_{link['name']}_{i}_{j}"
-                    
-                    # Карточка с рамкой
-                    st.markdown(f"""
-                    <div class="link-card-frame">
-                        <div class="center-content">
-                            <!-- Эмодзи -->
-                            <div style="font-size: 2.8rem; margin-bottom: 10px;">
-                                {link['icon']}
-                            </div>
-                            
-                            <!-- Название -->
-                            <div style="
-                                font-weight: 600; 
-                                font-size: 0.95rem; 
-                                color: #333;
-                                margin-bottom: 5px;
-                                line-height: 1.3;
-                            ">
-                                {link['name']}
-                            </div>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Кнопки под карточкой
-                    col_open, col_del = st.columns([3, 1])
-                    
-                    with col_open:
-                        # Кнопка "Открыть" на всю ширину под карточкой
-                        if st.button("🌐 Открыть", 
-                                   key=f"open_{link['name']}_{i}_{j}",
-                                   use_container_width=True,
-                                   type="primary",
-                                   help=f"Открыть {link['name']}"):
-                            js_code = f'window.open("{link["url"]}", "_blank");'
-                            components.html(f"<script>{js_code}</script>", height=0)
-                    
-                    with col_del:
-                        # Маленькая кнопка удаления
-                        if st.button("🗑️", 
-                                   key=delete_key,
-                                   help="Удалить",
-                                   use_container_width=True,
-                                   type="secondary"):
-                            st.session_state.quick_links.remove(link)
-                            save_quick_links(st.session_state.quick_links)
-                            st.success(f"Ссылка '{link['name']}' удалена!")
-                            st.rerun()
-
-    st.markdown("---")
     
     # Форма добавления новой ссылки
     if st.session_state.show_add_link:
@@ -1249,6 +1147,72 @@ if st.session_state.page == "Главная":
                 st.rerun()
         
         st.markdown("---")
+
+# Отображение быстрых ссылок
+    st.markdown("#### Ваши ссылки:")
+    
+    quick_links = st.session_state.quick_links
+    
+    if not quick_links:
+        st.info("Нет быстрых ссылок. Добавьте первую!")
+    else:
+        # Показываем ссылки в сетке 4x2
+        for i in range(0, len(quick_links), 4):
+            cols = st.columns(4)
+            row_links = quick_links[i:i+4]
+            
+            for j, link in enumerate(row_links):
+                with cols[j]:
+                    # Создаем уникальный ключ для удаления
+                    delete_key = f"delete_{link['name']}_{hash(link['url'])}"
+                    
+                    # Карточка ссылки
+                    st.markdown(f"""
+                    <div style="
+                        background: white;
+                        border-radius: 15px;
+                        padding: 15px;
+                        margin: 5px;
+                        border: 1px solid #e0e0e0;
+                        text-align: center;
+                        transition: all 0.3s ease;
+                        min-height: 120px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        position: relative;
+                    ">
+                        <div>
+                            <div style="font-size: 2.5rem; margin-bottom: 10px;">{link['icon']}</div>
+                            <div style="font-weight: 600; font-size: 0.9rem;">{link['name']}</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Кнопки под карточкой
+                    col_open, col_del = st.columns([3, 1])
+                    
+                    with col_open:
+                        if st.button("🌐 Открыть", 
+                                   key=f"open_{link['name']}_{i}_{j}",
+                                   use_container_width=True,
+                                   type="primary"):
+                            js_code = f'window.open("{link["url"]}", "_blank");'
+                            components.html(f"<script>{js_code}</script>", height=0)
+                    
+                    with col_del:
+                        # Маленькая кнопка удаления
+                        if st.button("🗑️", 
+                                   key=delete_key,
+                                   help="Удалить",
+                                   use_container_width=True,
+                                   type="secondary"):
+                            st.session_state.quick_links.remove(link)
+                            save_quick_links(st.session_state.quick_links)
+                            st.success(f"Ссылка '{link['name']}' удалена!")
+                            st.rerun()
+
+    st.markdown("---")
 
 # ================= МЕССЕНДЖЕР =================
 elif st.session_state.page == "Мессенджер":
