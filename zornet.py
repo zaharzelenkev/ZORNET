@@ -272,7 +272,7 @@ st.markdown("""
         background: white !important;
         border: 2px solid #DAA520 !important;
         color: #B8860B !important;
-        padding: 10px 20px !important;
+        padding: 10px 15px !important;
         border-radius: 8px !important;
         font-weight: 600 !important;
         transition: all 0.3s ease !important;
@@ -1101,7 +1101,7 @@ if st.session_state.page == "Главная":
     else:
         # Показываем ссылки в сетке 4x2
         for i in range(0, len(quick_links), 4):
-            cols = st.columns(3)
+            cols = st.columns(4)
             row_links = quick_links[i:i+4]
             
             for j, link in enumerate(row_links):
