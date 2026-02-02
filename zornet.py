@@ -1139,8 +1139,8 @@ if st.session_state.page == "Главная":
                     
                     .stButton button {
                         width: 100% !important;
-                        margin: -20px 0 !important;
-                        min-height: 40px;
+                        margin: -30px 0 !important;
+                        min-height: 700px;
                         display: flex;
                         align-items: center;
                         justify-content: center;
