@@ -1348,132 +1348,139 @@ elif st.session_state.page == "Мессенджер":  # ← ТЕПЕРЬ ЭТО
                 st.session_state.chat_partner = contact
                 st.session_state.current_chat_id = contact["id"]
                 st.rerun()
-    
-    with col_chat:
-        if st.session_state.chat_partner:
-            partner = st.session_state.chat_partner
-            
-            # Заголовок чата
-            st.markdown(f"""
+
+with col_chat:
+    if st.session_state.chat_partner:
+        partner = st.session_state.chat_partner
+        
+        # Заголовок чата - ИСПРАВЛЕНО: используем двойные кавычки для словарей внутри
+        st.markdown(f"""
+        <div style="
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+            margin-bottom: 15px;
+        ">
+            <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="
-                background: white;
-                padding: 15px;
-                border-radius: 10px;
-                border: 1px solid #e0e0e0;
-                margin-bottom: 15px;
-            ">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div style="
-                        width: 40px;
-                        height: 40px;
-                        border-radius: 50%;
-                        background: linear-gradient(135deg, #DAA520, #B8860B);
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: white;
-                        font-weight: bold;
-                    ">
-                        {partner['first_name'][0]}
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    background: linear-gradient(135deg, #DAA520, #B8860B);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-weight: bold;
+                ">
+                    {partner.get('first_name', '')[0] if partner.get('first_name') else '?'}
+                </div>
+                <div>
+                    <div style="font-weight: 600; font-size: 18px;">
+                        {partner.get('first_name', '')} {partner.get('last_name', '')}
                     </div>
-                    <div>
-                        <div style="font-weight: 600; font-size: 18px;">
-                            {partner['first_name']} {partner['last_name']}
-                        </div>
-                        <div style="font-size: 14px; color: #666;">
-                            @{partner['username']}
-                        </div>
+                    <div style="font-size: 14px; color: #666;">
+                        @{partner.get('username', '')}
                     </div>
                 </div>
             </div>
-            """, unsafe_allow_html=True)
-            
-            # История сообщений
-            if "messages" not in st.session_state:
-                st.session_state.messages = {}
-            
-            chat_key = f"{st.session_state.user_data['username']}_{partner['username']}"
-            if chat_key not in st.session_state.messages:
-                # Загружаем из БД
-                db_messages = get_chat_history(st.session_state.user_data['username'], partner['username'])
-                st.session_state.messages[chat_key] = []
-                for msg in db_messages:
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # История сообщений
+        if "messages" not in st.session_state:
+            st.session_state.messages = {}
+        
+        chat_key = f"{st.session_state.user_data.get('username', '')}_{partner.get('username', '')}"
+        if chat_key not in st.session_state.messages:
+            # Загружаем из БД
+            db_messages = get_chat_history(
+                st.session_state.user_data.get('username', ''),
+                partner.get('username', '')
+            )
+            st.session_state.messages[chat_key] = []
+            for msg in db_messages:
+                st.session_state.messages[chat_key].append({
+                    "sender": msg[0],
+                    "receiver": msg[1],
+                    "text": msg[2],
+                    "time": msg[3]
+                })
+        
+        # Показываем сообщения - ИСПРАВЛЕНО: используем двойные кавычки внутри f-строк
+        chat_container = st.container(height=400)
+        with chat_container:
+            for msg in st.session_state.messages.get(chat_key, []):
+                msg_text = msg.get("text", "")
+                msg_time = msg.get("time", "")
+                time_display = msg_time.split(' ')[1][:5] if ' ' in msg_time else msg_time[:5]
+                
+                if msg.get("sender") == st.session_state.user_data.get('username', ''):
+                    st.markdown(f"""
+                    <div style="
+                        background: #DCF8C6;
+                        padding: 10px 15px;
+                        border-radius: 18px;
+                        margin: 5px 0;
+                        margin-left: auto;
+                        max-width: 70%;
+                        border-bottom-right-radius: 4px;
+                    ">
+                        <div>{msg_text}</div>
+                        <div style="font-size: 11px; color: #666; text-align: right;">
+                            {time_display}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                    <div style="
+                        background: white;
+                        padding: 10px 15px;
+                        border-radius: 18px;
+                        margin: 5px 0;
+                        margin-right: auto;
+                        max-width: 70%;
+                        border-bottom-left-radius: 4px;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                    ">
+                        <div>{msg_text}</div>
+                        <div style="font-size: 11px; color: #666; text-align: right;">
+                            {time_display}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+        
+        # Поле ввода
+        col_input, col_send = st.columns([5, 1])
+        with col_input:
+            new_message = st.text_input(
+                "Введите сообщение...", 
+                key="new_message_input",
+                label_visibility="collapsed"
+            )
+        with col_send:
+            if st.button("📤", use_container_width=True, type="primary"):
+                if new_message:
+                    # Сохраняем в БД
+                    save_chat_message(
+                        st.session_state.user_data.get('username', ''),
+                        partner.get('username', ''),
+                        new_message
+                    )
+                    
+                    # Добавляем в историю
                     st.session_state.messages[chat_key].append({
-                        "sender": msg[0],
-                        "receiver": msg[1],
-                        "text": msg[2],
-                        "time": msg[3]
+                        "sender": st.session_state.user_data.get('username', ''),
+                        "receiver": partner.get('username', ''),
+                        "text": new_message,
+                        "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     })
-            
-            # Показываем сообщения
-            chat_container = st.container(height=400)
-            with chat_container:
-                for msg in st.session_state.messages.get(chat_key, []):
-                    if msg["sender"] == st.session_state.user_data['username']:
-                        st.markdown(f"""
-                        <div style="
-                            background: #DCF8C6;
-                            padding: 10px 15px;
-                            border-radius: 18px;
-                            margin: 5px 0;
-                            margin-left: auto;
-                            max-width: 70%;
-                            border-bottom-right-radius: 4px;
-                        ">
-                            <div>{msg['text']}</div>
-                            <div style="font-size: 11px; color: #666; text-align: right;">
-                                {msg['time'].split(' ')[1][:5]}
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"""
-                        <div style="
-                            background: white;
-                            padding: 10px 15px;
-                            border-radius: 18px;
-                            margin: 5px 0;
-                            margin-right: auto;
-                            max-width: 70%;
-                            border-bottom-left-radius: 4px;
-                            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                        ">
-                            <div>{msg['text']}</div>
-                            <div style="font-size: 11px; color: #666; text-align: right;">
-                                {msg['time'].split(' ')[1][:5]}
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
-            
-            # Поле ввода
-            col_input, col_send = st.columns([5, 1])
-            with col_input:
-                new_message = st.text_input(
-                    "Введите сообщение...", 
-                    key="new_message_input",
-                    label_visibility="collapsed"
-                )
-            with col_send:
-                if st.button("📤", use_container_width=True, type="primary"):
-                    if new_message:
-                        # Сохраняем в БД
-                        save_chat_message(
-                            st.session_state.user_data['username'],
-                            partner['username'],
-                            new_message
-                        )
-                        
-                        # Добавляем в историю
-                        st.session_state.messages[chat_key].append({
-                            "sender": st.session_state.user_data['username'],
-                            "receiver": partner['username'],
-                            "text": new_message,
-                            "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        })
-                        
-                        st.rerun()
-        else:
-            st.info("👈 Выберите пользователя для начала общения")
+                    
+                    st.rerun()
+    else:
+        st.info("👈 Выберите пользователя для начала общения")
 
 # ================= КИНОТЕАТР =================
 elif st.session_state.page == "Кинотеатр":
