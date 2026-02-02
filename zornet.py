@@ -1161,24 +1161,60 @@ if st.session_state.page == "Главная":
             
             for j, link in enumerate(row_links):
                 with cols[j]:
-                    # Создаем контейнер для карточки
+                    # Создаем контейнер для всей карточки
                     container = st.container()
                     
                     with container:
-                        # Используем columns для позиционирования
-                        col_icon_area, col_del_area = st.columns([4, 1])
-                        
-                        with col_icon_area:
-                            # Иконка и название
-                            st.markdown(f"""
-                            <div style="text-align: center; position: relative;">
-                                <div style="font-size: 2.5rem; margin-bottom: 5px;">{link['icon']}</div>
-                                <div style="font-weight: 600; font-size: 0.9rem;">{link['name']}</div>
+                        # Карточка с рамкой
+                        st.markdown(f"""
+                        <div style="
+                            background: white;
+                            border-radius: 12px;
+                            padding: 20px 15px 40px 15px;
+                            margin: 5px 0 10px 0;
+                            border: 2px solid #DAA520;
+                            text-align: center;
+                            position: relative;
+                            min-height: 140px;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            box-shadow: 0 3px 10px rgba(218, 165, 32, 0.1);
+                        ">
+                            <!-- Эмодзи -->
+                            <div style="font-size: 2.8rem; margin-bottom: 10px;">
+                                {link['icon']}
                             </div>
-                            """, unsafe_allow_html=True)
+                            
+                            <!-- Название -->
+                            <div style="
+                                font-weight: 600; 
+                                font-size: 0.95rem; 
+                                color: #333;
+                                text-align: center;
+                            ">
+                                {link['name']}
+                            </div>
+                            
+                            <!-- Кнопка удаления будет здесь -->
+                        </div>
+                        """, unsafe_allow_html=True)
                         
-                        with col_del_area:
-                            # Маленькая кнопка удаления (значок корзины)
+                        # Позиционируем кнопку удаления в правом нижнем углу карточки
+                        # Используем абсолютное позиционирование через CSS
+                        st.markdown(f"""
+                        <div style="position: relative; margin-top: -35px; margin-bottom: 10px;">
+                            <div style="position: absolute; right: 0; bottom: 0;">
+                                <!-- Здесь будет кнопка удаления -->
+                            </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Кнопка удаления в правом нижнем углу
+                        col_del = st.columns([1])
+                        with col_del[0]:
+                            # Маленькая кнопка удаления
                             if st.button("🗑", 
                                        key=f"del_{link['name']}_{i}_{j}",
                                        help="Удалить",
