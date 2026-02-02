@@ -58,7 +58,13 @@ if "chat_partner" not in st.session_state:
 # ================= ОБНОВЛЕННЫЕ CSS СТИЛИ =================
 st.markdown("""
 <style>
-/* Убираем белый треугольник / стрелку */
+
+/* убираем верхний белый хедер */
+.stApp > header {
+    display: none;
+}
+
+/* Убираем белый треугольник / декорации */
 div[data-testid="stDecoration"],
 div[data-testid="stToolbar"],
 header:before,
@@ -66,10 +72,11 @@ header:after {
     display:none !important;
 }
 
-/* убираем верхний отступ полностью */
+/* убираем верхний отступ */
 .block-container {
     padding-top: 0rem !important;
 }
+
 </style>
 """, unsafe_allow_html=True)
     .stApp > header {
