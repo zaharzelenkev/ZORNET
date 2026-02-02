@@ -947,6 +947,8 @@ def get_belta_news():
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
 
+# ... предыдущий код ...
+
 # ================= СТРАНИЦА ГЛАВНАЯ =================
 if st.session_state.page == "Главная":
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
@@ -1086,169 +1088,228 @@ if st.session_state.page == "Главная":
     
     st.markdown("---")
 
-# БЫСТРЫЕ ССЫЛКИ
-col1, col2 = st.columns([3, 1])
-with col1:
-    st.markdown("### 📌 Быстрые ссылки")
-with col2:
-    if st.button("➕ Добавить", key="add_link_btn", type="secondary", use_container_width=True):
-        st.session_state.show_add_link = not st.session_state.show_add_link
-        st.rerun()
+    # БЫСТРЫЕ ССЫЛКИ С ОБНОВЛЕННЫМ ДИЗАЙНОМ
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.markdown("### 📌 Быстрые ссылки")
+    with col2:
+        if st.button("➕ Добавить", key="add_link_btn", type="secondary", use_container_width=True):
+            st.session_state.show_add_link = not st.session_state.show_add_link
+            st.rerun()
 
-quick_links = st.session_state.quick_links
-
-if not quick_links:
-    st.info("📭 Нет быстрых ссылок. Нажмите 'Добавить', чтобы создать первую!")
-else:
-    # ОБНОВЛЕННЫЙ CSS стиль для карточек
-    st.markdown("""
-    <style>
-    /* Улучшенный стиль для карточки ссылки */
-    .link-card-frame {
-        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-        border-radius: 16px;
-        padding: 25px 20px 20px 20px;
-        margin: 8px 0;
-        border: 3px solid #DAA520;
-        text-align: center;
-        transition: all 0.3s ease;
-        position: relative;
-        min-height: 160px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.15);
-    }
+    quick_links = st.session_state.quick_links
     
-    .link-card-frame:hover {
-        transform: translateY(-5px) scale(1.02);
-        box-shadow: 0 8px 25px rgba(218, 165, 32, 0.25);
-        border-color: #B8860B;
-        background: linear-gradient(135deg, #ffffff 0%, #fff9e6 100%);
-    }
-    
-    /* Большие и красивые иконки */
-    .link-icon {
-        font-size: 3.5rem !important;
-        margin-bottom: 15px;
-        text-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease;
-    }
-    
-    .link-card-frame:hover .link-icon {
-        transform: scale(1.1) rotate(5deg);
-    }
-    
-    /* Стиль для названия */
-    .link-name {
-        font-weight: 700 !important;
-        font-size: 1.1rem !important;
-        color: #333 !important;
-        margin-bottom: 5px !important;
-        line-height: 1.4 !important;
-        font-family: 'Helvetica Neue', sans-serif;
-    }
-    
-    /* Кнопка удаления */
-    .delete-icon-btn {
-        position: absolute !important;
-        top: 10px !important;
-        right: 10px !important;
-        width: 28px !important;
-        height: 28px !important;
-        min-width: 28px !important;
-        min-height: 28px !important;
-        padding: 0 !important;
-        border-radius: 50% !important;
-        background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%) !important;
-        color: white !important;
-        font-size: 14px !important;
-        font-weight: bold !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        z-index: 100;
-        opacity: 0.8;
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        border: 2px solid white;
-    }
-    
-    .delete-icon-btn:hover {
-        opacity: 1;
-        transform: scale(1.15);
-        box-shadow: 0 3px 8px rgba(0,0,0,0.3);
-    }
-    
-    /* Кнопка "Открыть" */
-    .open-link-btn {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 10px !important;
-        padding: 8px 15px !important;
-        font-weight: 600 !important;
-        font-size: 14px !important;
-        transition: all 0.3s ease !important;
-        margin-top: 10px !important;
-        width: 100% !important;
-    }
-    
-    .open-link-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(218, 165, 32, 0.4);
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    
-    # Показываем ссылки в сетке 4x2 с ОБНОВЛЕННЫМ ДИЗАЙНОМ
-    for i in range(0, len(quick_links), 4):
-        cols = st.columns(4)
-        row_links = quick_links[i:i+4]
+    if not quick_links:
+        st.info("📭 Нет быстрых ссылок. Нажмите 'Добавить', чтобы создать первую!")
+    else:
+        # ОБНОВЛЕННЫЙ CSS стиль для карточек
+        st.markdown("""
+        <style>
+        /* Улучшенный стиль для карточки ссылки */
+        .link-card-frame {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 16px;
+            padding: 25px 20px 20px 20px;
+            margin: 8px 0;
+            border: 3px solid #DAA520;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.15);
+        }
         
-        for j, link in enumerate(row_links):
-            with cols[j]:
-                # Создаем уникальный ключ для удаления
-                delete_key = f"delete_{link['name']}_{i}_{j}"
-                
-                # ОБНОВЛЕННАЯ КАРТОЧКА С ПРАВИЛЬНЫМ ОТОБРАЖЕНИЕМ ИКОНКИ
-                st.markdown(f"""
-                <div class="link-card-frame">
-                    <div class="center-content">
-                        <!-- БОЛЬШАЯ ИКОНКА (теперь точно будет видна) -->
-                        <div class="link-icon">
-                            {link.get('icon', '🔗')}
-                        </div>
-                        
-                        <!-- Название с улучшенным стилем -->
-                        <div class="link-name">
-                            {link['name']}
+        .link-card-frame:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(218, 165, 32, 0.25);
+            border-color: #B8860B;
+            background: linear-gradient(135deg, #ffffff 0%, #fff9e6 100%);
+        }
+        
+        /* Большие и красивые иконки */
+        .link-icon {
+            font-size: 3.5rem !important;
+            margin-bottom: 15px;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .link-card-frame:hover .link-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+        
+        /* Стиль для названия */
+        .link-name {
+            font-weight: 700 !important;
+            font-size: 1.1rem !important;
+            color: #333 !important;
+            margin-bottom: 5px !important;
+            line-height: 1.4 !important;
+            font-family: 'Helvetica Neue', sans-serif;
+        }
+        
+        /* Кнопка удаления */
+        .delete-icon-btn {
+            position: absolute !important;
+            top: 10px !important;
+            right: 10px !important;
+            width: 28px !important;
+            height: 28px !important;
+            min-width: 28px !important;
+            min-height: 28px !important;
+            padding: 0 !important;
+            border-radius: 50% !important;
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%) !important;
+            color: white !important;
+            font-size: 14px !important;
+            font-weight: bold !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            z-index: 100;
+            opacity: 0.8;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            border: 2px solid white;
+        }
+        
+        .delete-icon-btn:hover {
+            opacity: 1;
+            transform: scale(1.15);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+        }
+        
+        /* Кнопка "Открыть" */
+        .open-link-btn {
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 10px !important;
+            padding: 8px 15px !important;
+            font-weight: 600 !important;
+            font-size: 14px !important;
+            transition: all 0.3s ease !important;
+            margin-top: 10px !important;
+            width: 100% !important;
+        }
+        
+        .open-link-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(218, 165, 32, 0.4);
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # Показываем ссылки в сетке 4x2 с ОБНОВЛЕННЫМ ДИЗАЙНОМ
+        for i in range(0, len(quick_links), 4):
+            cols = st.columns(4)
+            row_links = quick_links[i:i+4]
+            
+            for j, link in enumerate(row_links):
+                with cols[j]:
+                    # Создаем уникальный ключ для удаления
+                    delete_key = f"delete_{link['name']}_{i}_{j}"
+                    
+                    # ОБНОВЛЕННАЯ КАРТОЧКА С ПРАВИЛЬНЫМ ОТОБРАЖЕНИЕМ ИКОНКИ
+                    st.markdown(f"""
+                    <div class="link-card-frame">
+                        <div class="center-content">
+                            <!-- БОЛЬШАЯ ИКОНКА -->
+                            <div class="link-icon">
+                                {link.get('icon', '🔗')}
+                            </div>
+                            
+                            <!-- Название с улучшенным стилем -->
+                            <div class="link-name">
+                                {link['name']}
+                            </div>
                         </div>
                     </div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Кнопка "Открыть" под карточкой
-                if st.button("🌐 Открыть", 
-                           key=f"open_{link['name']}_{i}_{j}",
-                           use_container_width=True,
-                           type="primary"):
-                    js_code = f'window.open("{link["url"]}", "_blank");'
-                    components.html(f"<script>{js_code}</script>", height=0)
-                
-                # Кнопка удаления
-                if st.button("×", 
-                           key=delete_key,
-                           help="Удалить ссылку",
-                           type="secondary"):
-                    st.session_state.quick_links.remove(link)
-                    save_quick_links(st.session_state.quick_links)
-                    st.success(f"Ссылка '{link['name']}' удалена!")
-                    st.rerun()
+                    """, unsafe_allow_html=True)
+                    
+                    # Кнопка "Открыть" под карточкой
+                    if st.button("🌐 Открыть", 
+                               key=f"open_{link['name']}_{i}_{j}",
+                               use_container_width=True,
+                               type="primary"):
+                        js_code = f'window.open("{link["url"]}", "_blank");'
+                        components.html(f"<script>{js_code}</script>", height=0)
+                    
+                    # Кнопка удаления
+                    col_del = st.columns([1])
+                    with col_del[0]:
+                        if st.button("×", 
+                                   key=delete_key,
+                                   help="Удалить",
+                                   type="secondary"):
+                            st.session_state.quick_links.remove(link)
+                            save_quick_links(st.session_state.quick_links)
+                            st.success(f"Ссылка '{link['name']}' удалена!")
+                            st.rerun()
+
+    st.markdown("---")
+    
+    # Форма добавления новой ссылки
+    if st.session_state.show_add_link:
+        st.markdown("---")
+        st.markdown("#### 📝 Добавить новую ссылку")
+        
+        col_name, col_url, col_icon = st.columns([2, 3, 1])
+        
+        with col_name:
+            new_link_name = st.text_input("Название", placeholder="Например: Facebook", key="new_name")
+        
+        with col_url:
+            new_link_url = st.text_input("URL", placeholder="https://facebook.com", key="new_url")
+        
+        with col_icon:
+            new_link_icon = st.selectbox(
+                "Иконка",
+                ["🔍", "📺", "📧", "🤖", "💻", "👥", "🌐", "🎮", "📚", "🎵", "🛒", "💼", "🎨", "📱", "🔧"],
+                index=0,
+                key="new_icon"
+            )
+        
+        col_save, col_cancel = st.columns(2)
+        
+        with col_save:
+            if st.button("💾 Сохранить", type="primary", use_container_width=True):
+                if new_link_name and new_link_url:
+                    # Проверяем корректность URL
+                    if not new_link_url.startswith(('http://', 'https://')):
+                        new_link_url = 'https://' + new_link_url
+                    
+                    # Проверяем, что ссылка не существует
+                    existing_urls = [link['url'] for link in st.session_state.quick_links]
+                    if new_link_url in existing_urls:
+                        st.error("Эта ссылка уже добавлена!")
+                    else:
+                        st.session_state.quick_links.append({
+                            "name": new_link_name,
+                            "url": new_link_url,
+                            "icon": new_link_icon
+                        })
+                        # Сохраняем в хранилище
+                        save_quick_links(st.session_state.quick_links)
+                        st.session_state.show_add_link = False
+                        st.success(f"Ссылка '{new_link_name}' добавлена!")
+                        st.rerun()
+                else:
+                    st.error("Заполните название и URL")
+        
+        with col_cancel:
+            if st.button("❌ Отмена", use_container_width=True):
+                st.session_state.show_add_link = False
+                st.rerun()
+        
+        st.markdown("---")
 
 # ================= МЕССЕНДЖЕР =================
-elif st.session_state.page == "Мессенджер":
+elif st.session_state.page == "Мессенджер":  # ← ТЕПЕРЬ ЭТО КОРРЕКТНО
     st.markdown('<div class="gold-title">💬 МЕССЕНДЖЕР</div>', unsafe_allow_html=True)
     
     if not st.session_state.is_logged_in:
