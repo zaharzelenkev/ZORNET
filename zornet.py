@@ -403,32 +403,6 @@ st.markdown("""
         border-bottom-left-radius: 4px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
-
-        /* Стили для карточек быстрых ссылок */
-    .quick-link-card {
-        background: white;
-        border-radius: 12px;
-        padding: 15px;
-        margin: 5px;
-        border: 1px solid #e0e0e0;
-        text-align: center;
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    }
-    
-    .quick-link-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        border-color: #DAA520;
-    }
-    
-    /* Стиль для кнопки открытия под иконкой */
-    .open-link-btn {
-        margin-top: 10px !important;
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-        color: white !important;
-        border: none !important;
-    }
     
     /* Логин контейнер */
     .login-container {
@@ -890,17 +864,14 @@ if st.session_state.page == "Главная":
     """, height=220)
     
     st.markdown("---")
-
-        # БЫСТРЫЕ ССЫЛКИ
+    
+    # БЫСТРЫЕ ССЫЛКИ
     st.markdown("### 🚀 Быстрые ссылки")
     
     # Кнопка добавления новой ссылки
-    col_add, col_space = st.columns([1, 3])
-    with col_add:
-        if st.button("➕ Добавить ссылку", key="add_link_btn", type="primary", 
-                    use_container_width=True, help="Добавить новую быструю ссылку"):
-            st.session_state.show_add_link = not st.session_state.show_add_link
-            st.rerun()
+    if st.button("➕ Добавить ссылку", key="add_link_btn", type="secondary"):
+        st.session_state.show_add_link = not st.session_state.show_add_link
+        st.rerun()
     
     # Форма добавления новой ссылки
     if st.session_state.show_add_link:
@@ -919,14 +890,13 @@ if st.session_state.page == "Главная":
             new_link_icon = st.selectbox(
                 "Иконка",
                 ["🔍", "📺", "📧", "🤖", "💻", "👥", "🌐", "🎮", "📚", "🎵", "🛒", "💼", "🎨", "📱", "🔧"],
-                index=0,
-                label_visibility="collapsed"
+                index=0
             )
         
         col_save, col_cancel = st.columns(2)
         
         with col_save:
-            if st.button("💾 Сохранить", type="primary", use_container_width=True):
+            if st.button("💾 Сохранить ссылку", type="primary", use_container_width=True):
                 if new_link_name and new_link_url:
                     # Проверяем корректность URL
                     if not new_link_url.startswith(('http://', 'https://')):
@@ -954,7 +924,7 @@ if st.session_state.page == "Главная":
     quick_links = st.session_state.quick_links
     
     if not quick_links:
-        st.info("📭 Нет быстрых ссылок. Добавьте первую!")
+        st.info("Нет быстрых ссылок. Добавьте первую!")
     else:
         # Показываем ссылки в сетке 4x2
         for i in range(0, len(quick_links), 4):
@@ -963,40 +933,33 @@ if st.session_state.page == "Главная":
             
             for j, link in enumerate(row_links):
                 with cols[j]:
-                    # Карточка ссылки
+                    # Контейнер для ссылки
                     st.markdown(f"""
                     <div style="
                         background: white;
-                        border-radius: 12px;
+                        border-radius: 10px;
                         padding: 15px;
                         margin: 5px;
-                        border: 2px solid #f0f0f0;
+                        border: 1px solid #e0e0e0;
                         text-align: center;
                         transition: all 0.3s ease;
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
                     ">
-                        <div style="font-size: 2.5rem; margin-bottom: 10px;">{link['icon']}</div>
-                        <div style="font-weight: 600; margin: 8px 0; font-size: 14px;">{link['name']}</div>
+                        <div style="font-size: 2rem;">{link['icon']}</div>
+                        <div style="font-weight: 600; margin: 8px 0;">{link['name']}</div>
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Кнопка открытия (под иконкой)
-                    if st.button(f"Открыть", 
-                               key=f"open_{link['name']}_{i}_{j}",
-                               use_container_width=True,
-                               type="primary"):
+                    # Кнопка открытия
+                    if st.button(f"Открыть", key=f"open_{link['name']}_{i}_{j}", use_container_width=True):
                         js_code = f'window.open("{link["url"]}", "_blank");'
                         components.html(f"<script>{js_code}</script>", height=0)
                     
-                    # Скрытая кнопка удаления в выпадающем меню
-                    with st.popover("⋮"):
-                        if st.button(f"🗑️ Удалить", 
-                                   key=f"delete_{link['name']}_{i}_{j}",
-                                   help=f"Удалить {link['name']}",
-                                   use_container_width=True):
-                            st.session_state.quick_links.remove(link)
-                            st.success(f"Ссылка '{link['name']}' удалена!")
-                            st.rerun()
+                    # Кнопка удаления
+                    if st.button(f"🗑️", key=f"delete_{link['name']}_{i}_{j}", 
+                               help=f"Удалить {link['name']}"):
+                        st.session_state.quick_links.remove(link)
+                        st.success(f"Ссылка '{link['name']}' удалена!")
+                        st.rerun()
 
 # ================= МЕССЕНДЖЕР =================
 elif st.session_state.page == "Мессенджер":
@@ -1760,93 +1723,37 @@ elif st.session_state.page == "Новости":
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
     
-    # КРАСИВАЯ СТРОКА ПОИСКА ГОРОДА (как на главной)
-    st.markdown("""
-    <style>
-        .weather-search-input {
-            padding: 15px 25px;
-            font-size: 16px;
-            border: 2px solid #DAA520;
-            border-radius: 30px;
-            width: 100%;
-            box-sizing: border-box;
-            margin-bottom: 15px;
-            background: white;
-            color: #333;
-        }
-        .weather-search-input:focus {
-            outline: none;
-            box-shadow: 0 0 10px rgba(218, 165, 32, 0.3);
-        }
-    </style>
-    """, unsafe_allow_html=True)
+    # ОДНА строка поиска
+    st.markdown("### Введите город для поиска погоды")
     
-    # Используем компоненты HTML для красивой строки
-    components.html("""
-    <div style="width: 100%; max-width: 600px; margin: 0 auto;">
-        <input type="text" 
-               id="cityInput" 
-               class="weather-search-input" 
-               placeholder="🔍 Введите город... (например: Минск, Москва, Лондон)"
-               onkeypress="if(event.keyCode==13) searchWeather()">
-        <button onclick="searchWeather()" 
-                style="
-                    background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-                    color: white;
-                    border: none;
-                    padding: 15px 30px;
-                    border-radius: 25px;
-                    font-size: 16px;
-                    font-weight: bold;
-                    cursor: pointer;
-                    width: 100%;
-                    margin-top: 10px;
-                    transition: all 0.3s ease;
-                "
-                onmouseover="this.style.transform='scale(1.02)'"
-                onmouseout="this.style.transform='scale(1)'">
-            ПОКАЗАТЬ ПОГОДУ
-        </button>
-    </div>
+    col_search, col_btn = st.columns([3, 1])
     
-    <script>
-    function searchWeather() {
-        var city = document.getElementById('cityInput').value;
-        if (city) {
-            window.parent.postMessage({
-                type: 'streamlit:setComponentValue',
-                value: city
-            }, '*');
-        }
-    }
-    </script>
-    """, height=150)
+    with col_search:
+        city_input = st.text_input(
+            "Город:",
+            placeholder="Например: Минск, Гродно, Москва...",
+            label_visibility="collapsed"
+        )
     
-    # Получаем город из компонента
-    city_input = st.text_input("", key="weather_city_input", label_visibility="collapsed")
+    with col_btn:
+        search_clicked = st.button("🔍 Найти", type="primary", use_container_width=True)
     
-    # Определяем какой город показывать
-    city_to_show = "Минск"
-    if city_input:
+    # Обработка поиска
+    city_to_show = st.session_state.user_city if st.session_state.user_city else "Минск"
+    
+    if search_clicked and city_input:
         city_to_show = city_input
-    elif st.session_state.user_city:
-        city_to_show = st.session_state.user_city
-    
-    st.markdown("---")
+        st.session_state.user_city = city_input
     
     # Получаем погоду
     with st.spinner(f"Получаю погоду для {city_to_show}..."):
         weather_data = get_weather_by_city(city_to_show)
         
         if not weather_data:
-            # Пробуем Минск если не нашли город
+            st.error(f"Не удалось найти город: {city_to_show}")
             weather_data = get_weather_by_city("Минск")
-            if weather_data:
-                st.error(f"Не удалось найти город '{city_to_show}'. Показываю погоду для Минска")
-                city_to_show = "Минск"
-            else:
-                st.error("Ошибка получения погоды. Проверьте подключение к интернету.")
-                st.stop()
+            city_to_show = "Минск"
+            st.info("Показываю погоду для Минска")
         
         if weather_data:
             current = weather_data["current"]
@@ -1869,15 +1776,6 @@ elif st.session_state.page == "Погода":
                     </div>
                     <div style="font-size: 1rem; color: #888; margin-top: 5px;">
                         💁 Ощущается как {current['feels_like']}°C
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            with col_icon:
-                st.markdown(f"""
-                <div style="text-align: center; padding-top: 15px;">
-                    <div style="font-size: 5rem;">
-                        {get_weather_icon(current['icon'])}
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
