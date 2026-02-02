@@ -1101,7 +1101,7 @@ if st.session_state.page == "Главная":
     else:
         # Показываем ссылки в сетке 4x2
         for i in range(0, len(quick_links), 4):
-            cols = st.columns(4)
+            cols = st.columns(3)
             row_links = quick_links[i:i+4]
             
             for j, link in enumerate(row_links):
