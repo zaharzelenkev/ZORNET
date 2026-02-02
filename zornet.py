@@ -292,8 +292,8 @@ st.markdown("""
     
     .file-card {
         background: #f8f9fa;
-        border-radius: 5px;
-        padding: 5px;
+        border-radius: 10px;
+        padding: 15px;
         margin: 10px 0;
         border-left: 4px solid #DAA520;
         transition: all 0.3s ease;
@@ -1116,7 +1116,7 @@ if st.session_state.page == "Главная":
                         border: 1px solid #e0e0e0;
                         text-align: center;
                         transition: all 0.3s ease;
-                        min-height: 150px;
+                        min-height: 100px;
                         display: flex;
                         flex-direction: column;
                         justify-content: space-between;
