@@ -484,24 +484,39 @@ def register_user(email, username, first_name, last_name, password):
     c = conn.cursor()
     
     try:
-        # Сначала проверяем существование пользователей
-        c.execute("SELECT email FROM users WHERE email = ?", (email,))
+        # Проверяем почту
+        c.execute("SELECT email FROM users WHERE LOWER(email) = LOWER(?)", (email,))
         if c.fetchone():
             return {"success": False, "message": "Email уже используется"}
         
-        c.execute("SELECT username FROM users WHERE username = ?", (username,))
+        # Проверяем никнейм (без учета регистра)
+        c.execute("SELECT username FROM users WHERE LOWER(username) = LOWER(?)", (username,))
         if c.fetchone():
             return {"success": False, "message": "Никнейм уже занят"}
+        
+        # Проверяем длину пароля
+        if len(password) < 6:
+            return {"success": False, "message": "Пароль должен быть не менее 6 символов"}
+        
+        # Проверяем валидность email
+        if '@' not in email or '.' not in email:
+            return {"success": False, "message": "Неверный формат email"}
         
         password_hash = hashlib.sha256(password.encode()).hexdigest()
         
         c.execute("""
             INSERT INTO users (email, username, first_name, last_name, password_hash)
             VALUES (?, ?, ?, ?, ?)
-        """, (email, username, first_name, last_name, password_hash))
+        """, (email.strip(), username.strip(), first_name.strip(), 
+              last_name.strip() if last_name else "", password_hash))
         
         conn.commit()
-        return {"success": True, "message": "Аккаунт создан!"}
+        
+        # Создаем папку для пользователя в облачном хранилище
+        user_folder = Path(f"zornet_cloud/{username}")
+        user_folder.mkdir(parents=True, exist_ok=True)
+        
+        return {"success": True, "message": "Аккаунт успешно создан!"}
     except sqlite3.IntegrityError as e:
         error_msg = str(e)
         if "UNIQUE constraint failed: users.email" in error_msg:
@@ -509,7 +524,7 @@ def register_user(email, username, first_name, last_name, password):
         elif "UNIQUE constraint failed: users.username" in error_msg:
             return {"success": False, "message": "Никнейм уже занят"}
         else:
-            return {"success": False, "message": f"Ошибка регистрации"}
+            return {"success": False, "message": f"Ошибка регистрации: {error_msg}"}
     except Exception as e:
         return {"success": False, "message": f"Ошибка: {str(e)}"}
     finally:
@@ -911,101 +926,103 @@ if st.session_state.page == "Главная":
     
     st.markdown("---")
     
-    # БЫСТРЫЕ ССЫЛКИ
-    st.markdown("### 🚀 Быстрые ссылки")
-    
-    # Кнопка добавления новой ссылки
-    if st.button("➕ Добавить ссылку", key="add_link_btn", type="secondary"):
-        st.session_state.show_add_link = not st.session_state.show_add_link
-        st.rerun()
-    
-    # Форма добавления новой ссылки
-    if st.session_state.show_add_link:
-        st.markdown("---")
-        st.markdown("#### 📝 Добавить новую ссылку")
+    # В разделе главной страницы, где отображаются быстрые ссылки:
+
+# Отображение быстрых ссылок
+quick_links = st.session_state.quick_links
+
+if not quick_links:
+    st.info("Нет быстрых ссылок. Добавьте первую!")
+else:
+    # Показываем ссылки в сетке 4x2
+    for i in range(0, len(quick_links), 4):
+        cols = st.columns(4)
+        row_links = quick_links[i:i+4]
         
-        col_name, col_url, col_icon = st.columns([2, 3, 1])
-        
-        with col_name:
-            new_link_name = st.text_input("Название", placeholder="Например: Facebook")
-        
-        with col_url:
-            new_link_url = st.text_input("URL", placeholder="https://facebook.com")
-        
-        with col_icon:
-            new_link_icon = st.selectbox(
-                "Иконка",
-                ["🔍", "📺", "📧", "🤖", "💻", "👥", "🌐", "🎮", "📚", "🎵", "🛒", "💼", "🎨", "📱", "🔧"],
-                index=0
-            )
-        
-        col_save, col_cancel = st.columns(2)
-        
-        with col_save:
-            if st.button("💾 Сохранить ссылку", type="primary", use_container_width=True):
-                if new_link_name and new_link_url:
-                    # Проверяем корректность URL
-                    if not new_link_url.startswith(('http://', 'https://')):
-                        new_link_url = 'https://' + new_link_url
-                    
-                    st.session_state.quick_links.append({
-                        "name": new_link_name,
-                        "url": new_link_url,
-                        "icon": new_link_icon
-                    })
-                    st.session_state.show_add_link = False
-                    st.success(f"Ссылка '{new_link_name}' добавлена!")
-                    st.rerun()
-                else:
-                    st.error("Заполните название и URL")
-        
-        with col_cancel:
-            if st.button("❌ Отмена", use_container_width=True):
-                st.session_state.show_add_link = False
-                st.rerun()
-        
-        st.markdown("---")
-    
-    # Отображение быстрых ссылок
-    quick_links = st.session_state.quick_links
-    
-    if not quick_links:
-        st.info("Нет быстрых ссылок. Добавьте первую!")
-    else:
-        # Показываем ссылки в сетке 4x2
-        for i in range(0, len(quick_links), 4):
-            cols = st.columns(4)
-            row_links = quick_links[i:i+4]
-            
-            for j, link in enumerate(row_links):
-                with cols[j]:
-                    # Контейнер для ссылки
-                    st.markdown(f"""
-                    <div style="
-                        background: white;
-                        border-radius: 10px;
-                        padding: 15px;
-                        margin: 5px;
-                        border: 1px solid #e0e0e0;
-                        text-align: center;
-                        transition: all 0.3s ease;
-                    ">
+        for j, link in enumerate(row_links):
+            with cols[j]:
+                # Исправленный контейнер для ссылки
+                st.markdown(f"""
+                <div style="
+                    background: white;
+                    border-radius: 10px;
+                    padding: 15px;
+                    margin: 5px;
+                    border: 1px solid #e0e0e0;
+                    text-align: center;
+                    transition: all 0.3s ease;
+                    min-height: 150px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                ">
+                    <div>
                         <div style="font-size: 2rem;">{link['icon']}</div>
                         <div style="font-weight: 600; margin: 8px 0;">{link['name']}</div>
                     </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Кнопка открытия
-                    if st.button(f"Открыть", key=f"open_{link['name']}_{i}_{j}", use_container_width=True):
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Контейнер для кнопок с исправленным CSS
+                st.markdown("""
+                <style>
+                div[data-testid="column"] {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: stretch;
+                }
+                
+                .stButton button {
+                    width: 100% !important;
+                    margin: 5px 0 !important;
+                    min-height: 40px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
+                # Кнопка открытия
+                open_col, delete_col = st.columns([3, 1])
+                
+                with open_col:
+                    if st.button(f"🌐 Открыть", key=f"open_{link['name']}_{i}_{j}", 
+                               use_container_width=True, type="primary"):
                         js_code = f'window.open("{link["url"]}", "_blank");'
                         components.html(f"<script>{js_code}</script>", height=0)
-                    
-                    # Кнопка удаления
+                
+                with delete_col:
                     if st.button(f"🗑️", key=f"delete_{link['name']}_{i}_{j}", 
-                               help=f"Удалить {link['name']}"):
+                               help=f"Удалить {link['name']}", use_container_width=True):
                         st.session_state.quick_links.remove(link)
+                        save_quick_links(st.session_state.quick_links)
                         st.success(f"Ссылка '{link['name']}' удалена!")
                         st.rerun()
+
+if st.button("💾 Сохранить ссылку", type="primary", use_container_width=True):
+    if new_link_name and new_link_url:
+        # Проверяем корректность URL
+        if not new_link_url.startswith(('http://', 'https://')):
+            new_link_url = 'https://' + new_link_url
+        
+        # Проверяем, что ссылка не существует
+        existing_urls = [link['url'] for link in st.session_state.quick_links]
+        if new_link_url in existing_urls:
+            st.error("Эта ссылка уже добавлена!")
+        else:
+            st.session_state.quick_links.append({
+                "name": new_link_name,
+                "url": new_link_url,
+                "icon": new_link_icon
+            })
+            # Сохраняем в хранилище
+            save_quick_links(st.session_state.quick_links)
+            st.session_state.show_add_link = False
+            st.success(f"Ссылка '{new_link_name}' добавлена!")
+            st.rerun()
+    else:
+        st.error("Заполните название и URL")
 
 # ================= МЕССЕНДЖЕР =================
 elif st.session_state.page == "Мессенджер":
@@ -1969,10 +1986,19 @@ elif st.session_state.page == "Профиль":
         """, unsafe_allow_html=True)
         
         if st.button("🚪 Выйти из аккаунта", type="primary", use_container_width=True):
-            st.session_state.is_logged_in = False
-            st.session_state.user_data = {}
-            st.session_state.page = "Главная"
-            st.rerun()
+    # Сохраняем быстрые ссылки перед выходом
+    if st.session_state.is_logged_in and "quick_links" in st.session_state:
+        save_quick_links(st.session_state.quick_links)
+    
+    # Сбрасываем сессию
+    st.session_state.is_logged_in = False
+    st.session_state.user_data = {}
+    st.session_state.quick_links = [
+        {"name": "YouTube", "url": "https://www.youtube.com", "icon": "📺"},
+        {"name": "Gmail", "url": "https://mail.google.com", "icon": "📧"},
+    ]
+    st.session_state.page = "Главная"
+    st.rerun()
     
     else:
         st.markdown('<div class="giant-id-title">ZORNET ID</div>', unsafe_allow_html=True)
