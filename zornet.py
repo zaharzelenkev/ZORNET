@@ -1985,9 +1985,9 @@ elif st.session_state.page == "Профиль":
         </div>
         """, unsafe_allow_html=True)
         
-        if st.button("🚪 Выйти из аккаунта", type="primary", use_container_width=True):
+    if st.button("🚪 Выйти из аккаунта", type="primary", use_container_width=True):
     # Сохраняем быстрые ссылки перед выходом
-    if st.session_state.is_logged_in and "quick_links" in st.session_state:
+if st.session_state.is_logged_in and "quick_links" in st.session_state:
         save_quick_links(st.session_state.quick_links)
     
     # Сбрасываем сессию
