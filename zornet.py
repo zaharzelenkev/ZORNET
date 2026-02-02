@@ -1085,9 +1085,6 @@ if st.session_state.page == "Главная":
     # Заголовок и кнопка добавления в одной строке
     col_title, col_add = st.columns([3, 1])
     
-    with col_title:
-        st.markdown("### 📌 Быстрые ссылки")
-    
     with col_add:
         if st.button("➕ Добавить", key="add_link_btn", type="secondary", use_container_width=True):
             st.session_state.show_add_link = not st.session_state.show_add_link
