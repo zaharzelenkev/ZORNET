@@ -1653,15 +1653,83 @@ elif st.session_state.page == "Диск":
     os.makedirs(st.session_state.disk_current_path, exist_ok=True)
 
     # CSS стили для диска
-    st.markdown("""
-    <style>
-        .disk-container {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            margin: 10px 0;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        }
+st.markdown('''
+<style>
+    .disk-container {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin: 10px 0;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+
+    .disk-header {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+        border-radius: 12px;
+        padding: 25px;
+        color: white;
+        margin-bottom: 20px;
+    }
+
+    .disk-btn {
+        background: white !important;
+        border: 2px solid #DAA520 !important;
+        color: #B8860B !important;
+        padding: 10px 20px !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .disk-btn:hover {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+        color: white !important;
+        border-color: transparent !important;
+    }
+
+    .disk-btn-active {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+        color: white !important;
+        border-color: transparent !important;
+    }
+
+    .file-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin: 10px 0;
+        border-left: 4px solid #DAA520;
+        transition: all 0.3s ease;
+    }
+
+    .file-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .folder-card {
+        background: linear-gradient(135deg, #fff9e6 0%, #ffe699 100%);
+        border-radius: 10px;
+        padding: 15px;
+        margin: 10px 0;
+        border: 2px solid #ffd966;
+    }
+
+    .storage-bar {
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 10px 0;
+    }
+
+    .storage-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #DAA520, #FFD700);
+        border-radius: 4px;
+    }
+</style>
+''', unsafe_allow_html=True)
 
         .disk-header {
             background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
