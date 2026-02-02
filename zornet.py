@@ -1089,7 +1089,7 @@ if st.session_state.page == "Главная":
     # БЫСТРЫЕ ССЫЛКИ
     col1, col2 = st.columns([3, 1])
     with col1:
-        st.markdown("### 📌 Быстрые ссылки")
+        st.markdown("### 📌 Избранное")
     with col2:
         if st.button("➕ Добавить", key="add_link_btn", type="secondary", use_container_width=True):
             st.session_state.show_add_link = not st.session_state.show_add_link
