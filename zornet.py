@@ -1451,14 +1451,6 @@ elif st.session_state.page == "Диск":
         # ОСНОВНОЙ РЕЖИМ ПРОСМОТРА ФАЙЛОВ
         st.markdown("### 📁 Файлы и папки")
 
-        if quick_upload:
-            for file in quick_upload:
-                file_path = os.path.join(st.session_state.disk_current_path, file.name)
-                with open(file_path, "wb") as f:
-                    f.write(file.getbuffer())
-            st.success(f"✅ Загружено {len(quick_upload)} файлов!")
-            st.rerun()
-
         # Навигация по папкам
         if st.session_state.disk_current_path != "zornet_cloud":
             current_parts = st.session_state.disk_current_path.split(os.sep)
