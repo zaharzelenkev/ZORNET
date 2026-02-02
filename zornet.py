@@ -2286,16 +2286,16 @@ if "current_auth" in storage:
     storage["current_auth"]["user_data"] = {}
     save_storage(storage)
     
-            # Сбрасываем сессию
-            st.session_state.is_logged_in = False
-            st.session_state.user_data = {}
-            st.session_state.quick_links = [
-                {"name": "YouTube", "url": "https://www.youtube.com", "icon": "📺"},
-                {"name": "Gmail", "url": "https://mail.google.com", "icon": "📧"},
-            ]
-            st.session_state.registration_success = False
-            st.session_state.page = "Главная"
-            st.rerun()
+# Сбрасываем сессию
+st.session_state.is_logged_in = False
+st.session_state.user_data = {}
+st.session_state.quick_links = [
+        {"name": "YouTube", "url": "https://www.youtube.com", "icon": "📺"},
+        {"name": "Gmail", "url": "https://mail.google.com", "icon": "📧"},
+    ]
+st.session_state.registration_success = False
+st.session_state.page = "Главная"
+st.rerun()
     
     else:
         st.markdown('<div class="giant-id-title">ZORNET ID</div>', unsafe_allow_html=True)
