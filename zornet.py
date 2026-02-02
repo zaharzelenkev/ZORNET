@@ -56,6 +56,15 @@ if "chat_partner" not in st.session_state:
     st.session_state.chat_partner = None
 if "room_messages" not in st.session_state:
     st.session_state.room_messages = {}
+if "quick_links" not in st.session_state:  # Новое: Быстрые ссылки
+    st.session_state.quick_links = [
+        {"name": "Google", "url": "https://www.google.com", "icon": "🔍"},
+        {"name": "YouTube", "url": "https://www.youtube.com", "icon": "📺"},
+        {"name": "Gmail", "url": "https://mail.google.com", "icon": "📧"},
+        {"name": "GPT", "url": "https://chat.openai.com", "icon": "🤖"},
+        {"name": "GitHub", "url": "https://github.com", "icon": "💻"},
+        {"name": "Twitter", "url": "https://twitter.com", "icon": "🐦"}
+    ]
 
 # ================= ОБНОВЛЕННЫЕ CSS СТИЛИ =================
 st.markdown("""
@@ -430,6 +439,35 @@ st.markdown("""
         box-shadow: 0 10px 40px rgba(0,0,0,0.1);
         border: 1px solid #e0e0e0;
     }
+    
+    /* Стили для быстрых ссылок */
+    .quick-links-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 20px 0;
+        justify-content: center;
+    }
+    
+    .quick-link-btn {
+        background: white !important;
+        border: 2px solid #DAA520 !important;
+        color: #B8860B !important;
+        padding: 10px 20px !important;
+        border-radius: 25px !important;
+        font-weight: 600 !important;
+        transition: all 0.3s ease !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }
+    
+    .quick-link-btn:hover {
+        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+        color: white !important;
+        border-color: transparent !important;
+        transform: translateY(-2px) !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -495,6 +533,15 @@ def register_user(email, username, first_name, last_name, password):
     c = conn.cursor()
     
     try:
+        # Проверяем, существует ли уже пользователь с таким email или username
+        c.execute("SELECT email FROM users WHERE email = ?", (email,))
+        if c.fetchone():
+            return {"success": False, "message": "Email уже используется"}
+        
+        c.execute("SELECT username FROM users WHERE username = ?", (username,))
+        if c.fetchone():
+            return {"success": False, "message": "Никнейм уже занят"}
+        
         password_hash = hashlib.sha256(password.encode()).hexdigest()
         
         c.execute("""
@@ -505,12 +552,16 @@ def register_user(email, username, first_name, last_name, password):
         conn.commit()
         return {"success": True, "message": "Аккаунт создан!"}
     except sqlite3.IntegrityError as e:
-        if "email" in str(e):
+        # Запасной вариант обработки ошибки
+        error_msg = str(e)
+        if "UNIQUE constraint failed: users.email" in error_msg:
             return {"success": False, "message": "Email уже используется"}
-        elif "username" in str(e):
+        elif "UNIQUE constraint failed: users.username" in error_msg:
             return {"success": False, "message": "Никнейм уже занят"}
         else:
-            return {"success": False, "message": "Ошибка регистрации"}
+            return {"success": False, "message": f"Ошибка регистрации: {error_msg}"}
+    except Exception as e:
+        return {"success": False, "message": f"Ошибка: {str(e)}"}
     finally:
         conn.close()
 
@@ -783,7 +834,7 @@ if st.session_state.page == "Главная":
     if not st.session_state.is_logged_in:
         st.warning("⚠️ Вы не авторизованы. Перейдите в профиль для входа.")
     
-    # ВАШ СУЩЕСТВУЮЩИЙ HTML КОД ДЛЯ ПОИСКА...
+    # ОБНОВЛЕННЫЙ HTML КОД ДЛЯ ПОИСКА (без кнопки, только строка поиска)
     components.html("""
     <!DOCTYPE html>
     <html>
@@ -800,7 +851,7 @@ if st.session_state.page == "Главная":
         
         .search-container {
             width: 100%;
-            max-width: 600px;
+            max-width: 700px;
             padding: 10px;
             box-sizing: border-box;
             text-align: center;
@@ -825,47 +876,109 @@ if st.session_state.page == "Главная":
             border-color: #DAA520;
             box-shadow: 0 0 15px rgba(218, 165, 32, 0.2);
         }
-
-        button {
-            margin-top: 20px;
-            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-            color: white;
-            border: none;
-            padding: 14px 40px;
-            border-radius: 25px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
-            transition: transform 0.2s, box-shadow 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            -webkit-appearance: none;
-            width: 100%;
-            max-width: 250px;
-        }
-
-        button:hover {
-            transform: scale(1.03);
-            box-shadow: 0 6px 20px rgba(218, 165, 32, 0.6);
-        }
         
-        button:active {
-            transform: scale(0.98);
+        /* Скрываем кнопку поиска */
+        .search-button {
+            display: none;
         }
     </style>
     </head>
     <body>
         <div class="search-container">
-            <form action="https://www.google.com/search" method="get" target="_top">
-                <input type="text" name="q" placeholder="🔍 Введите запрос..." required autocomplete="off">
-                <br>
-                <button type="submit">ИСКАТЬ</button>
+            <form action="https://www.google.com/search" method="get" target="_self"> <!-- Изменено на target="_self" -->
+                <input type="text" 
+                       name="q" 
+                       placeholder="🔍 Введите запрос..." 
+                       required 
+                       autocomplete="off"
+                       id="searchInput"
+                       onkeypress="handleKeyPress(event)">
             </form>
         </div>
+        
+        <script>
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                // Получаем форму и отправляем ее
+                const form = event.target.closest('form');
+                if (form) {
+                    form.submit();
+                }
+            }
+        }
+        </script>
     </body>
     </html>
-    """, height=220)
+    """, height=100)
+    
+    # БЫСТРЫЕ ССЫЛКИ
+    st.markdown("### 🚀 Быстрые ссылки")
+    
+    # Создаем строки для быстрых ссылок
+    quick_links = st.session_state.quick_links
+    
+    # Первая строка - 4 ссылки
+    cols = st.columns(4)
+    for i in range(min(4, len(quick_links))):
+        with cols[i]:
+            link = quick_links[i]
+            if st.button(
+                f"{link['icon']} {link['name']}", 
+                key=f"quick_link_{i}",
+                use_container_width=True
+            ):
+                # Открываем ссылку в текущем окне
+                js_code = f'window.open("{link["url"]}", "_self");'
+                components.html(f"""
+                <script>
+                    {js_code}
+                </script>
+                """, height=0)
+    
+    # Вторая строка - оставшиеся ссылки
+    if len(quick_links) > 4:
+        cols2 = st.columns(4)
+        for i in range(4, min(8, len(quick_links))):
+            with cols2[i-4]:
+                link = quick_links[i]
+                if st.button(
+                    f"{link['icon']} {link['name']}", 
+                    key=f"quick_link_{i}",
+                    use_container_width=True
+                ):
+                    # Открываем ссылку в текущем окне
+                    js_code = f'window.open("{link["url"]}", "_self");'
+                    components.html(f"""
+                    <script>
+                        {js_code}
+                    </script>
+                    """, height=0)
+    
+    st.markdown("---")
+    
+    # БЛОК ДЛЯ ДОБАВЛЕНИЯ НОВЫХ ССЫЛОК
+    st.markdown("#### Добавить новую быструю ссылку")
+    col_new1, col_new2, col_new3 = st.columns(3)
+    
+    with col_new1:
+        new_link_name = st.text_input("Название", placeholder="Например: Facebook")
+    with col_new2:
+        new_link_url = st.text_input("URL", placeholder="https://...")
+    with col_new3:
+        new_link_icon = st.selectbox(
+            "Иконка",
+            ["🔍", "📺", "📧", "🤖", "💻", "🐦", "📚", "🎵", "🎮", "🛒"]
+        )
+    
+    if st.button("➕ Добавить ссылку", type="primary"):
+        if new_link_name and new_link_url:
+            st.session_state.quick_links.append({
+                "name": new_link_name,
+                "url": new_link_url,
+                "icon": new_link_icon
+            })
+            st.success(f"Ссылка '{new_link_name}' добавлена!")
+            st.rerun()
 
 # ================= МЕССЕНДЖЕР =================
 elif st.session_state.page == "Мессенджер":
@@ -1071,7 +1184,7 @@ elif st.session_state.page == "Кинотеатр":
                 # Разные форматы YouTube ссылок
                 patterns = [
                     r'(?:youtube\.com\/watch\?v=|youtu\.be\/)([0-9A-Za-z_-]{11})',
-                    r'youtube\.com\/embed\/([0-9A-Za-z_-]{11})',
+                    r'youtube\.com\/embed\/([09A-Za-z_-]{11})',
                     r'youtube\.com\/v\/([0-9A-Za-z_-]{11})'
                 ]
                 
@@ -1634,7 +1747,7 @@ elif st.session_state.page == "Новости":
                 margin-bottom: 15px;
                 border-radius: 8px;
             ">
-                <a href="{item.link}" target="_blank" 
+                <a href="{item.link}" target="_self"  <!-- Изменено на target="_self" -->
                    style="color:#DAA520; font-size:1.2rem; font-weight:bold; text-decoration:none;">
                     {item.title}
                 </a>
@@ -1642,113 +1755,22 @@ elif st.session_state.page == "Новости":
             </div>
             """, unsafe_allow_html=True)
 
-# ================= СТРАНИЦА ПОГОДЫ (ПРОСТО И РАБОЧЕ) =================
+# ================= СТРАНИЦА ПОГОДЫ (УПРОЩЕННАЯ ВЕРСИЯ) =================
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
     
-    # ЗОЛОТОЙ ПОИСК ДЛЯ ПОГОДЫ
-    components.html("""
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: transparent;
-            font-family: 'Helvetica Neue', sans-serif;
-            display: flex;
-            justify-content: center;
-        }
-        
-        .weather-search-container {
-            width: 100%;
-            max-width: 600px;
-            padding: 10px;
-            box-sizing: border-box;
-            text-align: center;
-        }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 18px 25px;
-            font-size: 18px;
-            border: 2px solid #e0e0e0;
-            border-radius: 30px;
-            outline: none;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            background-color: #ffffff;
-            color: #333;
-            box-sizing: border-box;
-            -webkit-appearance: none;
-        }
-
-        input[type="text"]:focus {
-            border-color: #DAA520;
-            box-shadow: 0 0 15px rgba(218, 165, 32, 0.2);
-        }
-
-        button {
-            margin-top: 20px;
-            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-            color: white;
-            border: none;
-            padding: 14px 40px;
-            border-radius: 25px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
-            transition: transform 0.2s, box-shadow 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            -webkit-appearance: none;
-            width: 100%;
-            max-width: 250px;
-        }
-
-        button:hover {
-            transform: scale(1.03);
-            box-shadow: 0 6px 20px rgba(218, 165, 32, 0.6);
-        }
-        
-        button:active {
-            transform: scale(0.98);
-        }
-    </style>
-    </head>
-    <body>
-        <div class="weather-search-container">
-            <input type="text" id="cityInput" placeholder="🔍 Введите город..." autocomplete="off">
-            <br>
-            <button onclick="searchWeather()">ПОКАЗАТЬ ПОГОДУ</button>
-        </div>
-        
-        <script>
-        function searchWeather() {
-            var city = document.getElementById('cityInput').value;
-            if (city) {
-                window.parent.postMessage({
-                    type: 'streamlit:setComponentValue',
-                    value: city
-                }, '*');
-            }
-        }
-        
-        document.getElementById('cityInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                searchWeather();
-            }
-        });
-        </script>
-    </body>
-    </html>
-    """, height=150)
+    # ЕДИНСТВЕННАЯ СТРОКА ПОИСКА (без дублирования)
+    col_search, col_btn = st.columns([4, 1])
     
-    # Получаем город
-    city_input = st.text_input("", key="weather_city_input", label_visibility="collapsed")
+    with col_search:
+        city_input = st.text_input(
+            "Введите город...", 
+            placeholder="Например: Минск",
+            label_visibility="collapsed"
+        )
+    
+    with col_btn:
+        search_clicked = st.button("ПОКАЗАТЬ ПОГОДУ", type="primary", use_container_width=True)
     
     # Определяем какой город показывать
     city_to_show = "Минск"
@@ -1756,6 +1778,11 @@ elif st.session_state.page == "Погода":
         city_to_show = city_input
     elif st.session_state.user_city:
         city_to_show = st.session_state.user_city
+    
+    # Если нажали кнопку или Enter в поле ввода
+    if search_clicked or city_input:
+        if city_input:
+            city_to_show = city_input
     
     # Получаем погоду
     with st.spinner(f"Получаю погоду для {city_to_show}..."):
@@ -1886,7 +1913,7 @@ elif st.session_state.page == "Погода":
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
-
+    
     # Блок с городами Беларуси
     st.markdown("---")
     st.markdown("### 🇧🇾 Города Беларуси")
