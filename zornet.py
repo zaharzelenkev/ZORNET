@@ -84,8 +84,8 @@ header:after {
     color: white !important;
 }
 
-/* Кнопка сайдбара - ИСПРАВЛЕННАЯ */
-button[data-testid="baseButton-header"] {
+/* Кнопка сайдбара */
+button[data-testid="stSidebarCollapse"] {
     position: fixed !important;
     right: 20px !important;
     top: 15px !important;
@@ -101,10 +101,22 @@ button[data-testid="baseButton-header"] {
     box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
 }
 
-button[data-testid="baseButton-header"] svg {
+button[data-testid="stSidebarCollapse"] svg {
+    display: none !important;
+}
+
+button[data-testid="stSidebarCollapse"]::after {
+    content: "☰" !important;
     color: white !important;
-    width: 24px !important;
-    height: 24px !important;
+    font-size: 24px !important;
+    font-weight: bold !important;
+}
+
+[data-testid="stSidebar"] button[data-testid="stSidebarCollapse"] {
+    right: auto !important;
+    left: 10px !important;
+    top: 10px !important;
+    position: relative !important;
 }
 
 div[data-testid="stVerticalBlock"] > div:has(div.stMarkdown) {
@@ -491,53 +503,31 @@ def init_db():
     conn.close()
 
 def register_user(email, username, first_name, last_name, password):
-    """Регистрация пользователя - ИСПРАВЛЕННАЯ"""
-    # Очистка данных
+    """Регистрация пользователя"""
     email = email.strip().lower()
     username = username.strip().lower()
-    first_name = first_name.strip()
-    last_name = last_name.strip() if last_name else ""
     password = password.strip()
-    
-    # Проверка данных
-    if not email or not username or not first_name or not password:
-        return {"success": False, "message": "Заполните все обязательные поля"}
-    
-    if len(password) < 6:
-        return {"success": False, "message": "Пароль должен быть не менее 6 символов"}
-    
-    if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-        return {"success": False, "message": "Введите корректный email"}
     
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
     
     try:
-        # Проверяем, существует ли пользователь с таким email
-        c.execute("SELECT id FROM users WHERE email = ?", (email,))
-        if c.fetchone():
-            return {"success": False, "message": "Email уже используется"}
-        
-        # Проверяем, существует ли пользователь с таким username
-        c.execute("SELECT id FROM users WHERE username = ?", (username,))
-        if c.fetchone():
-            return {"success": False, "message": "Никнейм уже занят"}
-        
-        # Хешируем пароль
         password_hash = hashlib.sha256(password.encode()).hexdigest()
         
-        # Вставляем пользователя
         c.execute("""
             INSERT INTO users (email, username, first_name, last_name, password_hash)
             VALUES (?, ?, ?, ?, ?)
         """, (email, username, first_name, last_name, password_hash))
         
         conn.commit()
-        return {"success": True, "message": "✅ Аккаунт создан! Теперь войдите в систему."}
-    
-    except sqlite3.Error as e:
-        return {"success": False, "message": f"Ошибка базы данных: {str(e)}"}
-    
+        return {"success": True, "message": "Аккаунт создан!"}
+    except sqlite3.IntegrityError as e:
+        if "email" in str(e):
+            return {"success": False, "message": "Email уже используется"}
+        elif "username" in str(e):
+            return {"success": False, "message": "Никнейм уже занят"}
+        else:
+            return {"success": False, "message": "Ошибка регистрации"}
     finally:
         conn.close()
         
@@ -2038,31 +2028,15 @@ elif st.session_state.page == "Профиль":
 
 # ================= ИНИЦИАЛИЗАЦИЯ БД =================
 if __name__ == "__main__":
-    # Инициализируем БД
     init_db()
     
     # Создаем тестового пользователя если его нет
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
-    
-    try:
-        # Проверяем есть ли тестовый пользователь
-        c.execute("SELECT COUNT(*) FROM users WHERE username = 'test'")
-        count = c.fetchone()[0]
-        
-        if count == 0:
-            test_password = hashlib.sha256("test123".encode()).hexdigest()
-            c.execute("""
-                INSERT INTO users (email, username, first_name, last_name, password_hash) 
-                VALUES (?, ?, ?, ?, ?)
-            """, ("test@zornet.by", "test", "Тест", "Пользователь", test_password))
-            conn.commit()
-            print("✅ Создан тестовый пользователь: test@zornet.by / test123")
-        else:
-            print("ℹ️ Тестовый пользователь уже существует")
-            
-    except Exception as e:
-        print(f"⚠️ Ошибка при создании тестового пользователя: {e}")
-    
-    finally:
-        conn.close()
+    c.execute("SELECT COUNT(*) FROM users WHERE username = 'test'")
+    if c.fetchone()[0] == 0:
+        test_password = hashlib.sha256("test123".encode()).hexdigest()
+        c.execute("INSERT INTO users (email, username, first_name, last_name, password_hash) VALUES (?, ?, ?, ?, ?)",
+                 ("test@zornet.by", "test", "Тест", "Пользователь", test_password))
+        conn.commit()
+    conn.close()
