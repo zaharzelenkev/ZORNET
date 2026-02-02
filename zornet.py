@@ -780,10 +780,7 @@ if st.session_state.page == "Главная":
     </style>
     """, unsafe_allow_html=True)
     
-    if st.session_state.is_logged_in:
-        user = st.session_state.user_data
-        st.info(f"👤 **{user.get('first_name', 'Пользователь')} {user.get('last_name', '')}** | ✉️ {user.get('email', '')} | 🆔 @{user.get('username', 'user')}")
-    else:
+    if not st.session_state.is_logged_in:
         st.warning("⚠️ Вы не авторизованы. Перейдите в профиль для входа.")
     
     # ВАШ СУЩЕСТВУЮЩИЙ HTML КОД ДЛЯ ПОИСКА...
