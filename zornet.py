@@ -292,8 +292,8 @@ st.markdown("""
     
     .file-card {
         background: #f8f9fa;
-        border-radius: 10px;
-        padding: 10px;
+        border-radius: 5px;
+        padding: 5px;
         margin: 10px 0;
         border-left: 4px solid #DAA520;
         transition: all 0.3s ease;
