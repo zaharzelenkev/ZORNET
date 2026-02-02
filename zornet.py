@@ -926,103 +926,139 @@ if st.session_state.page == "Главная":
     
     st.markdown("---")
     
-    # В разделе главной страницы, где отображаются быстрые ссылки:
-
-# Отображение быстрых ссылок
-quick_links = st.session_state.quick_links
-
-if not quick_links:
-    st.info("Нет быстрых ссылок. Добавьте первую!")
-else:
-    # Показываем ссылки в сетке 4x2
-    for i in range(0, len(quick_links), 4):
-        cols = st.columns(4)
-        row_links = quick_links[i:i+4]
+    # БЫСТРЫЕ ССЫЛКИ
+    st.markdown("### 🚀 Быстрые ссылки")
+    
+    # Кнопка добавления новой ссылки
+    if st.button("➕ Добавить ссылку", key="add_link_btn", type="secondary"):
+        st.session_state.show_add_link = not st.session_state.show_add_link
+        st.rerun()
+    
+    # Форма добавления новой ссылки
+    if st.session_state.show_add_link:
+        st.markdown("---")
+        st.markdown("#### 📝 Добавить новую ссылку")
         
-        for j, link in enumerate(row_links):
-            with cols[j]:
-                # Исправленный контейнер для ссылки
-                st.markdown(f"""
-                <div style="
-                    background: white;
-                    border-radius: 10px;
-                    padding: 15px;
-                    margin: 5px;
-                    border: 1px solid #e0e0e0;
-                    text-align: center;
-                    transition: all 0.3s ease;
-                    min-height: 150px;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: space-between;
-                ">
-                    <div>
-                        <div style="font-size: 2rem;">{link['icon']}</div>
-                        <div style="font-weight: 600; margin: 8px 0;">{link['name']}</div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Контейнер для кнопок с исправленным CSS
-                st.markdown("""
-                <style>
-                div[data-testid="column"] {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: stretch;
-                }
-                
-                .stButton button {
-                    width: 100% !important;
-                    margin: 5px 0 !important;
-                    min-height: 40px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                }
-                </style>
-                """, unsafe_allow_html=True)
-                
-                # Кнопка открытия
-                open_col, delete_col = st.columns([3, 1])
-                
-                with open_col:
-                    if st.button(f"🌐 Открыть", key=f"open_{link['name']}_{i}_{j}", 
-                               use_container_width=True, type="primary"):
-                        js_code = f'window.open("{link["url"]}", "_blank");'
-                        components.html(f"<script>{js_code}</script>", height=0)
-                
-                with delete_col:
-                    if st.button(f"🗑️", key=f"delete_{link['name']}_{i}_{j}", 
-                               help=f"Удалить {link['name']}", use_container_width=True):
-                        st.session_state.quick_links.remove(link)
+        col_name, col_url, col_icon = st.columns([2, 3, 1])
+        
+        with col_name:
+            new_link_name = st.text_input("Название", placeholder="Например: Facebook")
+        
+        with col_url:
+            new_link_url = st.text_input("URL", placeholder="https://facebook.com")
+        
+        with col_icon:
+            new_link_icon = st.selectbox(
+                "Иконка",
+                ["🔍", "📺", "📧", "🤖", "💻", "👥", "🌐", "🎮", "📚", "🎵", "🛒", "💼", "🎨", "📱", "🔧"],
+                index=0
+            )
+        
+        col_save, col_cancel = st.columns(2)
+        
+        with col_save:
+            if st.button("💾 Сохранить ссылку", type="primary", use_container_width=True):
+                if new_link_name and new_link_url:
+                    # Проверяем корректность URL
+                    if not new_link_url.startswith(('http://', 'https://')):
+                        new_link_url = 'https://' + new_link_url
+                    
+                    # Проверяем, что ссылка не существует
+                    existing_urls = [link['url'] for link in st.session_state.quick_links]
+                    if new_link_url in existing_urls:
+                        st.error("Эта ссылка уже добавлена!")
+                    else:
+                        st.session_state.quick_links.append({
+                            "name": new_link_name,
+                            "url": new_link_url,
+                            "icon": new_link_icon
+                        })
+                        # Сохраняем в хранилище
                         save_quick_links(st.session_state.quick_links)
-                        st.success(f"Ссылка '{link['name']}' удалена!")
+                        st.session_state.show_add_link = False
+                        st.success(f"Ссылка '{new_link_name}' добавлена!")
                         st.rerun()
-
-if st.button("💾 Сохранить ссылку", type="primary", use_container_width=True):
-    if new_link_name and new_link_url:
-        # Проверяем корректность URL
-        if not new_link_url.startswith(('http://', 'https://')):
-            new_link_url = 'https://' + new_link_url
+                else:
+                    st.error("Заполните название и URL")
         
-        # Проверяем, что ссылка не существует
-        existing_urls = [link['url'] for link in st.session_state.quick_links]
-        if new_link_url in existing_urls:
-            st.error("Эта ссылка уже добавлена!")
-        else:
-            st.session_state.quick_links.append({
-                "name": new_link_name,
-                "url": new_link_url,
-                "icon": new_link_icon
-            })
-            # Сохраняем в хранилище
-            save_quick_links(st.session_state.quick_links)
-            st.session_state.show_add_link = False
-            st.success(f"Ссылка '{new_link_name}' добавлена!")
-            st.rerun()
+        with col_cancel:
+            if st.button("❌ Отмена", use_container_width=True):
+                st.session_state.show_add_link = False
+                st.rerun()
+        
+        st.markdown("---")
+    
+    # Отображение быстрых ссылок
+    quick_links = st.session_state.quick_links
+    
+    if not quick_links:
+        st.info("Нет быстрых ссылок. Добавьте первую!")
     else:
-        st.error("Заполните название и URL")
+        # Показываем ссылки в сетке 4x2
+        for i in range(0, len(quick_links), 4):
+            cols = st.columns(4)
+            row_links = quick_links[i:i+4]
+            
+            for j, link in enumerate(row_links):
+                with cols[j]:
+                    # Исправленный контейнер для ссылки
+                    st.markdown(f"""
+                    <div style="
+                        background: white;
+                        border-radius: 10px;
+                        padding: 15px;
+                        margin: 5px;
+                        border: 1px solid #e0e0e0;
+                        text-align: center;
+                        transition: all 0.3s ease;
+                        min-height: 150px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                    ">
+                        <div>
+                            <div style="font-size: 2rem;">{link['icon']}</div>
+                            <div style="font-weight: 600; margin: 8px 0;">{link['name']}</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Контейнер для кнопок с исправленным CSS
+                    st.markdown("""
+                    <style>
+                    div[data-testid="column"] {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: stretch;
+                    }
+                    
+                    .stButton button {
+                        width: 100% !important;
+                        margin: 5px 0 !important;
+                        min-height: 40px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
+                    
+                    # Кнопка открытия
+                    open_col, delete_col = st.columns([3, 1])
+                    
+                    with open_col:
+                        if st.button(f"🌐 Открыть", key=f"open_{link['name']}_{i}_{j}", 
+                                   use_container_width=True, type="primary"):
+                            js_code = f'window.open("{link["url"]}", "_blank");'
+                            components.html(f"<script>{js_code}</script>", height=0)
+                    
+                    with delete_col:
+                        if st.button(f"🗑️", key=f"delete_{link['name']}_{i}_{j}", 
+                                   help=f"Удалить {link['name']}", use_container_width=True):
+                            st.session_state.quick_links.remove(link)
+                            save_quick_links(st.session_state.quick_links)
+                            st.success(f"Ссылка '{link['name']}' удалена!")
+                            st.rerun()
 
 # ================= МЕССЕНДЖЕР =================
 elif st.session_state.page == "Мессенджер":
@@ -1985,20 +2021,22 @@ elif st.session_state.page == "Профиль":
         </div>
         """, unsafe_allow_html=True)
         
-    if st.button("🚪 Выйти из аккаунта", type="primary", use_container_width=True):
-    # Сохраняем быстрые ссылки перед выходом
-if st.session_state.is_logged_in and "quick_links" in st.session_state:
-        save_quick_links(st.session_state.quick_links)
-    
-    # Сбрасываем сессию
-    st.session_state.is_logged_in = False
-    st.session_state.user_data = {}
-    st.session_state.quick_links = [
-        {"name": "YouTube", "url": "https://www.youtube.com", "icon": "📺"},
-        {"name": "Gmail", "url": "https://mail.google.com", "icon": "📧"},
-    ]
-    st.session_state.page = "Главная"
-    st.rerun()
+        if st.button("🚪 Выйти из аккаунта", type="primary", use_container_width=True):
+            # Сохраняем быстрые ссылки перед выходом
+            if st.session_state.is_logged_in and "quick_links" in st.session_state:
+                save_quick_links(st.session_state.quick_links)
+            
+            # Сбрасываем сессию
+            st.session_state.is_logged_in = False
+            st.session_state.user_data = {}
+            st.session_state.quick_links = [
+                {"name": "Google", "url": "https://www.google.com", "icon": "🔍"},
+                {"name": "YouTube", "url": "https://www.youtube.com", "icon": "📺"},
+                {"name": "Gmail", "url": "https://mail.google.com", "icon": "📧"},
+                {"name": "ChatGPT", "url": "https://chat.openai.com", "icon": "🤖"},
+            ]
+            st.session_state.page = "Главная"
+            st.rerun()
     
     else:
         st.markdown('<div class="giant-id-title">ZORNET ID</div>', unsafe_allow_html=True)
@@ -2018,6 +2056,12 @@ if st.session_state.is_logged_in and "quick_links" in st.session_state:
                     if user:
                         st.session_state.user_data = user
                         st.session_state.is_logged_in = True
+                        
+                        # Загружаем сохраненные быстрые ссылки пользователя
+                        saved_links = load_quick_links()
+                        if saved_links:
+                            st.session_state.quick_links = saved_links
+                        
                         st.success("✅ Вход выполнен!")
                         st.session_state.page = "Главная"
                         st.rerun()
