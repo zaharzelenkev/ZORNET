@@ -59,6 +59,7 @@ def load_quick_links():
 # ================= НАСТРОЙКИ =================
 st.set_page_config(
     page_title="ZORNET",
+    page_icon="🌐",  # ← ДОБАВЬТЕ ЭТУ СТРОКУ ДЛЯ ИКОНКИ САЙТА!
     layout="wide",
     initial_sidebar_state="expanded"
 )
