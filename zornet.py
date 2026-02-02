@@ -1353,44 +1353,47 @@ elif st.session_state.page == "Мессенджер":  # ← ТЕПЕРЬ ЭТО
 with col_chat:
     if st.session_state.chat_partner:
         partner = st.session_state.chat_partner
-        
-        # Заголовок чата - ПРОСТАЯ ВЕРСИЯ без сложного форматирования
-        st.markdown(f'''
-        <div style="background: white; padding: 15px; border-radius: 10px; border: 1px solid #e0e0e0; margin-bottom: 15px;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #DAA520, #B8860B); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                    {partner.get("first_name", "?")[0]}
-                </div>
-                <div>
-                    <div style="font-weight: 600; font-size: 18px;">
-                        {partner.get("first_name", "")} {partner.get("last_name", "")}
-                    </div>
-                    <div style="font-size: 14px; color: #666;">
-                        @{partner.get("username", "")}
-                    </div>
-                </div>
+
+# Заголовок чата - ПРОСТАЯ ВЕРСИЯ без сложного форматирования
+st.markdown(f'''
+<div style="background: white; padding: 15px; border-radius: 10px; border: 1px solid #e0e0e0; margin-bottom: 15px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #DAA520, #B8860B); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+            {partner.get("first_name", "?")[0]}
+        </div>
+        <div>
+            <div style="font-weight: 600; font-size: 18px;">
+                {partner.get("first_name", "")} {partner.get("last_name", "")}
+            </div>
+            <div style="font-size: 14px; color: #666;">
+                @{partner.get("username", "")}
             </div>
         </div>
-        ''', unsafe_allow_html=True)
-        
-        # История сообщений
+    </div>
+</div>
+''', unsafe_allow_html=True)
+
+# История сообщений
 if "messages" not in st.session_state:
     st.session_state.messages = {}
 
 current_user = st.session_state.user_data.get("username", "")
 partner_user = partner.get("username", "")
-        
-        if chat_key not in st.session_state.messages:
-            # Загружаем из БД
-            db_messages = get_chat_history(current_user, partner_user)
-            st.session_state.messages[chat_key] = []
-            for msg in db_messages:
-                st.session_state.messages[chat_key].append({
-                    "sender": msg[0],
-                    "receiver": msg[1],
-                    "text": msg[2],
-                    "time": msg[3]
-                })
+
+# Определяем chat_key
+chat_key = f"{current_user}_{partner_user}"
+
+if chat_key not in st.session_state.messages:
+    # Загружаем из БД
+    db_messages = get_chat_history(current_user, partner_user)
+    st.session_state.messages[chat_key] = []
+    for msg in db_messages:
+        st.session_state.messages[chat_key].append({
+            "sender": msg[0],
+            "receiver": msg[1],
+            "text": msg[2],
+            "time": msg[3]
+        })
         
         # Показываем сообщения
         chat_container = st.container(height=400)
