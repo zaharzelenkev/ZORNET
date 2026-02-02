@@ -752,33 +752,116 @@ if st.session_state.page == "Главная":
     
     st.markdown("---")
     
-    # ПОИСКОВАЯ СИСТЕМА
-    st.markdown("### 🔍 Поиск в интернете")
+    # Добавьте этот CSS для исправления выравнивания кнопок
+    st.markdown("""
+    <style>
+        /* Стиль для выровненных кнопок на главной */
+        div[data-testid="column"] {
+            align-items: center !important;
+        }
+        
+        /* Фиксируем высоту кнопок для равного размера */
+        div.stButton > button {
+            height: 80px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            align-items: center !important;
+            margin: 0 5px !important;
+            font-size: 14px !important;
+            line-height: 1.3 !important;
+            white-space: pre-line !important;
+            text-align: center !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
     
-    # Используем Streamlit элементы вместо HTML
-    search_col1, search_col2 = st.columns([4, 1])
+    if not st.session_state.is_logged_in:
+        st.warning("⚠️ Вы не авторизованы. Перейдите в профиль для входа.")
     
-    with search_col1:
-        search_query = st.text_input(
-            "Введите запрос для поиска:",
-            placeholder="Например: новости, погода, видео...",
-            label_visibility="collapsed"
-        )
-    
-    with search_col2:
-        search_clicked = st.button("🔍 Искать", type="primary", use_container_width=True)
-    
-    # Обработка поиска
-    if search_clicked and search_query:
-        # Открываем поиск Google в новом окне
-        search_url = f"https://www.google.com/search?q={search_query}"
-        js_code = f'''
-        <script>
-            window.open("{search_url}", "_blank");
-        </script>
-        '''
-        components.html(js_code, height=0)
-        st.info(f"🔍 Поиск: {search_query}")
+    # ВАШ СУЩЕСТВУЮЩИЙ HTML КОД ДЛЯ ПОИСКА...
+    components.html("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: transparent;
+            font-family: 'Helvetica Neue', sans-serif;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .search-container {
+            width: 100%;
+            max-width: 600px;
+            padding: 10px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 18px 25px;
+            font-size: 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 30px;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            background-color: #ffffff;
+            color: #333;
+            box-sizing: border-box;
+            -webkit-appearance: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: #DAA520;
+            box-shadow: 0 0 15px rgba(218, 165, 32, 0.2);
+        }
+
+        button {
+            margin-top: 20px;
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            -webkit-appearance: none;
+            width: 100%;
+            max-width: 250px;
+        }
+
+        button:hover {
+            transform: scale(1.03);
+            box-shadow: 0 6px 20px rgba(218, 165, 32, 0.6);
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+    </style>
+    </head>
+    <body>
+        <div class="search-container">
+            <form action="https://www.google.com/search" method="get" target="_top">
+                <input type="text" name="q" placeholder="🔍 Введите запрос..." required autocomplete="off">
+                <br>
+                <button type="submit">ИСКАТЬ</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    """, height=220)
     
     st.markdown("---")
     
