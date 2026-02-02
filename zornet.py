@@ -1451,13 +1451,6 @@ elif st.session_state.page == "Диск":
         # ОСНОВНОЙ РЕЖИМ ПРОСМОТРА ФАЙЛОВ
         st.markdown("### 📁 Файлы и папки")
 
-        # Быстрая загрузка (всегда доступна)
-        quick_upload = st.file_uploader(
-            "Загрузить файлы (можно перетащить)",
-            accept_multiple_files=True,
-            key="quick_upload"
-        )
-
         if quick_upload:
             for file in quick_upload:
                 file_path = os.path.join(st.session_state.disk_current_path, file.name)
