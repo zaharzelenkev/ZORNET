@@ -1080,7 +1080,7 @@ if st.session_state.page == "Главная":
     """, height=220)
     
     st.markdown("---")
-    
+
     # БЫСТРЫЕ ССЫЛКИ
     st.markdown("### 🚀 Быстрые ссылки")
     
@@ -1144,46 +1144,68 @@ if st.session_state.page == "Главная":
         st.markdown("---")
     
     # Отображение быстрых ссылок
-quick_links = st.session_state.quick_links
-
-if not quick_links:
-    st.info("Нет быстрых ссылок. Добавьте первую!")
-else:
-    # Показываем ссылки в сетке
-    for i in range(0, len(quick_links), 4):
-        cols = st.columns(4)
-        row_links = quick_links[i:i+4]
-        
-        for j, link in enumerate(row_links):
-            with cols[j]:
-                # Создаем уникальный ключ
-                delete_key = f"delete_{link['name']}_{hash(link['url'])}"
-                
-                # Используем контейнер с абсолютным позиционированием
-                st.markdown(f"""
-                <div class="quick-link-card" style="position: relative;">
-                    <a href="{link['url']}" target="_blank" style="text-decoration: none; color: inherit;">
-                        <div style="font-size: 2.5rem; margin-bottom: 10px;">{link['icon']}</div>
-                        <div style="font-weight: 600; font-size: 0.9rem;">{link['name']}</div>
-                    </a>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Кнопка удаления поверх карточки
-                col1, col2, col3 = st.columns([1, 1, 1])
-                with col2:
-                    # Используем пустую колонку для позиционирования
-                    pass
-                with col3:
-                    # Маленькая круглая кнопка удаления
-                    if st.button("×", 
-                                key=delete_key,
-                                help="Удалить",
-                                type="secondary"):
-                        st.session_state.quick_links.remove(link)
-                        save_quick_links(st.session_state.quick_links)
-                        st.success(f"Ссылка '{link['name']}' удалена!")
-                        st.rerun()
+    st.markdown("#### Ваши ссылки:")
+    
+    quick_links = st.session_state.quick_links
+    
+    if not quick_links:
+        st.info("Нет быстрых ссылок. Добавьте первую!")
+    else:
+        # Показываем ссылки в сетке 4x2
+        for i in range(0, len(quick_links), 4):
+            cols = st.columns(4)
+            row_links = quick_links[i:i+4]
+            
+            for j, link in enumerate(row_links):
+                with cols[j]:
+                    # Создаем уникальный ключ для удаления
+                    delete_key = f"delete_{link['name']}_{hash(link['url'])}"
+                    
+                    # Карточка ссылки
+                    st.markdown(f"""
+                    <div style="
+                        background: white;
+                        border-radius: 15px;
+                        padding: 15px;
+                        margin: 5px;
+                        border: 1px solid #e0e0e0;
+                        text-align: center;
+                        transition: all 0.3s ease;
+                        min-height: 120px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        position: relative;
+                    ">
+                        <div>
+                            <div style="font-size: 2.5rem; margin-bottom: 10px;">{link['icon']}</div>
+                            <div style="font-weight: 600; font-size: 0.9rem;">{link['name']}</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Кнопки под карточкой
+                    col_open, col_del = st.columns([3, 1])
+                    
+                    with col_open:
+                        if st.button("🌐 Открыть", 
+                                   key=f"open_{link['name']}_{i}_{j}",
+                                   use_container_width=True,
+                                   type="primary"):
+                            js_code = f'window.open("{link["url"]}", "_blank");'
+                            components.html(f"<script>{js_code}</script>", height=0)
+                    
+                    with col_del:
+                        # Маленькая кнопка удаления
+                        if st.button("🗑️", 
+                                   key=delete_key,
+                                   help="Удалить",
+                                   use_container_width=True,
+                                   type="secondary"):
+                            st.session_state.quick_links.remove(link)
+                            save_quick_links(st.session_state.quick_links)
+                            st.success(f"Ссылка '{link['name']}' удалена!")
+                            st.rerun()
 
 # ================= МЕССЕНДЖЕР =================
 elif st.session_state.page == "Мессенджер":
