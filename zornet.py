@@ -2278,31 +2278,32 @@ elif st.session_state.page == "Профиль":
         if st.button("🚪 Выйти из аккаунта", type="primary", use_container_width=True):
             # Сохраняем быстрые ссылки перед выходом
             save_quick_links(st.session_state.quick_links)
-        
-        # Удаляем состояние входа из хранилища
-storage = load_storage()
-if "current_auth" in storage:
-    storage["current_auth"]["is_logged_in"] = False
-    storage["current_auth"]["user_data"] = {}
-    save_storage(storage)
+            
+            # Сбрасываем сессию
+            st.session_state.is_logged_in = False
+            st.session_state.user_data = {}
+            st.session_state.quick_links = [
+                {"name": "YouTube", "url": "https://www.youtube.com", "icon": "📺"},
+                {"name": "Gmail", "url": "https://mail.google.com", "icon": "📧"},
+            ]
+            st.session_state.registration_success = False
+            st.session_state.page = "Главная"
+            
+            # Очищаем авторизацию в хранилище
+            storage = load_storage()
+            if "current_auth" in storage:
+                storage["current_auth"]["is_logged_in"] = False
+                storage["current_auth"]["user_data"] = {}
+                save_storage(storage)
+            
+            st.rerun()
     
-# Сбрасываем сессию
-st.session_state.is_logged_in = False
-st.session_state.user_data = {}
-st.session_state.quick_links = [
-        {"name": "YouTube", "url": "https://www.youtube.com", "icon": "📺"},
-        {"name": "Gmail", "url": "https://mail.google.com", "icon": "📧"},
-    ]
-st.session_state.registration_success = False
-st.session_state.page = "Главная"
-st.rerun()
-    
-else:
-    st.markdown('<div class="giant-id-title">ZORNET ID</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="giant-id-title">ZORNET ID</div>', unsafe_allow_html=True)
         
-    st.markdown('<div class="login-container">', unsafe_allow_html=True)
+        st.markdown('<div class="login-container">', unsafe_allow_html=True)
         
-    tab1, tab2 = st.tabs(["Вход", "Регистрация"])
+        tab1, tab2 = st.tabs(["Вход", "Регистрация"])
         
         with tab1:
             st.markdown("### Вход в аккаунт")
@@ -2320,6 +2321,14 @@ else:
                         saved_links = load_quick_links()
                         if saved_links:
                             st.session_state.quick_links = saved_links
+                        
+                        # Сохраняем состояние входа в хранилище
+                        storage = load_storage()
+                        if "current_auth" not in storage:
+                            storage["current_auth"] = {}
+                        storage["current_auth"]["is_logged_in"] = True
+                        storage["current_auth"]["user_data"] = user
+                        save_storage(storage)
                         
                         st.success("✅ Вход выполнен!")
                         st.session_state.page = "Главная"
@@ -2347,15 +2356,7 @@ else:
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-
-                # Сохраняем состояние входа в хранилище
-storage = load_storage()
-if "current_auth" not in storage:
-    storage["current_auth"] = {}
-storage["current_auth"]["is_logged_in"] = True
-storage["current_auth"]["user_data"] = user
-save_storage(storage)
-
+                
                 # Кнопки после успешной регистрации
                 col1, col2 = st.columns(2)
                 with col1:
