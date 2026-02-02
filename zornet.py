@@ -272,7 +272,7 @@ st.markdown("""
         background: white !important;
         border: 2px solid #DAA520 !important;
         color: #B8860B !important;
-        padding: 10px 15px !important;
+        padding: 10px 10px !important;
         border-radius: 8px !important;
         font-weight: 600 !important;
         transition: all 0.3s ease !important;
