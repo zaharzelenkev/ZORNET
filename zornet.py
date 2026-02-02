@@ -1110,7 +1110,7 @@ if st.session_state.page == "Главная":
                     st.markdown(f"""
                     <div style="
                         background: white;
-                        border-radius: 20px;
+                        border-radius: 15px;
                         padding: 15px;
                         margin: 5px;
                         border: 1px solid #e0e0e0;
@@ -1139,7 +1139,7 @@ if st.session_state.page == "Главная":
                     
                     .stButton button {
                         width: 100% !important;
-                        margin: 5px 0 !important;
+                        margin: 40px 0 !important;
                         min-height: 40px;
                         display: flex;
                         align-items: center;
