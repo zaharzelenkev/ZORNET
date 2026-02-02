@@ -119,6 +119,14 @@ if "quick_links" not in st.session_state:
 
 if "show_add_link" not in st.session_state:
     st.session_state.show_add_link = False
+if "registration_success" not in st.session_state:
+    st.session_state.registration_success = False
+if "registration_message" not in st.session_state:
+    st.session_state.registration_message = ""
+if "new_user_email" not in st.session_state:
+    st.session_state.new_user_email = ""
+if "new_user_username" not in st.session_state:
+    st.session_state.new_user_username = ""
 
 # ================= ОБНОВЛЕННЫЕ CSS СТИЛИ =================
 st.markdown("""
@@ -466,6 +474,16 @@ st.markdown("""
         box-shadow: 0 10px 40px rgba(0,0,0,0.1);
         border: 1px solid #e0e0e0;
     }
+    
+    /* Стили для сообщения об успешной регистрации */
+    .success-message {
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin: 15px 0;
+        border-left: 5px solid #2E7D32;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -505,7 +523,7 @@ def init_db():
             room_id TEXT UNIQUE NOT NULL,
             name TEXT NOT NULL,
             youtube_url TEXT NOT NULL,
-            password_hash TEXT NOT NULL,
+            password TEXT NOT NULL,
             owner_username TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -563,7 +581,12 @@ def register_user(email, username, first_name, last_name, password):
         user_folder = Path(f"zornet_cloud/{username}")
         user_folder.mkdir(parents=True, exist_ok=True)
         
-        return {"success": True, "message": "Аккаунт успешно создан!"}
+        return {
+            "success": True, 
+            "message": "Аккаунт успешно создан!",
+            "email": email,
+            "username": username
+        }
     except sqlite3.IntegrityError as e:
         error_msg = str(e)
         if "UNIQUE constraint failed: users.email" in error_msg:
@@ -642,6 +665,19 @@ def save_chat_message(sender, receiver, message):
     conn.commit()
     conn.close()
 
+def save_room_message_to_db(room_id, username, message):
+    """Сохранение сообщения в комнате в БД"""
+    conn = sqlite3.connect("zornet.db")
+    c = conn.cursor()
+    
+    c.execute("""
+        INSERT INTO room_messages (room_id, username, message)
+        VALUES (?, ?, ?)
+    """, (room_id, username, message))
+    
+    conn.commit()
+    conn.close()
+
 def save_room_message(room_id, username, message):
     """Сохранение сообщения в комнате"""
     if room_id not in st.session_state.room_messages:
@@ -670,6 +706,69 @@ def get_chat_history(user1, user2):
     conn.close()
     
     return messages
+
+def create_watch_room(room_id, name, youtube_url, password, owner_username):
+    """Создание комнаты в БД"""
+    conn = sqlite3.connect("zornet.db")
+    c = conn.cursor()
+    
+    try:
+        c.execute("""
+            INSERT INTO watch_rooms (room_id, name, youtube_url, password, owner_username)
+            VALUES (?, ?, ?, ?, ?)
+        """, (room_id, name, youtube_url, password, owner_username))
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Ошибка создания комнаты: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_watch_room(room_id, password):
+    """Получение комнаты из БД"""
+    conn = sqlite3.connect("zornet.db")
+    c = conn.cursor()
+    
+    c.execute("""
+        SELECT room_id, name, youtube_url, password, owner_username
+        FROM watch_rooms 
+        WHERE room_id = ? AND password = ?
+    """, (room_id, password))
+    
+    room = c.fetchone()
+    conn.close()
+    
+    if room:
+        return {
+            "id": room[0],
+            "name": room[1],
+            "youtube_url": room[2],
+            "password": room[3],
+            "owner": room[4]
+        }
+    return None
+
+def get_all_watch_rooms():
+    """Получение всех комнат из БД"""
+    conn = sqlite3.connect("zornet.db")
+    c = conn.cursor()
+    
+    c.execute("SELECT room_id, name, youtube_url, password, owner_username FROM watch_rooms")
+    rooms = c.fetchall()
+    conn.close()
+    
+    return [
+        {
+            "id": room[0],
+            "name": room[1],
+            "youtube_url": room[2],
+            "password": room[3],
+            "owner": room[4]
+        }
+        for room in rooms
+    ]
 
 # ================= САЙДБАР =================
 with st.sidebar:
@@ -1254,13 +1353,26 @@ elif st.session_state.page == "Кинотеатр":
         # Если пользователь уже в комнате
         if st.session_state.get("watch_room"):
             room_id = st.session_state.watch_room
-            room_data = None
             
-            # Находим комнату
+            # Получаем комнату из БД
+            room_data = None
+            # Сначала проверяем в сессии
             for room in st.session_state.rooms:
                 if room["id"] == room_id:
                     room_data = room
                     break
+            
+            # Если не нашли в сессии, пробуем найти в БД
+            if not room_data:
+                # Загружаем все комнаты из БД
+                db_rooms = get_all_watch_rooms()
+                for room in db_rooms:
+                    if room["id"] == room_id:
+                        room_data = room
+                        # Добавляем в сессию для быстрого доступа
+                        if room not in st.session_state.rooms:
+                            st.session_state.rooms.append(room)
+                        break
             
             if room_data:
                 # Извлекаем ID видео из YouTube URL
@@ -1282,7 +1394,7 @@ elif st.session_state.page == "Кинотеатр":
                 
                 # Заголовок комнаты
                 st.markdown(f"### 🎥 {room_data['name']}")
-                st.markdown(f"**ID комнаты:** `{room_id}` | **Пароль:** `{room_data['password']}`")
+                st.markdown(f"**ID комнаты:** `{room_id}` | **Создатель:** @{room_data['owner']}")
                 
                 # YouTube плеер
                 if video_id:
@@ -1305,7 +1417,7 @@ elif st.session_state.page == "Кинотеатр":
                     # Добавляем приветственное сообщение
                     st.session_state.room_messages[room_chat_key] = [{
                         "username": "Система",
-                        "message": f"Добро пожаловать в комнату '{room_data['name']}'! ID: {room_id}, Пароль: {room_data['password']}",
+                        "message": f"Добро пожаловать в комнату '{room_data['name']}'!",
                         "timestamp": datetime.datetime.now().strftime("%H:%M")
                     }]
                 
@@ -1353,6 +1465,8 @@ elif st.session_state.page == "Кинотеатр":
                         if room_message.strip():
                             username = st.session_state.user_data.get("username", "Гость")
                             save_room_message(room_chat_key, username, room_message)
+                            # Также сохраняем в БД
+                            save_room_message_to_db(room_id, username, room_message)
                             st.rerun()
                 
                 # Кнопка выхода
@@ -1369,40 +1483,64 @@ elif st.session_state.page == "Кинотеатр":
             st.markdown("### Создать комнату")
             room_name = st.text_input("Название комнаты:", value="Моя комната", key="room_name")
             youtube_url = st.text_input("YouTube ссылка:", placeholder="https://www.youtube.com/watch?v=...", key="youtube_url")
-            room_password = st.text_input("Пароль:", type="password", key="room_password")
+            room_password = st.text_input("Пароль комнаты:", type="password", key="room_password")
             
             if st.button("🎥 Создать комнату", type="primary", use_container_width=True):
                 if room_name and youtube_url and room_password:
                     room_id = str(uuid.uuid4())[:8]
-                    st.session_state.rooms.append({
-                        "id": room_id,
-                        "name": room_name,
-                        "youtube_url": youtube_url,
-                        "password": room_password,
-                        "owner": st.session_state.user_data.get("username", "Гость"),
-                        "created": datetime.datetime.now().strftime("%H:%M")
-                    })
-                    st.session_state.watch_room = room_id
-                    st.success(f"Комната создана! ID: {room_id}")
-                    st.rerun()
+                    owner = st.session_state.user_data.get("username", "Гость")
+                    
+                    # Сохраняем комнату в БД
+                    if create_watch_room(room_id, room_name, youtube_url, room_password, owner):
+                        # Также добавляем в сессию для текущего пользователя
+                        st.session_state.rooms.append({
+                            "id": room_id,
+                            "name": room_name,
+                            "youtube_url": youtube_url,
+                            "password": room_password,
+                            "owner": owner,
+                            "created": datetime.datetime.now().strftime("%H:%M")
+                        })
+                        st.session_state.watch_room = room_id
+                        st.success(f"✅ Комната создана! ID: `{room_id}`, Пароль: `{room_password}`")
+                        st.info("⚠️ Сообщите ID и пароль другим пользователям для входа")
+                        st.rerun()
+                    else:
+                        st.error("Ошибка создания комнаты")
         
         with col_join:
             st.markdown("### Присоединиться к комнате")
-            join_id = st.text_input("ID комнаты:", placeholder="Введите ID", key="join_id")
-            join_password = st.text_input("Пароль для входа:", type="password", key="join_password")
+            join_id = st.text_input("ID комнаты:", placeholder="Введите ID комнаты", key="join_id")
+            join_password = st.text_input("Пароль комнаты:", type="password", key="join_password")
             
             if st.button("🔗 Присоединиться", type="primary", use_container_width=True):
                 if join_id and join_password:
-                    room_found = False
-                    for room in st.session_state.rooms:
-                        if room["id"] == join_id and room["password"] == join_password:
-                            st.session_state.watch_room = room["id"]
-                            st.success("Вы присоединились к комнате!")
-                            st.rerun()
-                            room_found = True
-                            break
-                    if not room_found:
-                        st.error("Комната не найдена или неверный пароль")
+                    # Ищем комнату в БД
+                    room_data = get_watch_room(join_id, join_password)
+                    
+                    if room_data:
+                        # Добавляем комнату в сессию, если её там нет
+                        room_exists = False
+                        for room in st.session_state.rooms:
+                            if room["id"] == join_id:
+                                room_exists = True
+                                break
+                        
+                        if not room_exists:
+                            st.session_state.rooms.append({
+                                "id": room_data["id"],
+                                "name": room_data["name"],
+                                "youtube_url": room_data["youtube_url"],
+                                "password": room_data["password"],
+                                "owner": room_data["owner"],
+                                "created": "Из БД"
+                            })
+                        
+                        st.session_state.watch_room = room_data["id"]
+                        st.success(f"✅ Вы присоединились к комнате '{room_data['name']}'!")
+                        st.rerun()
+                    else:
+                        st.error("❌ Комната не найдена или неверный пароль")
 
 # ================= ПРОФЕССИОНАЛЬНЫЙ ОБЛАЧНЫЙ ДИСК ZORNET DISK =================
 elif st.session_state.page == "Диск":
@@ -2035,11 +2173,10 @@ elif st.session_state.page == "Профиль":
             st.session_state.is_logged_in = False
             st.session_state.user_data = {}
             st.session_state.quick_links = [
-                {"name": "Google", "url": "https://www.google.com", "icon": "🔍"},
                 {"name": "YouTube", "url": "https://www.youtube.com", "icon": "📺"},
                 {"name": "Gmail", "url": "https://mail.google.com", "icon": "📧"},
-                {"name": "ChatGPT", "url": "https://chat.openai.com", "icon": "🤖"},
             ]
+            st.session_state.registration_success = False
             st.session_state.page = "Главная"
             st.rerun()
     
@@ -2071,31 +2208,66 @@ elif st.session_state.page == "Профиль":
                         st.session_state.page = "Главная"
                         st.rerun()
                     else:
-                        st.error("Неверный email или пароль")
+                        st.error("❌ Неверный email или пароль")
         
         with tab2:
             st.markdown("### Регистрация")
-            reg_email = st.text_input("Email", key="reg_email")
-            reg_username = st.text_input("Никнейм", key="reg_username")
-            reg_first_name = st.text_input("Имя", key="reg_first_name")
-            reg_last_name = st.text_input("Фамилия", key="reg_last_name")
-            reg_password = st.text_input("Пароль", type="password", key="reg_password")
-            reg_password_confirm = st.text_input("Повторите пароль", type="password", key="reg_password_confirm")
             
-            if st.button("Создать аккаунт", type="primary", use_container_width=True):
-                if not all([reg_email, reg_username, reg_first_name, reg_password, reg_password_confirm]):
-                    st.error("Заполните все обязательные поля")
-                elif reg_password != reg_password_confirm:
-                    st.error("Пароли не совпадают")
-                elif len(reg_password) < 6:
-                    st.error("Пароль должен быть не менее 6 символов")
-                else:
-                    result = register_user(reg_email, reg_username, reg_first_name, reg_last_name, reg_password)
-                    if result["success"]:
-                        st.success("✅ Аккаунт создан! Теперь войдите в систему.")
+            # Если была успешная регистрация, показываем сообщение
+            if st.session_state.registration_success:
+                st.markdown(f"""
+                <div class="success-message">
+                    <div style="font-size: 1.2rem; font-weight: bold; margin-bottom: 10px;">
+                        ✅ {st.session_state.registration_message}
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        📝 <strong>Теперь войдите в аккаунт во вкладке "Вход"</strong>
+                    </div>
+                    <div style="background: rgba(255, 255, 255, 0.2); padding: 10px; border-radius: 5px; margin: 10px 0;">
+                        <div><strong>Ваши данные:</strong></div>
+                        <div>📧 Email: {st.session_state.new_user_email}</div>
+                        <div>👤 Никнейм: @{st.session_state.new_user_username}</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Кнопки после успешной регистрации
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("➡️ Перейти ко входу", type="primary", use_container_width=True):
+                        st.session_state.registration_success = False
+                        # Переключаемся на вкладку "Вход"
                         st.rerun()
+                with col2:
+                    if st.button("✏️ Создать ещё один аккаунт", type="secondary", use_container_width=True):
+                        st.session_state.registration_success = False
+                        st.rerun()
+            else:
+                # Форма регистрации
+                reg_email = st.text_input("Email", key="reg_email")
+                reg_username = st.text_input("Никнейм", key="reg_username")
+                reg_first_name = st.text_input("Имя", key="reg_first_name")
+                reg_last_name = st.text_input("Фамилия (необязательно)", key="reg_last_name")
+                reg_password = st.text_input("Пароль", type="password", key="reg_password")
+                reg_password_confirm = st.text_input("Повторите пароль", type="password", key="reg_password_confirm")
+                
+                if st.button("Создать аккаунт", type="primary", use_container_width=True):
+                    if not all([reg_email, reg_username, reg_first_name, reg_password, reg_password_confirm]):
+                        st.error("❌ Заполните все обязательные поля")
+                    elif reg_password != reg_password_confirm:
+                        st.error("❌ Пароли не совпадают")
+                    elif len(reg_password) < 6:
+                        st.error("❌ Пароль должен быть не менее 6 символов")
                     else:
-                        st.error(result["message"])
+                        result = register_user(reg_email, reg_username, reg_first_name, reg_last_name, reg_password)
+                        if result["success"]:
+                            st.session_state.registration_success = True
+                            st.session_state.registration_message = result["message"]
+                            st.session_state.new_user_email = result["email"]
+                            st.session_state.new_user_username = result["username"]
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {result['message']}")
         
         st.markdown('</div>', unsafe_allow_html=True)
 
