@@ -1355,7 +1355,7 @@ elif st.session_state.page == "Мессенджер":  # ← ТЕПЕРЬ ЭТО
             
             # Заголовок чата
             st.markdown(f"""
-            <div style="
+                <div style="
                 background: white;
                 padding: 15px;
                 border-radius: 10px;
