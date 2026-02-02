@@ -1110,7 +1110,7 @@ if st.session_state.page == "Главная":
                     st.markdown(f"""
                     <div style="
                         background: white;
-                        border-radius: 10px;
+                        border-radius: 20px;
                         padding: 15px;
                         margin: 5px;
                         border: 1px solid #e0e0e0;
