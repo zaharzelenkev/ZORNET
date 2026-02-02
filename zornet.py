@@ -255,7 +255,30 @@ st.markdown("""
         padding: 15px;
         text-align: center;
     }
-    
+
+    # Карточка с рамкой
+st.markdown(f"""
+<div class="link-card-frame">
+    <div class="center-content">
+        <!-- Эмодзи -->
+        <div style="font-size: 2.8rem; margin-bottom: 10px;">
+            {link['icon']}  # ← ЗДЕСЬ ДОЛЖНА БЫТЬ ИКОНКА ИЗ link['icon']
+        </div>
+        
+        <!-- Название -->
+        <div style="
+            font-weight: 600; 
+            font-size: 0.95rem; 
+            color: #333;
+            margin-bottom: 5px;
+            line-height: 1.3;
+        ">
+            {link['name']}
+        </div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
     /* Стили для диска */
     .disk-container {
         background: white;
