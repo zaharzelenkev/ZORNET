@@ -1222,14 +1222,6 @@ if st.session_state.page == "Главная":
                             <div class="link-icon">
                                 {link.get('icon', '🔗')}
                             </div>
-                            
-                            <!-- Название с улучшенным стилем -->
-                            <div class="link-name">
-                                {link['name']}
-                            </div>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
                     
                     # Кнопка "Открыть" под карточкой
                     if st.button("🌐 Открыть", 
