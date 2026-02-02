@@ -1082,7 +1082,7 @@ if st.session_state.page == "Главная":
     st.markdown("---")
 
     # БЫСТРЫЕ ССЫЛКИ
-    st.markdown("### 🚀 Быстрые ссылки")
+    st.markdown("### Быстрые ссылки")
     
     # Кнопка добавления новой ссылки
     if st.button("➕ Добавить ссылку", key="add_link_btn", type="secondary"):
@@ -1144,7 +1144,7 @@ if st.session_state.page == "Главная":
         st.markdown("---")
     
     # Отображение быстрых ссылок
-    st.markdown("#### Ваши ссылки:")
+    st.markdown("#### Избранное")
     
     quick_links = st.session_state.quick_links
     
@@ -1167,7 +1167,7 @@ if st.session_state.page == "Главная":
                         background: white;
                         border-radius: 15px;
                         padding: 15px;
-                        margin: 5px;
+                        margin: -15px;
                         border: 1px solid #e0e0e0;
                         text-align: center;
                         transition: all 0.3s ease;
@@ -1188,7 +1188,7 @@ if st.session_state.page == "Главная":
                     col_open, col_del = st.columns([3, 1])
                     
                     with col_open:
-                        if st.button("🌐 Открыть", 
+                        if st.button("Открыть", 
                                    key=f"open_{link['name']}_{i}_{j}",
                                    use_container_width=True,
                                    type="primary"):
