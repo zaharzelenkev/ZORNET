@@ -56,13 +56,18 @@ if "chat_partner" not in st.session_state:
     st.session_state.chat_partner = None
 if "room_messages" not in st.session_state:
     st.session_state.room_messages = {}
+# Загружаем быстрые ссылки из хранилища
 if "quick_links" not in st.session_state:
-    st.session_state.quick_links = [
-        {"name": "Google", "url": "https://www.google.com", "icon": "🔍"},
-        {"name": "YouTube", "url": "https://www.youtube.com", "icon": "📺"},
-        {"name": "Gmail", "url": "https://mail.google.com", "icon": "📧"},
-        {"name": "ChatGPT", "url": "https://chat.openai.com", "icon": "🤖"},
-    ]
+    # Сначала пытаемся загрузить сохраненные ссылки
+    saved_links = load_quick_links()
+    if saved_links:
+        st.session_state.quick_links = saved_links
+    else:
+        # Если нет сохраненных, используем стандартные
+        st.session_state.quick_links = [
+            {"name": "YouTube", "url": "https://www.youtube.com", "icon": "📺"},
+            {"name": "Gmail", "url": "https://mail.google.com", "icon": "📧"},
+        ]
 
 if "show_add_link" not in st.session_state:
     st.session_state.show_add_link = False
@@ -560,6 +565,47 @@ def get_user_by_username(username):
             "first_name": user[3],
             "last_name": user[4]
         }
+    return None
+
+def load_storage():
+    """Загружает данные из файла"""
+    storage_file = Path("zornet_storage.json")
+    if storage_file.exists():
+        try:
+            with open(storage_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def save_storage(data):
+    """Сохраняет данные в файл"""
+    storage_file = Path("zornet_storage.json")
+    with open(storage_file, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def save_quick_links(links):
+    """Сохраняет быстрые ссылки для текущего пользователя"""
+    storage = load_storage()
+    if st.session_state.is_logged_in:
+        username = st.session_state.user_data.get("username")
+        if username:
+            if "users" not in storage:
+                storage["users"] = {}
+            if username not in storage["users"]:
+                storage["users"][username] = {}
+            storage["users"][username]["quick_links"] = links
+            save_storage(storage)
+
+def load_quick_links():
+    """Загружает быстрые ссылки для текущего пользователя"""
+    if st.session_state.is_logged_in:
+        username = st.session_state.user_data.get("username")
+        if username:
+            storage = load_storage()
+            user_links = storage.get("users", {}).get(username, {}).get("quick_links")
+            if user_links:
+                return user_links
     return None
 
 def save_chat_message(sender, receiver, message):
