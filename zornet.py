@@ -1374,12 +1374,11 @@ with col_chat:
         ''', unsafe_allow_html=True)
         
         # История сообщений
-        if "messages" not in st.session_state:
-            st.session_state.messages = {}
-        
-        current_user = st.session_state.user_data.get("username", "")
-        partner_user = partner.get("username", "")
-        chat_key = f"{current_user}_{partner_user}"
+if "messages" not in st.session_state:
+    st.session_state.messages = {}
+
+current_user = st.session_state.user_data.get("username", "")
+partner_user = partner.get("username", "")
         
         if chat_key not in st.session_state.messages:
             # Загружаем из БД
