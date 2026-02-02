@@ -1170,7 +1170,7 @@ if st.session_state.page == "Главная":
                     st.markdown(f"""
                     <div style="
                         background: white;
-                        border-radius: -15px;
+                        border-radius: 15px;
                         padding: 15px;
                         margin: 5px;
                         border: 1px solid #e0e0e0;
@@ -1183,7 +1183,7 @@ if st.session_state.page == "Главная":
                         position: relative;
                     ">
                         <div>
-                            <div style="font-size: 2.5rem; margin-bottom: 10px;">{link['icon']}</div>
+                            <div style="font-size: 2.5rem; margin-bottom: -10px;">{link['icon']}</div>
                             <div style="font-weight: 600; font-size: 0.9rem;">{link['name']}</div>
                         </div>
                     </div>
