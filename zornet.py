@@ -2297,12 +2297,12 @@ st.session_state.registration_success = False
 st.session_state.page = "Главная"
 st.rerun()
     
-    else:
-        st.markdown('<div class="giant-id-title">ZORNET ID</div>', unsafe_allow_html=True)
+else:
+    st.markdown('<div class="giant-id-title">ZORNET ID</div>', unsafe_allow_html=True)
         
-        st.markdown('<div class="login-container">', unsafe_allow_html=True)
+    st.markdown('<div class="login-container">', unsafe_allow_html=True)
         
-        tab1, tab2 = st.tabs(["Вход", "Регистрация"])
+    tab1, tab2 = st.tabs(["Вход", "Регистрация"])
         
         with tab1:
             st.markdown("### Вход в аккаунт")
