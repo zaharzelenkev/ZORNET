@@ -272,7 +272,7 @@ st.markdown("""
         background: white !important;
         border: 2px solid #DAA520 !important;
         color: #B8860B !important;
-        padding: 10px 5px !important;
+        padding: 10px 15px !important;
         border-radius: 8px !important;
         font-weight: 600 !important;
         transition: all 0.3s ease !important;
@@ -293,7 +293,7 @@ st.markdown("""
     .file-card {
         background: #f8f9fa;
         border-radius: 10px;
-        padding: 15px;
+        padding: 10px;
         margin: 10px 0;
         border-left: 4px solid #DAA520;
         transition: all 0.3s ease;
