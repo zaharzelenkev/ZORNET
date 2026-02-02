@@ -1082,12 +1082,18 @@ if st.session_state.page == "Главная":
     st.markdown("---")
 
     # БЫСТРЫЕ ССЫЛКИ
-    st.markdown("### Быстрые ссылки")
+    st.markdown("#### 📌 Быстрые ссылки")
     
-    # Кнопка добавления новой ссылки
-    if st.button("➕ Добавить ссылку", key="add_link_btn", type="secondary"):
-        st.session_state.show_add_link = not st.session_state.show_add_link
-        st.rerun()
+    # Создаем две колонки: заголовок и кнопка добавления
+    col_title, col_add = st.columns([3, 1])
+    
+    with col_title:
+        st.markdown("#### Ваши ссылки")
+    
+    with col_add:
+        if st.button("➕ Добавить", key="add_link_btn", type="secondary", use_container_width=True):
+            st.session_state.show_add_link = not st.session_state.show_add_link
+            st.rerun()
     
     # Форма добавления новой ссылки
     if st.session_state.show_add_link:
@@ -1097,22 +1103,23 @@ if st.session_state.page == "Главная":
         col_name, col_url, col_icon = st.columns([2, 3, 1])
         
         with col_name:
-            new_link_name = st.text_input("Название", placeholder="Например: Facebook")
+            new_link_name = st.text_input("Название", placeholder="Например: Facebook", key="new_name")
         
         with col_url:
-            new_link_url = st.text_input("URL", placeholder="https://facebook.com")
+            new_link_url = st.text_input("URL", placeholder="https://facebook.com", key="new_url")
         
         with col_icon:
             new_link_icon = st.selectbox(
                 "Иконка",
                 ["🔍", "📺", "📧", "🤖", "💻", "👥", "🌐", "🎮", "📚", "🎵", "🛒", "💼", "🎨", "📱", "🔧"],
-                index=0
+                index=0,
+                key="new_icon"
             )
         
         col_save, col_cancel = st.columns(2)
         
         with col_save:
-            if st.button("💾 Сохранить ссылку", type="primary", use_container_width=True):
+            if st.button("💾 Сохранить", type="primary", use_container_width=True):
                 if new_link_name and new_link_url:
                     # Проверяем корректность URL
                     if not new_link_url.startswith(('http://', 'https://')):
@@ -1144,13 +1151,41 @@ if st.session_state.page == "Главная":
         st.markdown("---")
     
     # Отображение быстрых ссылок
-    st.markdown("#### Избранное")
-    
     quick_links = st.session_state.quick_links
     
     if not quick_links:
-        st.info("Нет быстрых ссылок. Добавьте первую!")
+        st.info("📭 Нет быстрых ссылок. Нажмите 'Добавить', чтобы создать первую!")
     else:
+        # CSS стили для лучшего отображения
+        st.markdown("""
+        <style>
+        /* Стиль для маленькой кнопки удаления */
+        .small-delete-btn {
+            padding: 0 !important;
+            min-width: 30px !important;
+            height: 30px !important;
+            font-size: 12px !important;
+        }
+        
+        /* Стиль для карточки ссылки */
+        .link-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 5px 0;
+            border: 1px solid #e0e0e0;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .link-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-color: #DAA520;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
         # Показываем ссылки в сетке 4x2
         for i in range(0, len(quick_links), 4):
             cols = st.columns(4)
@@ -1158,54 +1193,65 @@ if st.session_state.page == "Главная":
             
             for j, link in enumerate(row_links):
                 with cols[j]:
-                    # Создаем уникальный ключ для удаления
-                    delete_key = f"delete_{link['name']}_{hash(link['url'])}"
+                    # Создаем уникальный ключ
+                    delete_key = f"delete_{link['name']}_{i}_{j}_{hash(link['url'])}"
                     
-                    # Карточка ссылки
+                    # Контейнер для карточки
                     st.markdown(f"""
-                    <div style="
-                        background: white;
-                        border-radius: 15px;
-                        padding: 15px;
-                        margin: 5px;
-                        border: 1px solid #e0e0e0;
-                        text-align: center;
-                        transition: all 0.3s ease;
-                        min-height: 120px;
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: space-between;
-                        position: relative;
-                    ">
-                        <div>
-                            <div style="font-size: 2.5rem; margin-bottom: 10px;">{link['icon']}</div>
-                            <div style="font-weight: 600; font-size: 0.9rem;">{link['name']}</div>
+                    <div class="link-card">
+                        <!-- Верхняя часть с иконкой и кнопкой удаления -->
+                        <div style="position: relative; margin-bottom: 10px;">
+                            <div style="font-size: 2.5rem; margin-bottom: 5px;">
+                                {link['icon']}
+                            </div>
+                            <div style="
+                                position: absolute;
+                                bottom: 0;
+                                right: 0;
+                                transform: translate(5px, 5px);
+                            ">
+                                <!-- Кнопка удаления будет здесь -->
+                            </div>
+                        </div>
+                        
+                        <!-- Название ссылки -->
+                        <div style="
+                            font-weight: 600; 
+                            font-size: 0.9rem; 
+                            margin-bottom: 10px;
+                            min-height: 40px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                        ">
+                            {link['name']}
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Кнопки под карточкой
-                    col_open, col_del = st.columns([3, 1])
+                    # Располагаем кнопки под карточкой
+                    # Используем columns для позиционирования кнопки удаления
+                    col_del_pos, col_btn = st.columns([1, 3])
                     
-                    with col_open:
-                        if st.button("Открыть", 
-                                   key=f"open_{link['name']}_{i}_{j}",
-                                   use_container_width=True,
-                                   type="primary"):
-                            js_code = f'window.open("{link["url"]}", "_blank");'
-                            components.html(f"<script>{js_code}</script>", height=0)
-                    
-                    with col_del:
-                        # Маленькая кнопка удаления
-                        if st.button("🗑️", 
+                    with col_del_pos:
+                        # Маленькая кнопка удаления в правом нижнем углу иконки
+                        if st.button("×", 
                                    key=delete_key,
                                    help="Удалить",
-                                   use_container_width=True,
                                    type="secondary"):
                             st.session_state.quick_links.remove(link)
                             save_quick_links(st.session_state.quick_links)
                             st.success(f"Ссылка '{link['name']}' удалена!")
                             st.rerun()
+                    
+                    with col_btn:
+                        # Кнопка "Открыть" на всю ширину
+                        if st.button("🌐 Открыть", 
+                                   key=f"open_{link['name']}_{i}_{j}",
+                                   use_container_width=True,
+                                   type="primary"):
+                            js_code = f'window.open("{link["url"]}", "_blank");'
+                            components.html(f"<script>{js_code}</script>", height=0)
 
 # ================= МЕССЕНДЖЕР =================
 elif st.session_state.page == "Мессенджер":
