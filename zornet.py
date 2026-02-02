@@ -123,7 +123,6 @@ if "show_add_link" not in st.session_state:
 # ================= ОБНОВЛЕННЫЕ CSS СТИЛИ =================
 st.markdown("""
 <style>
-
     /* ГЛАВНЫЙ ЗАГОЛОВОК */
     .gold-title {
         font-family: 'Helvetica Neue', sans-serif;
@@ -630,47 +629,6 @@ def get_user_by_username(username):
         }
     return None
 
-def load_storage():
-    """Загружает данные из файла"""
-    storage_file = Path("zornet_storage.json")
-    if storage_file.exists():
-        try:
-            with open(storage_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            return {}
-    return {}
-
-def save_storage(data):
-    """Сохраняет данные в файл"""
-    storage_file = Path("zornet_storage.json")
-    with open(storage_file, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-def save_quick_links(links):
-    """Сохраняет быстрые ссылки для текущего пользователя"""
-    storage = load_storage()
-    if st.session_state.is_logged_in:
-        username = st.session_state.user_data.get("username")
-        if username:
-            if "users" not in storage:
-                storage["users"] = {}
-            if username not in storage["users"]:
-                storage["users"][username] = {}
-            storage["users"][username]["quick_links"] = links
-            save_storage(storage)
-
-def load_quick_links():
-    """Загружает быстрые ссылки для текущего пользователя"""
-    if st.session_state.is_logged_in:
-        username = st.session_state.user_data.get("username")
-        if username:
-            storage = load_storage()
-            user_links = storage.get("users", {}).get(username, {}).get("quick_links")
-            if user_links:
-                return user_links
-    return None
-
 def save_chat_message(sender, receiver, message):
     """Сохранение сообщения в чате"""
     conn = sqlite3.connect("zornet.db")
@@ -1028,18 +986,8 @@ if st.session_state.page == "Главная":
                         st.rerun()
                 else:
                     st.error("Заполните название и URL")
-st.session_state.quick_links.append({
-    "name": new_link_name,
-    "url": new_link_url,
-    "icon": new_link_icon
-})
-# Сохраняем в хранилище
-save_quick_links(st.session_state.quick_links)
         
-st.session_state.quick_links.remove(link)
-save_quick_links(st.session_state.quick_links)
-
-with col_cancel:
+        with col_cancel:
             if st.button("❌ Отмена", use_container_width=True):
                 st.session_state.show_add_link = False
                 st.rerun()
@@ -2080,43 +2028,26 @@ elif st.session_state.page == "Профиль":
         """, unsafe_allow_html=True)
         
         if st.button("🚪 Выйти из аккаунта", type="primary", use_container_width=True):
-    # Сохраняем быстрые ссылки перед выходом
-    save_quick_links(st.session_state.quick_links)
-    
-    # Сбрасываем сессию
-    st.session_state.is_logged_in = False
-    st.session_state.user_data = {}
-    st.session_state.quick_links = [
-        {"name": "Google", "url": "https://www.google.com", "icon": "🔍"},
-        {"name": "YouTube", "url": "https://www.youtube.com", "icon": "📺"},
-        {"name": "Gmail", "url": "https://mail.google.com", "icon": "📧"},
-        {"name": "ChatGPT", "url": "https://chat.openai.com", "icon": "🤖"},
-    ]
-    st.session_state.page = "Главная"
-    st.rerun()
+            # Сохраняем быстрые ссылки перед выходом
+            save_quick_links(st.session_state.quick_links)
+            
+            # Сбрасываем сессию
+            st.session_state.is_logged_in = False
+            st.session_state.user_data = {}
+            st.session_state.quick_links = [
+                {"name": "Google", "url": "https://www.google.com", "icon": "🔍"},
+                {"name": "YouTube", "url": "https://www.youtube.com", "icon": "📺"},
+                {"name": "Gmail", "url": "https://mail.google.com", "icon": "📧"},
+                {"name": "ChatGPT", "url": "https://chat.openai.com", "icon": "🤖"},
+            ]
+            st.session_state.page = "Главная"
+            st.rerun()
     
     else:
         st.markdown('<div class="giant-id-title">ZORNET ID</div>', unsafe_allow_html=True)
         
         st.markdown('<div class="login-container">', unsafe_allow_html=True)
-        if st.button("Войти", type="primary", use_container_width=True):
-    if login_email and login_password:
-        user = login_user(login_email, login_password)
-        if user:
-            st.session_state.user_data = user
-            st.session_state.is_logged_in = True
-            
-            # Загружаем сохраненные быстрые ссылки пользователя
-            saved_links = load_quick_links()
-            if saved_links:
-                st.session_state.quick_links = saved_links
-            
-            st.success("✅ Вход выполнен!")
-            st.session_state.page = "Главная"
-            st.rerun()
-        else:
-            st.error("Неверный email или пароль")
-
+        
         tab1, tab2 = st.tabs(["Вход", "Регистрация"])
         
         with tab1:
