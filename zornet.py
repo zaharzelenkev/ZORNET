@@ -56,60 +56,20 @@ if "chat_partner" not in st.session_state:
     st.session_state.chat_partner = None
 if "room_messages" not in st.session_state:
     st.session_state.room_messages = {}
+if "quick_links" not in st.session_state:
+    st.session_state.quick_links = [
+        {"name": "Google", "url": "https://www.google.com", "icon": "🔍"},
+        {"name": "YouTube", "url": "https://www.youtube.com", "icon": "📺"},
+        {"name": "Gmail", "url": "https://mail.google.com", "icon": "📧"},
+        {"name": "ChatGPT", "url": "https://chat.openai.com", "icon": "🤖"},
+    ]
+
+if "show_add_link" not in st.session_state:
+    st.session_state.show_add_link = False
 
 # ================= ОБНОВЛЕННЫЕ CSS СТИЛИ =================
 st.markdown("""
 <style>
-    /* Убираем белую полосу под заголовком */
-    .stApp > header {
-        display: none !important;
-    }
-    
-    /* Делаем хедер прозрачным */
-    [data-testid="stHeader"] {
-        background: rgba(0,0,0,0) !important;
-        color: white !important;
-    }
-
-    /* Кнопка сайдбара */
-    button[data-testid="stSidebarCollapse"] {
-        position: fixed !important;
-        right: 20px !important;
-        top: 15px !important;
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-        border-radius: 8px !important;
-        width: 45px !important;
-        height: 45px !important;
-        z-index: 10000 !important;
-        display: flex !important;
-        justify-content: center !important;
-        align-items: center !important;
-        border: 1px solid rgba(255,255,255,0.2) !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
-    }
-
-    button[data-testid="stSidebarCollapse"] svg {
-        display: none !important;
-    }
-    
-    button[data-testid="stSidebarCollapse"]::after {
-        content: "☰" !important;
-        color: white !important;
-        font-size: 24px !important;
-        font-weight: bold !important;
-    }
-
-    [data-testid="stSidebar"] button[data-testid="stSidebarCollapse"] {
-        right: auto !important;
-        left: 10px !important;
-        top: 10px !important;
-        position: relative !important;
-    }
-
-    div[data-testid="stVerticalBlock"] > div:has(div.stMarkdown) {
-        padding: 0 !important;
-        margin: 0 !important;
-    }
 
     /* ГЛАВНЫЙ ЗАГОЛОВОК */
     .gold-title {
@@ -341,7 +301,31 @@ st.markdown("""
         border: none !important;
         padding: 0 !important;
     }
+
+        /* Стили для карточек быстрых ссылок */
+    .quick-link-card {
+        background: white;
+        border-radius: 12px;
+        padding: 15px;
+        margin: 5px;
+        border: 1px solid #e0e0e0;
+        text-align: center;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
     
+    .quick-link-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        border-color: #DAA520;
+    }
+    
+    .add-link-btn {
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%) !important;
+        color: white !important;
+        border: none !important;
+    }
+
     /* Мессенджер стили */
     .messenger-container {
         display: flex;
@@ -495,6 +479,15 @@ def register_user(email, username, first_name, last_name, password):
     c = conn.cursor()
     
     try:
+        # Сначала проверяем существование пользователей
+        c.execute("SELECT email FROM users WHERE email = ?", (email,))
+        if c.fetchone():
+            return {"success": False, "message": "Email уже используется"}
+        
+        c.execute("SELECT username FROM users WHERE username = ?", (username,))
+        if c.fetchone():
+            return {"success": False, "message": "Никнейм уже занят"}
+        
         password_hash = hashlib.sha256(password.encode()).hexdigest()
         
         c.execute("""
@@ -505,12 +498,15 @@ def register_user(email, username, first_name, last_name, password):
         conn.commit()
         return {"success": True, "message": "Аккаунт создан!"}
     except sqlite3.IntegrityError as e:
-        if "email" in str(e):
+        error_msg = str(e)
+        if "UNIQUE constraint failed: users.email" in error_msg:
             return {"success": False, "message": "Email уже используется"}
-        elif "username" in str(e):
+        elif "UNIQUE constraint failed: users.username" in error_msg:
             return {"success": False, "message": "Никнейм уже занят"}
         else:
-            return {"success": False, "message": "Ошибка регистрации"}
+            return {"success": False, "message": f"Ошибка регистрации"}
+    except Exception as e:
+        return {"success": False, "message": f"Ошибка: {str(e)}"}
     finally:
         conn.close()
 
@@ -756,116 +752,131 @@ if st.session_state.page == "Главная":
     
     st.markdown("---")
     
-    # Добавьте этот CSS для исправления выравнивания кнопок
-    st.markdown("""
-    <style>
-        /* Стиль для выровненных кнопок на главной */
-        div[data-testid="column"] {
-            align-items: center !important;
-        }
-        
-        /* Фиксируем высоту кнопок для равного размера */
-        div.stButton > button {
-            height: 80px !important;
-            display: flex !important;
-            flex-direction: column !important;
-            justify-content: center !important;
-            align-items: center !important;
-            margin: 0 5px !important;
-            font-size: 14px !important;
-            line-height: 1.3 !important;
-            white-space: pre-line !important;
-            text-align: center !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
+    # ПОИСКОВАЯ СИСТЕМА
+    st.markdown("### 🔍 Поиск в интернете")
     
-    if not st.session_state.is_logged_in:
-        st.warning("⚠️ Вы не авторизованы. Перейдите в профиль для входа.")
+    # Используем Streamlit элементы вместо HTML
+    search_col1, search_col2 = st.columns([4, 1])
     
-    # ВАШ СУЩЕСТВУЮЩИЙ HTML КОД ДЛЯ ПОИСКА...
-    components.html("""
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: transparent;
-            font-family: 'Helvetica Neue', sans-serif;
-            display: flex;
-            justify-content: center;
-        }
+    with search_col1:
+        search_query = st.text_input(
+            "Введите запрос для поиска:",
+            placeholder="Например: новости, погода, видео...",
+            label_visibility="collapsed"
+        )
+    
+    with search_col2:
+        search_clicked = st.button("🔍 Искать", type="primary", use_container_width=True)
+    
+    # Обработка поиска
+    if search_clicked and search_query:
+        # Открываем поиск Google в новом окне
+        search_url = f"https://www.google.com/search?q={search_query}"
+        js_code = f'''
+        <script>
+            window.open("{search_url}", "_blank");
+        </script>
+        '''
+        components.html(js_code, height=0)
+        st.info(f"🔍 Поиск: {search_query}")
+    
+    st.markdown("---")
+    
+    # БЫСТРЫЕ ССЫЛКИ
+    st.markdown("### 🚀 Быстрые ссылки")
+    
+    # Кнопка добавления новой ссылки
+    if st.button("➕ Добавить ссылку", key="add_link_btn", type="secondary"):
+        st.session_state.show_add_link = not st.session_state.show_add_link
+        st.rerun()
+    
+    # Форма добавления новой ссылки
+    if st.session_state.show_add_link:
+        st.markdown("---")
+        st.markdown("#### 📝 Добавить новую ссылку")
         
-        .search-container {
-            width: 100%;
-            max-width: 600px;
-            padding: 10px;
-            box-sizing: border-box;
-            text-align: center;
-        }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 18px 25px;
-            font-size: 18px;
-            border: 2px solid #e0e0e0;
-            border-radius: 30px;
-            outline: none;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            background-color: #ffffff;
-            color: #333;
-            box-sizing: border-box;
-            -webkit-appearance: none;
-        }
-
-        input[type="text"]:focus {
-            border-color: #DAA520;
-            box-shadow: 0 0 15px rgba(218, 165, 32, 0.2);
-        }
-
-        button {
-            margin-top: 20px;
-            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-            color: white;
-            border: none;
-            padding: 14px 40px;
-            border-radius: 25px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
-            transition: transform 0.2s, box-shadow 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            -webkit-appearance: none;
-            width: 100%;
-            max-width: 250px;
-        }
-
-        button:hover {
-            transform: scale(1.03);
-            box-shadow: 0 6px 20px rgba(218, 165, 32, 0.6);
-        }
+        col_name, col_url, col_icon = st.columns([2, 3, 1])
         
-        button:active {
-            transform: scale(0.98);
-        }
-    </style>
-    </head>
-    <body>
-        <div class="search-container">
-            <form action="https://www.google.com/search" method="get" target="_top">
-                <input type="text" name="q" placeholder="🔍 Введите запрос..." required autocomplete="off">
-                <br>
-                <button type="submit">ИСКАТЬ</button>
-            </form>
-        </div>
-    </body>
-    </html>
-    """, height=220)
+        with col_name:
+            new_link_name = st.text_input("Название", placeholder="Например: Facebook")
+        
+        with col_url:
+            new_link_url = st.text_input("URL", placeholder="https://facebook.com")
+        
+        with col_icon:
+            new_link_icon = st.selectbox(
+                "Иконка",
+                ["🔍", "📺", "📧", "🤖", "💻", "👥", "🌐", "🎮", "📚", "🎵", "🛒", "💼", "🎨", "📱", "🔧"],
+                index=0
+            )
+        
+        col_save, col_cancel = st.columns(2)
+        
+        with col_save:
+            if st.button("💾 Сохранить ссылку", type="primary", use_container_width=True):
+                if new_link_name and new_link_url:
+                    # Проверяем корректность URL
+                    if not new_link_url.startswith(('http://', 'https://')):
+                        new_link_url = 'https://' + new_link_url
+                    
+                    st.session_state.quick_links.append({
+                        "name": new_link_name,
+                        "url": new_link_url,
+                        "icon": new_link_icon
+                    })
+                    st.session_state.show_add_link = False
+                    st.success(f"Ссылка '{new_link_name}' добавлена!")
+                    st.rerun()
+                else:
+                    st.error("Заполните название и URL")
+        
+        with col_cancel:
+            if st.button("❌ Отмена", use_container_width=True):
+                st.session_state.show_add_link = False
+                st.rerun()
+        
+        st.markdown("---")
+    
+    # Отображение быстрых ссылок
+    quick_links = st.session_state.quick_links
+    
+    if not quick_links:
+        st.info("Нет быстрых ссылок. Добавьте первую!")
+    else:
+        # Показываем ссылки в сетке 4x2
+        for i in range(0, len(quick_links), 4):
+            cols = st.columns(4)
+            row_links = quick_links[i:i+4]
+            
+            for j, link in enumerate(row_links):
+                with cols[j]:
+                    # Контейнер для ссылки
+                    st.markdown(f"""
+                    <div style="
+                        background: white;
+                        border-radius: 10px;
+                        padding: 15px;
+                        margin: 5px;
+                        border: 1px solid #e0e0e0;
+                        text-align: center;
+                        transition: all 0.3s ease;
+                    ">
+                        <div style="font-size: 2rem;">{link['icon']}</div>
+                        <div style="font-weight: 600; margin: 8px 0;">{link['name']}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Кнопка открытия
+                    if st.button(f"Открыть", key=f"open_{link['name']}_{i}_{j}", use_container_width=True):
+                        js_code = f'window.open("{link["url"]}", "_blank");'
+                        components.html(f"<script>{js_code}</script>", height=0)
+                    
+                    # Кнопка удаления
+                    if st.button(f"🗑️", key=f"delete_{link['name']}_{i}_{j}", 
+                               help=f"Удалить {link['name']}"):
+                        st.session_state.quick_links.remove(link)
+                        st.success(f"Ссылка '{link['name']}' удалена!")
+                        st.rerun()
 
 # ================= МЕССЕНДЖЕР =================
 elif st.session_state.page == "Мессенджер":
@@ -1642,128 +1653,41 @@ elif st.session_state.page == "Новости":
             </div>
             """, unsafe_allow_html=True)
 
-# ================= СТРАНИЦА ПОГОДЫ (ПРОСТО И РАБОЧЕ) =================
+# ================= СТРАНИЦА ПОГОДЫ =================
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
     
-    # ЗОЛОТОЙ ПОИСК ДЛЯ ПОГОДЫ
-    components.html("""
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: transparent;
-            font-family: 'Helvetica Neue', sans-serif;
-            display: flex;
-            justify-content: center;
-        }
-        
-        .weather-search-container {
-            width: 100%;
-            max-width: 600px;
-            padding: 10px;
-            box-sizing: border-box;
-            text-align: center;
-        }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 18px 25px;
-            font-size: 18px;
-            border: 2px solid #e0e0e0;
-            border-radius: 30px;
-            outline: none;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            background-color: #ffffff;
-            color: #333;
-            box-sizing: border-box;
-            -webkit-appearance: none;
-        }
-
-        input[type="text"]:focus {
-            border-color: #DAA520;
-            box-shadow: 0 0 15px rgba(218, 165, 32, 0.2);
-        }
-
-        button {
-            margin-top: 20px;
-            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-            color: white;
-            border: none;
-            padding: 14px 40px;
-            border-radius: 25px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
-            transition: transform 0.2s, box-shadow 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            -webkit-appearance: none;
-            width: 100%;
-            max-width: 250px;
-        }
-
-        button:hover {
-            transform: scale(1.03);
-            box-shadow: 0 6px 20px rgba(218, 165, 32, 0.6);
-        }
-        
-        button:active {
-            transform: scale(0.98);
-        }
-    </style>
-    </head>
-    <body>
-        <div class="weather-search-container">
-            <input type="text" id="cityInput" placeholder="🔍 Введите город..." autocomplete="off">
-            <br>
-            <button onclick="searchWeather()">ПОКАЗАТЬ ПОГОДУ</button>
-        </div>
-        
-        <script>
-        function searchWeather() {
-            var city = document.getElementById('cityInput').value;
-            if (city) {
-                window.parent.postMessage({
-                    type: 'streamlit:setComponentValue',
-                    value: city
-                }, '*');
-            }
-        }
-        
-        document.getElementById('cityInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                searchWeather();
-            }
-        });
-        </script>
-    </body>
-    </html>
-    """, height=150)
+    # ОДНА строка поиска
+    st.markdown("### Введите город для поиска погоды")
     
-    # Получаем город
-    city_input = st.text_input("", key="weather_city_input", label_visibility="collapsed")
+    col_search, col_btn = st.columns([3, 1])
     
-    # Определяем какой город показывать
-    city_to_show = "Минск"
-    if city_input:
+    with col_search:
+        city_input = st.text_input(
+            "Город:",
+            placeholder="Например: Минск, Гродно, Москва...",
+            label_visibility="collapsed"
+        )
+    
+    with col_btn:
+        search_clicked = st.button("🔍 Найти", type="primary", use_container_width=True)
+    
+    # Обработка поиска
+    city_to_show = st.session_state.user_city if st.session_state.user_city else "Минск"
+    
+    if search_clicked and city_input:
         city_to_show = city_input
-    elif st.session_state.user_city:
-        city_to_show = st.session_state.user_city
+        st.session_state.user_city = city_input
     
     # Получаем погоду
     with st.spinner(f"Получаю погоду для {city_to_show}..."):
         weather_data = get_weather_by_city(city_to_show)
         
         if not weather_data:
+            st.error(f"Не удалось найти город: {city_to_show}")
             weather_data = get_weather_by_city("Минск")
             city_to_show = "Минск"
+            st.info("Показываю погоду для Минска")
         
         if weather_data:
             current = weather_data["current"]
