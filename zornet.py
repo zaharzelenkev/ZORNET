@@ -1298,23 +1298,6 @@ elif st.session_state.page == "Кинотеатр":
                             break
                     if not room_found:
                         st.error("Комната не найдена или неверный пароль")
-        
-        # Список доступных комнат
-        st.markdown("---")
-        st.markdown("### 🏨 Доступные комнаты")
-        
-        if st.session_state.rooms:
-            for room in st.session_state.rooms:
-                col_info, col_join_btn = st.columns([4, 1])
-                with col_info:
-                    st.markdown(f"**{room['name']}** (ID: `{room['id']}`)")
-                    st.markdown(f"Создатель: @{room['owner']} | Создана: {room['created']}")
-                with col_join_btn:
-                    if st.button("Войти", key=f"join_{room['id']}"):
-                        st.session_state.watch_room = room["id"]
-                        st.rerun()
-        else:
-            st.info("Пока нет созданных комнат")
 
 # ================= ПРОФЕССИОНАЛЬНЫЙ ОБЛАЧНЫЙ ДИСК ZORNET DISK =================
 elif st.session_state.page == "Диск":
