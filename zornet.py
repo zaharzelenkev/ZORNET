@@ -2164,64 +2164,35 @@ for i in range(0, len(details), 2):
             </div>
         """, unsafe_allow_html=True)
 
-    # Вторая колонка (проверяем, есть ли второй элемент в паре)
-if i + 1 < len(details):
-    with col2:
-        name, value = details[i + 1]
-        st.markdown(f"""
-        <div style="
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-        ">
-            <div style="color: #666; font-size: 0.9rem;">{name}</div>
-            <div style="font-size: 1.2rem; font-weight: bold;">{value}</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-            # Прогноз на 5 дней
-            if weather_data.get("forecast"):
-                st.markdown("#### 📅 Прогноз на 5 дней")
+    # 1. Сначала определяем стиль один раз (вставьте это ПЕРЕД циклом)
+st.markdown("""
+<style>
+    .my-card {
+        background: #f8f9fa;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        border: 1px solid #eee;
+    }
+    .card-label { color: #666; font-size: 0.9rem; }
+    .card-value { font-size: 1.2rem; font-weight: bold; color: #1f1f1f; }
+</style>
+""", unsafe_allow_html=True)
 
-                forecast = weather_data["forecast"]["list"]
-                days = {}
-
-                for item in forecast:
-                    date = item["dt_txt"].split(" ")[0]
-                    if date not in days:
-                        days[date] = item
-
-                # Берем максимум 5 дней
-                forecast_dates = list(days.keys())[:5]
-
-                # Показываем прогноз в ряд
-                cols = st.columns(len(forecast_dates))
-                for idx, date in enumerate(forecast_dates):
-                    with cols[idx]:
-                        day = days[date]
-                        day_name = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"][
-                            datetime.datetime.strptime(date, "%Y-%m-%d").weekday()
-                        ]
-
-                        st.markdown(f"""
-                        <div style="
-                            background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
-                            border-radius: 8px;
-                            padding: 12px;
-                            text-align: center;
-                            color: white;
-                        ">
-                            <div style="font-weight: bold; margin-bottom: 8px;">{day_name}</div>
-                            <div style="font-size: 2rem; margin: 8px 0;">
-                                {get_weather_icon(day['weather'][0]['icon'])}
-                            </div>
-                            <div style="font-size: 1.2rem; font-weight: bold;">
-                                {round(day['main']['temp'])}°C
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
-
+# 2. Теперь сам цикл стал максимально чистым
+for i in range(0, len(details), 2):
+    cols = st.columns(2)
+    for j in range(2):
+        if i + j < len(details):
+            name, value = details[i + j]
+            with cols[j]:
+                st.markdown(f"""
+                    <div class="my-card">
+                        <div class="card-label">{name}</div>
+                        <div class="card-value">{value}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+    
     # Блок с городами Беларуси
     st.markdown("---")
     st.markdown("### 🇧🇾 Города Беларуси")
