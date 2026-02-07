@@ -2165,7 +2165,7 @@ for i in range(0, len(details), 2):
             <div style="color: #666; font-size: 0.9rem;">{name}</div>
             <div style="font-size: 1.2rem; font-weight: bold;">{value}</div>
         </div>
-        """", unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
     if i + 1 < len(details):
         with col2:
