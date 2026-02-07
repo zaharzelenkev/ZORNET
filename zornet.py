@@ -1223,6 +1223,15 @@ if st.session_state.page == "Главная":
                             <div class="link-icon">
                                 {link.get('icon', '🔗')}
                             </div>
+                            <!-- НАЗВАНИЕ -->
+                            <div class="link-name">{link['name']}</div>
+                            <!-- ССЫЛКА -->
+                            <div style="font-size: 0.8rem; color: #666; word-break: break-all; margin-top: 5px;">
+                                {link['url'][:30]}...
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
                     
                     # Кнопка "Открыть" под карточкой
                     if st.button("🌐 Открыть", 
@@ -1302,7 +1311,7 @@ if st.session_state.page == "Главная":
         st.markdown("---")
 
 # ================= МЕССЕНДЖЕР =================
-elif st.session_state.page == "Мессенджер":  # ← ТЕПЕРЬ ЭТО КОРРЕКТНО
+elif st.session_state.page == "Мессенджер":
     st.markdown('<div class="gold-title">💬 МЕССЕНДЖЕР</div>', unsafe_allow_html=True)
     
     if not st.session_state.is_logged_in:
@@ -1350,99 +1359,99 @@ elif st.session_state.page == "Мессенджер":  # ← ТЕПЕРЬ ЭТО
                 st.session_state.current_chat_id = contact["id"]
                 st.rerun()
 
-with col_chat:
-    if st.session_state.chat_partner:
-        partner = st.session_state.chat_partner
+    with col_chat:
+        if st.session_state.chat_partner:
+            partner = st.session_state.chat_partner
 
-# Заголовок чата - ПРОСТАЯ ВЕРСИЯ без сложного форматирования
-st.markdown(f'''
-<div style="background: white; padding: 15px; border-radius: 10px; border: 1px solid #e0e0e0; margin-bottom: 15px;">
-    <div style="display: flex; align-items: center; gap: 12px;">
-        <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #DAA520, #B8860B); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-            {partner.get("first_name", "?")[0]}
-        </div>
-        <div>
-            <div style="font-weight: 600; font-size: 18px;">
-                {partner.get("first_name", "")} {partner.get("last_name", "")}
-            </div>
-            <div style="font-size: 14px; color: #666;">
-                @{partner.get("username", "")}
-            </div>
-        </div>
-    </div>
-</div>
-''', unsafe_allow_html=True)
-
-# История сообщений
-if "messages" not in st.session_state:
-    st.session_state.messages = {}
-
-current_user = st.session_state.user_data.get("username", "")
-partner_user = partner.get("username", "")
-
-# Определяем chat_key
-chat_key = f"{current_user}_{partner_user}"
-
-if chat_key not in st.session_state.messages:
-    # Загружаем из БД
-    db_messages = get_chat_history(current_user, partner_user)
-    st.session_state.messages[chat_key] = []
-    for msg in db_messages:
-        st.session_state.messages[chat_key].append({
-            "sender": msg[0],
-            "receiver": msg[1],
-            "text": msg[2],
-            "time": msg[3]
-        })
-
-# Показываем сообщения - ЭТО ДОЛЖНО БЫТЬ ВНЕ цикла выше!
-chat_container = st.container(height=400)
-with chat_container:
-    for msg in st.session_state.messages.get(chat_key, []):
-        msg_text = msg.get("text", "")
-        msg_time = msg.get("time", "")
-        time_display = msg_time.split(" ")[1][:5] if " " in msg_time else msg_time[:5]
-        
-        if msg.get("sender") == current_user:
+            # Заголовок чата - ПРОСТАЯ ВЕРСИЯ без сложного форматирования
             st.markdown(f'''
-            <div style="background: #DCF8C6; padding: 10px 15px; border-radius: 18px; margin: 5px 0; margin-left: auto; max-width: 70%; border-bottom-right-radius: 4px;">
-                <div>{msg_text}</div>
-                <div style="font-size: 11px; color: #666; text-align: right;">{time_display}</div>
+            <div style="background: white; padding: 15px; border-radius: 10px; border: 1px solid #e0e0e0; margin-bottom: 15px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #DAA520, #B8860B); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                        {partner.get("first_name", "?")[0]}
+                    </div>
+                    <div>
+                        <div style="font-weight: 600; font-size: 18px;">
+                            {partner.get("first_name", "")} {partner.get("last_name", "")}
+                        </div>
+                        <div style="font-size: 14px; color: #666;">
+                            @{partner.get("username", "")}
+                        </div>
+                    </div>
+                </div>
             </div>
             ''', unsafe_allow_html=True)
-        else:
-            st.markdown(f'''
-            <div style="background: white; padding: 10px 15px; border-radius: 18px; margin: 5px 0; margin-right: auto; max-width: 70%; border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                <div>{msg_text}</div>
-                <div style="font-size: 11px; color: #666; text-align: right;">{time_display}</div>
-            </div>
-            ''', unsafe_allow_html=True)
-        
-        # Поле ввода
-        col_input, col_send = st.columns([5, 1])
-        with col_input:
-            new_message = st.text_input(
-                "Введите сообщение...", 
-                key="new_message_input",
-                label_visibility="collapsed"
-            )
-        with col_send:
-            if st.button("📤", use_container_width=True, type="primary"):
-                if new_message:
-                    # Сохраняем в БД
-                    save_chat_message(current_user, partner_user, new_message)
-                    
-                    # Добавляем в историю
+
+            # История сообщений
+            if "messages" not in st.session_state:
+                st.session_state.messages = {}
+
+            current_user = st.session_state.user_data.get("username", "")
+            partner_user = partner.get("username", "")
+
+            # Определяем chat_key
+            chat_key = f"{current_user}_{partner_user}"
+
+            if chat_key not in st.session_state.messages:
+                # Загружаем из БД
+                db_messages = get_chat_history(current_user, partner_user)
+                st.session_state.messages[chat_key] = []
+                for msg in db_messages:
                     st.session_state.messages[chat_key].append({
-                        "sender": current_user,
-                        "receiver": partner_user,
-                        "text": new_message,
-                        "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        "sender": msg[0],
+                        "receiver": msg[1],
+                        "text": msg[2],
+                        "time": msg[3]
                     })
+
+            # Показываем сообщения
+            chat_container = st.container(height=400)
+            with chat_container:
+                for msg in st.session_state.messages.get(chat_key, []):
+                    msg_text = msg.get("text", "")
+                    msg_time = msg.get("time", "")
+                    time_display = msg_time.split(" ")[1][:5] if " " in msg_time else msg_time[:5]
                     
-                    st.rerun()
-    else:
-        st.info("👈 Выберите пользователя для начала общения")
+                    if msg.get("sender") == current_user:
+                        st.markdown(f'''
+                        <div style="background: #DCF8C6; padding: 10px 15px; border-radius: 18px; margin: 5px 0; margin-left: auto; max-width: 70%; border-bottom-right-radius: 4px;">
+                            <div>{msg_text}</div>
+                            <div style="font-size: 11px; color: #666; text-align: right;">{time_display}</div>
+                        </div>
+                        ''', unsafe_allow_html=True)
+                    else:
+                        st.markdown(f'''
+                        <div style="background: white; padding: 10px 15px; border-radius: 18px; margin: 5px 0; margin-right: auto; max-width: 70%; border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <div>{msg_text}</div>
+                            <div style="font-size: 11px; color: #666; text-align: right;">{time_display}</div>
+                        </div>
+                        ''', unsafe_allow_html=True)
+            
+            # Поле ввода
+            col_input, col_send = st.columns([5, 1])
+            with col_input:
+                new_message = st.text_input(
+                    "Введите сообщение...", 
+                    key="new_message_input",
+                    label_visibility="collapsed"
+                )
+            with col_send:
+                if st.button("📤", use_container_width=True, type="primary"):
+                    if new_message:
+                        # Сохраняем в БД
+                        save_chat_message(current_user, partner_user, new_message)
+                        
+                        # Добавляем в историю
+                        st.session_state.messages[chat_key].append({
+                            "sender": current_user,
+                            "receiver": partner_user,
+                            "text": new_message,
+                            "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        })
+                        
+                        st.rerun()
+        else:
+            st.info("👈 Выберите пользователя для начала общения")
 
 # ================= КИНОТЕАТР =================
 elif st.session_state.page == "Кинотеатр":
@@ -1526,117 +1535,117 @@ elif st.session_state.page == "Кинотеатр":
                     }]
                 
                 # Показываем сообщения
-chat_container = st.container(height=200)
-with chat_container:
-    for msg in st.session_state.room_messages[room_chat_key]:
-        username = msg.get("username", "")
-        message = msg.get("message", "")
-        timestamp = msg.get("timestamp", "")
-        
-        if username == "Система":
-            st.markdown(f'''
-            <div style="background: #e3f2fd; padding: 10px 15px; border-radius: 10px; margin: 8px 0; border-left: 4px solid #DAA520;">
-                <div><strong>{username}:</strong> {message}</div>
-                <div style="font-size: 11px; color: #666; text-align: right;">{timestamp}</div>
-            </div>
-            ''', unsafe_allow_html=True)
-        else:
-            st.markdown(f'''
-            <div style="background: white; padding: 10px 15px; border-radius: 10px; margin: 8px 0; border: 1px solid #e0e0e0;">
-                <div><strong>{username}:</strong> {message}</div>
-                <div style="font-size: 11px; color: #666; text-align: right;">{timestamp}</div>
-            </div>
-            ''', unsafe_allow_html=True)
+                chat_container = st.container(height=200)
+                with chat_container:
+                    for msg in st.session_state.room_messages[room_chat_key]:
+                        username = msg.get("username", "")
+                        message = msg.get("message", "")
+                        timestamp = msg.get("timestamp", "")
+                        
+                        if username == "Система":
+                            st.markdown(f'''
+                            <div style="background: #e3f2fd; padding: 10px 15px; border-radius: 10px; margin: 8px 0; border-left: 4px solid #DAA520;">
+                                <div><strong>{username}:</strong> {message}</div>
+                                <div style="font-size: 11px; color: #666; text-align: right;">{timestamp}</div>
+                            </div>
+                            ''', unsafe_allow_html=True)
+                        else:
+                            st.markdown(f'''
+                            <div style="background: white; padding: 10px 15px; border-radius: 10px; margin: 8px 0; border: 1px solid #e0e0e0;">
+                                <div><strong>{username}:</strong> {message}</div>
+                                <div style="font-size: 11px; color: #666; text-align: right;">{timestamp}</div>
+                            </div>
+                            ''', unsafe_allow_html=True)
 
-# Отправка сообщения
-col_msg, col_send = st.columns([5, 1])
-with col_msg:
-    room_message = st.text_input(
-        "Ваше сообщение...", 
-        key=f"room_msg_{room_id}",
-        label_visibility="collapsed"
-    )
-with col_send:
-    if st.button("Отпр.", use_container_width=True):
-        if room_message.strip():
-            username = st.session_state.user_data.get("username", "Гость")
-            save_room_message(room_chat_key, username, room_message)
-            # Также сохраняем в БД
-            save_room_message_to_db(room_id, username, room_message)
-            st.rerun()
+                # Отправка сообщения
+                col_msg, col_send = st.columns([5, 1])
+                with col_msg:
+                    room_message = st.text_input(
+                        "Ваше сообщение...", 
+                        key=f"room_msg_{room_id}",
+                        label_visibility="collapsed"
+                    )
+                with col_send:
+                    if st.button("Отпр.", use_container_width=True):
+                        if room_message.strip():
+                            username = st.session_state.user_data.get("username", "Гость")
+                            save_room_message(room_chat_key, username, room_message)
+                            # Также сохраняем в БД
+                            save_room_message_to_db(room_id, username, room_message)
+                            st.rerun()
 
-# Кнопка выхода
-if st.button("← Выйти из комнаты", type="primary", use_container_width=True):
-    st.session_state.watch_room = None
-    st.rerun()
+                # Кнопка выхода
+                if st.button("← Выйти из комнаты", type="primary", use_container_width=True):
+                    st.session_state.watch_room = None
+                    st.rerun()
 
-st.stop()
+                st.stop()
 
-# Если пользователь не в комнате - показываем создание/присоединение
-col_create, col_join = st.columns(2)
+        # Если пользователь не в комнате - показываем создание/присоединение
+        col_create, col_join = st.columns(2)
 
-with col_create:
-    st.markdown("### Создать комнату")
-    room_name = st.text_input("Название комнаты:", value="Моя комната", key="room_name")
-    youtube_url = st.text_input("YouTube ссылка:", placeholder="https://www.youtube.com/watch?v=...", key="youtube_url")
-    room_password = st.text_input("Пароль комнаты:", type="password", key="room_password")
-    
-    if st.button("🎥 Создать комнату", type="primary", use_container_width=True):
-        if room_name and youtube_url and room_password:
-            room_id = str(uuid.uuid4())[:8]
-            owner = st.session_state.user_data.get("username", "Гость")
+        with col_create:
+            st.markdown("### Создать комнату")
+            room_name = st.text_input("Название комнаты:", value="Моя комната", key="room_name")
+            youtube_url = st.text_input("YouTube ссылка:", placeholder="https://www.youtube.com/watch?v=...", key="youtube_url")
+            room_password = st.text_input("Пароль комнаты:", type="password", key="room_password")
             
-            # Сохраняем комнату в БД
-            if create_watch_room(room_id, room_name, youtube_url, room_password, owner):
-                # Также добавляем в сессию для текущего пользователя
-                st.session_state.rooms.append({
-                    "id": room_id,
-                    "name": room_name,
-                    "youtube_url": youtube_url,
-                    "password": room_password,
-                    "owner": owner,
-                    "created": datetime.datetime.now().strftime("%H:%M")
-                })
-                st.session_state.watch_room = room_id
-                st.success(f"✅ Комната создана! ID: `{room_id}`, Пароль: `{room_password}`")
-                st.info("⚠️ Сообщите ID и пароль другим пользователям для входа")
-                st.rerun()
-            else:
-                st.error("Ошибка создания комнаты")
+            if st.button("🎥 Создать комнату", type="primary", use_container_width=True):
+                if room_name and youtube_url and room_password:
+                    room_id = str(uuid.uuid4())[:8]
+                    owner = st.session_state.user_data.get("username", "Гость")
+                    
+                    # Сохраняем комнату в БД
+                    if create_watch_room(room_id, room_name, youtube_url, room_password, owner):
+                        # Также добавляем в сессию для текущего пользователя
+                        st.session_state.rooms.append({
+                            "id": room_id,
+                            "name": room_name,
+                            "youtube_url": youtube_url,
+                            "password": room_password,
+                            "owner": owner,
+                            "created": datetime.datetime.now().strftime("%H:%M")
+                        })
+                        st.session_state.watch_room = room_id
+                        st.success(f"✅ Комната создана! ID: `{room_id}`, Пароль: `{room_password}`")
+                        st.info("⚠️ Сообщите ID и пароль другим пользователям для входа")
+                        st.rerun()
+                    else:
+                        st.error("Ошибка создания комнаты")
 
-with col_join:
-    st.markdown("### Присоединиться к комнате")
-    join_id = st.text_input("ID комнаты:", placeholder="Введите ID комнаты", key="join_id")
-    join_password = st.text_input("Пароль комнаты:", type="password", key="join_password")
-    
-    if st.button("🔗 Присоединиться", type="primary", use_container_width=True):
-        if join_id and join_password:
-            # Ищем комнату в БД
-            room_data = get_watch_room(join_id, join_password)
+        with col_join:
+            st.markdown("### Присоединиться к комнате")
+            join_id = st.text_input("ID комнаты:", placeholder="Введите ID комнаты", key="join_id")
+            join_password = st.text_input("Пароль комнаты:", type="password", key="join_password")
             
-            if room_data:
-                # Добавляем комнату в сессию, если её там нет
-                room_exists = False
-                for room in st.session_state.rooms:
-                    if room["id"] == join_id:
-                        room_exists = True
-                        break
-                
-                if not room_exists:
-                    st.session_state.rooms.append({
-                        "id": room_data["id"],
-                        "name": room_data["name"],
-                        "youtube_url": room_data["youtube_url"],
-                        "password": room_data["password"],
-                        "owner": room_data["owner"],
-                        "created": "Из БД"
-                    })
-                
-                st.session_state.watch_room = room_data["id"]
-                st.success(f"✅ Вы присоединились к комнате '{room_data['name']}'!")
-                st.rerun()
-            else:
-                st.error("❌ Комната не найдена или неверный пароль")
+            if st.button("🔗 Присоединиться", type="primary", use_container_width=True):
+                if join_id and join_password:
+                    # Ищем комнату в БД
+                    room_data = get_watch_room(join_id, join_password)
+                    
+                    if room_data:
+                        # Добавляем комнату в сессию, если её там нет
+                        room_exists = False
+                        for room in st.session_state.rooms:
+                            if room["id"] == join_id:
+                                room_exists = True
+                                break
+                        
+                        if not room_exists:
+                            st.session_state.rooms.append({
+                                "id": room_data["id"],
+                                "name": room_data["name"],
+                                "youtube_url": room_data["youtube_url"],
+                                "password": room_data["password"],
+                                "owner": room_data["owner"],
+                                "created": "Из БД"
+                            })
+                        
+                        st.session_state.watch_room = room_data["id"]
+                        st.success(f"✅ Вы присоединились к комнате '{room_data['name']}'!")
+                        st.rerun()
+                    else:
+                        st.error("❌ Комната не найдена или неверный пароль")
 
 # ================= ПРОФЕССИОНАЛЬНЫЙ ОБЛАЧНЫЙ ДИСК ZORNET DISK =================
 elif st.session_state.page == "Диск":
@@ -1655,83 +1664,15 @@ elif st.session_state.page == "Диск":
     os.makedirs(st.session_state.disk_current_path, exist_ok=True)
 
     # CSS стили для диска
-st.markdown('''
-<style>
-    .disk-container {
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
-        margin: 10px 0;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    }
-
-    .disk-header {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-        border-radius: 12px;
-        padding: 25px;
-        color: white;
-        margin-bottom: 20px;
-    }
-
-    .disk-btn {
-        background: white !important;
-        border: 2px solid #DAA520 !important;
-        color: #B8860B !important;
-        padding: 10px 20px !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
-        transition: all 0.3s ease !important;
-    }
-
-    .disk-btn:hover {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-        color: white !important;
-        border-color: transparent !important;
-    }
-
-    .disk-btn-active {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-        color: white !important;
-        border-color: transparent !important;
-    }
-
-    .file-card {
-        background: #f8f9fa;
-        border-radius: 10px;
-        padding: 15px;
-        margin: 10px 0;
-        border-left: 4px solid #DAA520;
-        transition: all 0.3s ease;
-    }
-
-    .file-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
-
-    .folder-card {
-        background: linear-gradient(135deg, #fff9e6 0%, #ffe699 100%);
-        border-radius: 10px;
-        padding: 15px;
-        margin: 10px 0;
-        border: 2px solid #ffd966;
-    }
-
-    .storage-bar {
-        height: 8px;
-        background: #e9ecef;
-        border-radius: 4px;
-        overflow: hidden;
-        margin: 10px 0;
-    }
-
-    .storage-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #DAA520, #FFD700);
-        border-radius: 4px;
-    }
-</style>
-''', unsafe_allow_html=True)
+    st.markdown('''
+    <style>
+        .disk-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 10px 0;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
 
         .disk-header {
             background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
@@ -1799,8 +1740,7 @@ st.markdown('''
             border-radius: 4px;
         }
     </style>
-    """, unsafe_allow_html=True)
-
+    ''', unsafe_allow_html=True)
 
     # Функции для работы с диском
     def get_file_icon(filename):
@@ -2194,7 +2134,7 @@ elif st.session_state.page == "Погода":
                         {get_weather_icon(current['icon'])}
                     </div>
                 </div>
-                """, unsafe_allow_html=True)
+                ""', unsafe_allow_html=True)
 
             # Детали погоды
             st.markdown("#### 📊 Детали")
