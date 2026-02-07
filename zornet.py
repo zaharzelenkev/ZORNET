@@ -2165,46 +2165,21 @@ for i in range(0, len(details), 2):
         """, unsafe_allow_html=True)
 
     # Вторая колонка (проверяем, есть ли второй элемент в паре)
-    if i + 1 < len(details):
-        with col2:
-            name, value = details[i+1]
-            st.markdown(f"""
-                <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #eee;">
-                    <div style="color: #666; font-size: 0.9rem;">{name}</div>
-                    <div style="font-size: 1.2rem; font-weight: bold; color: #1f1f1f;">{value}</div>
-                </div>
-            """, unsafe_allow_html=True)
-
-    if i + 1 < len(details):
-        with col2:
-            name, value = details[i + 1]
-            st.markdown(f"""
-            <div style="
-                background: #f8f9fa;
-                padding: 12px;
-                border-radius: 8px;
-                margin-bottom: 10px;
-            ">
-                <div style="color: #666; font-size: 0.9rem;">{name}</div>
-                <div style="font-size: 1.2rem; font-weight: bold;">{value}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-                if i + 1 < len(details):
-                    with col2:
-                        name, value = details[i + 1]
-                        st.markdown(f"""
-                        <div style="
-                            background: #f8f9fa;
-                            padding: 12px;
-                            border-radius: 8px;
-                            margin-bottom: 10px;
-                        ">
-                            <div style="color: #666; font-size: 0.9rem;">{name}</div>
-                            <div style="font-size: 1.2rem; font-weight: bold;">{value}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-
+if i + 1 < len(details):
+    with col2:
+        name, value = details[i + 1]
+        st.markdown(f"""
+        <div style="
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        ">
+            <div style="color: #666; font-size: 0.9rem;">{name}</div>
+            <div style="font-size: 1.2rem; font-weight: bold;">{value}</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
             # Прогноз на 5 дней
             if weather_data.get("forecast"):
                 st.markdown("#### 📅 Прогноз на 5 дней")
