@@ -1394,29 +1394,29 @@ if chat_key not in st.session_state.messages:
             "text": msg[2],
             "time": msg[3]
         })
+
+# Показываем сообщения - ЭТО ДОЛЖНО БЫТЬ ВНЕ цикла выше!
+chat_container = st.container(height=400)
+with chat_container:
+    for msg in st.session_state.messages.get(chat_key, []):
+        msg_text = msg.get("text", "")
+        msg_time = msg.get("time", "")
+        time_display = msg_time.split(" ")[1][:5] if " " in msg_time else msg_time[:5]
         
-        # Показываем сообщения
-        chat_container = st.container(height=400)
-        with chat_container:
-            for msg in st.session_state.messages.get(chat_key, []):
-                msg_text = msg.get("text", "")
-                msg_time = msg.get("time", "")
-                time_display = msg_time.split(" ")[1][:5] if " " in msg_time else msg_time[:5]
-                
-                if msg.get("sender") == current_user:
-                    st.markdown(f'''
-                    <div style="background: #DCF8C6; padding: 10px 15px; border-radius: 18px; margin: 5px 0; margin-left: auto; max-width: 70%; border-bottom-right-radius: 4px;">
-                        <div>{msg_text}</div>
-                        <div style="font-size: 11px; color: #666; text-align: right;">{time_display}</div>
-                    </div>
-                    ''', unsafe_allow_html=True)
-                else:
-                    st.markdown(f'''
-                    <div style="background: white; padding: 10px 15px; border-radius: 18px; margin: 5px 0; margin-right: auto; max-width: 70%; border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                        <div>{msg_text}</div>
-                        <div style="font-size: 11px; color: #666; text-align: right;">{time_display}</div>
-                    </div>
-                    ''', unsafe_allow_html=True)
+        if msg.get("sender") == current_user:
+            st.markdown(f'''
+            <div style="background: #DCF8C6; padding: 10px 15px; border-radius: 18px; margin: 5px 0; margin-left: auto; max-width: 70%; border-bottom-right-radius: 4px;">
+                <div>{msg_text}</div>
+                <div style="font-size: 11px; color: #666; text-align: right;">{time_display}</div>
+            </div>
+            ''', unsafe_allow_html=True)
+        else:
+            st.markdown(f'''
+            <div style="background: white; padding: 10px 15px; border-radius: 18px; margin: 5px 0; margin-right: auto; max-width: 70%; border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div>{msg_text}</div>
+                <div style="font-size: 11px; color: #666; text-align: right;">{time_display}</div>
+            </div>
+            ''', unsafe_allow_html=True)
         
         # Поле ввода
         col_input, col_send = st.columns([5, 1])
