@@ -130,70 +130,84 @@ if "new_user_username" not in st.session_state:
 # ================= ПРОФЕССИОНАЛЬНЫЙ CSS =================
 st.markdown("""
 <style>
-    /* ОСНОВНЫЕ НАСТРОЙКИ */
-    .main {
-        background: #ffffff;
-    }
-    
+    /* ОСНОВНОЙ ФОН (чуть затемненный градиент, чтобы стекло работало) */
     .stApp {
-        background: #ffffff;
+        background: linear-gradient(135deg, #f0f4f8 0%, #f9fbfd 100%) !important;
     }
 
-    /* ГЛАВНЫЙ ЗАГОЛОВОК */
-    .gold-title {
-        font-family: 'Helvetica Neue', sans-serif;
-        font-size: 4rem;
-        font-weight: 800;
-        text-align: center;
-        background: linear-gradient(to bottom, #DAA520, #B8860B);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        letter-spacing: 4px;
-        text-transform: uppercase;
-        margin: 10px 0 30px 0;
+    /* САЙДБАР - делаем панель стеклянной */
+    section[data-testid="stSidebar"] {
+        background: rgba(255, 255, 255, 0.4) !important;
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.6) !important;
     }
 
-    /* КНОПКИ В САЙДБАРЕ */
+    /* КНОПКИ В САЙДБАРЕ (Стеклянные овалы) */
     section[data-testid="stSidebar"] .stButton > button {
         text-align: left !important;
         justify-content: flex-start !important;
         padding: 12px 20px !important;
-        margin: 2px 0 !important;
-        background: transparent !important;
-        border: none !important;
+        margin: 6px auto !important;
+        width: 90% !important;
+        
+        /* Эффект Liquid Glass */
+        background: rgba(255, 255, 255, 0.5) !important; /* Полупрозрачность */
+        backdrop-filter: blur(12px) !important; /* Размытие фона под кнопкой */
+        -webkit-backdrop-filter: blur(12px) !important; /* Для Safari/iOS */
+        border: 1px solid rgba(255, 255, 255, 0.8) !important; /* Блик по краям */
+        
         color: #1a1a1a !important;
-        font-weight: 400 !important;
-        border-radius: 0 25px 25px 0 !important;
+        font-weight: 600 !important;
+        border-radius: 30px !important;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03) !important; /* Нежная тень */
     }
     
     section[data-testid="stSidebar"] .stButton > button:hover {
-        background: #f8f9fa !important;
-        border: 1px solid #DAA520 !important;
+        background: rgba(255, 255, 255, 0.85) !important;
+        border: 1px solid rgba(218, 165, 32, 0.6) !important; /* Мягкое желто-золотое обрамление */
+        transform: scale(1.03) !important;
+        box-shadow: 0 8px 20px rgba(218, 165, 32, 0.12), inset 0 0 10px rgba(255,255,255,0.5) !important;
+        z-index: 1 !important;
     }
 
-    /* КНОПКИ НА ГЛАВНОЙ */
+    /* ОСНОВНЫЕ КНОПКИ (На главной странице) - тоже стеклянные */
     div.stButton > button {
-        background: #f8f9fa !important;
-        border: 1px solid #dee2e6 !important;
+        background: rgba(255, 255, 255, 0.5) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.8) !important;
         color: #1a1a1a !important;
         padding: 20px !important; 
-        border-radius: 12px !important;
+        border-radius: 18px !important; /* Смягченные углы */
         font-weight: bold !important;
         width: 100% !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03) !important;
+        /* ... центрирование ... */
         display: flex !important;
         flex-direction: column !important;
         justify-content: center !important;
         align-items: center !important;
         height: 80px !important;
-        line-height: 1.3 !important;
-        white-space: pre-line !important;
-        text-align: center !important;
     }
 
     div.stButton > button:hover {
-        border-color: #DAA520 !important;
-        box-shadow: 0 4px 12px rgba(218, 165, 32, 0.2) !important;
+        background: rgba(255, 255, 255, 0.9) !important;
+        border-color: rgba(218, 165, 32, 0.6) !important;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(218, 165, 32, 0.15) !important;
+    }
+    
+    /* КАРТОЧКИ БЫСТРЫХ ССЫЛОК (Овалы) - тоже под стекло */
+    .quick-link-card {
+        background: rgba(255, 255, 255, 0.5) !important;
+        backdrop-filter: blur(15px) !important;
+        -webkit-backdrop-filter: blur(15px) !important;
+        border-radius: 60px !important;
+        border: 1px solid rgba(218, 165, 32, 0.5) !important; /* Тонкая золотая рамка */
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+        /* остальной твой код без изменений... */
     }
 
     /* ЗОЛОТАЯ КНОПКА AI */
