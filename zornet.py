@@ -166,16 +166,6 @@ st.markdown("""
         .link-name {
             font-size: 0.9rem !important;
         }
-        .search-container {
-            flex-direction: column !important;
-        }
-        .search-container input {
-            width: 100% !important;
-            margin-bottom: 10px !important;
-        }
-        .search-container button {
-            width: 100% !important;
-        }
     }
     
     @media (max-width: 480px) {
@@ -190,6 +180,10 @@ st.markdown("""
         }
         .weather-icon {
             font-size: 3rem !important;
+        }
+        .header-with-button {
+            flex-direction: column !important;
+            align-items: flex-start !important;
         }
     }
     
@@ -218,16 +212,16 @@ st.markdown("""
         letter-spacing: 2px;
     }
     
-    /* СТИЛИ ДЛЯ ВСЕХ КНОПОК */
+    /* СТИЛИ ДЛЯ ВСЕХ КНОПОК - СЛАБЫЙ ЗОЛОТОЙ ЦВЕТ */
     .stButton > button {
         background: white !important;
-        border: 2px solid #D4AF37 !important;
+        border: 2px solid rgba(212, 175, 55, 0.3) !important;
         border-radius: 16px !important;
         color: #1a1a1a !important;
         padding: 12px 16px !important;
         font-weight: 600 !important;
         transition: all 0.3s ease !important;
-        box-shadow: 0 4px 10px rgba(212, 175, 55, 0.1) !important;
+        box-shadow: 0 4px 10px rgba(212, 175, 55, 0.05) !important;
         height: auto !important;
         min-height: 55px !important;
         display: flex !important;
@@ -239,7 +233,7 @@ st.markdown("""
         background: linear-gradient(135deg, #D4AF37, #B8860B) !important;
         color: white !important;
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(212, 175, 55, 0.3) !important;
+        box-shadow: 0 8px 20px rgba(212, 175, 55, 0.2) !important;
         border-color: transparent !important;
     }
     
@@ -251,7 +245,7 @@ st.markdown("""
     
     .stButton > button[kind="primary"]:hover {
         transform: translateY(-2px);
-        box-shadow: 0 12px 30px rgba(212, 175, 55, 0.4) !important;
+        box-shadow: 0 12px 30px rgba(212, 175, 55, 0.3) !important;
     }
     
     /* КНОПКИ В САЙДБАРЕ */
@@ -271,32 +265,33 @@ st.markdown("""
     
     div[data-testid="stSidebar"] div.stButton > button:hover {
         background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(212, 175, 55, 0.2) 100%) !important;
-        border-color: #D4AF37 !important;
+        border-color: rgba(212, 175, 55, 0.5) !important;
         transform: translateX(5px);
         color: #D4AF37 !important;
     }
     
-    /* ВИДЖЕТ ВРЕМЕНИ НА ГЛАВНОЙ - ОДИНАКОВЫЙ С ДРУГИМИ КНОПКАМИ */
+    /* ВИДЖЕТ ВРЕМЕНИ НА ГЛАВНОЙ */
     .time-widget {
         background: white;
-        border: 2px solid #D4AF37;
+        border: 2px solid rgba(212, 175, 55, 0.3);
         border-radius: 16px;
         padding: 12px 16px;
         text-align: center;
-        box-shadow: 0 4px 10px rgba(212, 175, 55, 0.1);
-        height: 100%;
-        min-height: 55px;
+        box-shadow: 0 4px 10px rgba(212, 175, 55, 0.05);
+        height: 55px;
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 8px;
         transition: all 0.3s ease;
         cursor: default;
+        width: 100%;
     }
     
     .time-widget:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(212, 175, 55, 0.2);
+        box-shadow: 0 8px 20px rgba(212, 175, 55, 0.15);
+        border-color: rgba(212, 175, 55, 0.5);
     }
     
     .time-icon {
@@ -321,13 +316,13 @@ st.markdown("""
         transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         position: relative;
         overflow: hidden;
-        box-shadow: 0 10px 25px rgba(212, 175, 55, 0.1);
+        box-shadow: 0 10px 25px rgba(212, 175, 55, 0.05);
     }
     
     .link-card:hover {
         transform: translateY(-5px) scale(1.02);
-        border-color: #D4AF37;
-        box-shadow: 0 20px 35px rgba(212, 175, 55, 0.25);
+        border-color: rgba(212, 175, 55, 0.8);
+        box-shadow: 0 20px 35px rgba(212, 175, 55, 0.15);
     }
     
     .link-icon {
@@ -363,7 +358,7 @@ st.markdown("""
         margin-top: 10px !important;
         margin-bottom: 5px !important;
         width: 100% !important;
-        box-shadow: 0 8px 20px rgba(212, 175, 55, 0.3) !important;
+        box-shadow: 0 8px 20px rgba(212, 175, 55, 0.2) !important;
     }
     
     /* КНОПКА УДАЛЕНИЯ */
@@ -377,53 +372,39 @@ st.markdown("""
         font-size: 0.85rem !important;
         transition: all 0.3s ease !important;
         width: 100% !important;
-        box-shadow: 0 4px 10px rgba(255, 68, 68, 0.2) !important;
+        box-shadow: 0 4px 10px rgba(255, 68, 68, 0.1) !important;
     }
     
-    /* КОНТЕЙНЕР ДЛЯ ПОИСКА */
+    /* ПОИСКОВАЯ СТРОКА - ВОЗВРАЩАЕМ ПРЕЖНИЙ ВИД */
     .search-container {
-        display: flex;
-        gap: 10px;
         margin: 30px 0;
         max-width: 600px;
         margin-left: auto;
         margin-right: auto;
     }
     
-    .search-container input {
-        flex: 1;
-        padding: 15px 25px;
-        font-size: 16px;
-        border: 2px solid #D4AF37;
+    .search-box {
+        width: 100%;
+        padding: 18px 25px;
+        font-size: 18px;
+        border: 2px solid rgba(212, 175, 55, 0.3);
         border-radius: 30px;
         outline: none;
         transition: all 0.3s ease;
-        background: white;
-        min-height: 55px;
+        box-shadow: 0 4px 10px rgba(212, 175, 55, 0.05);
+        background-color: #ffffff;
+        color: #333;
+        text-align: center;
     }
     
-    .search-container input:focus {
-        border-color: #B8860B;
-        box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.2);
+    .search-box:focus {
+        border-color: rgba(212, 175, 55, 0.8);
+        box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
     }
     
-    .search-container button {
-        background: linear-gradient(135deg, #D4AF37, #B8860B);
-        color: white;
-        border: none;
-        padding: 0 30px;
-        border-radius: 30px;
-        font-weight: 700;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        min-height: 55px;
+    .search-box::placeholder {
+        color: #999;
         font-size: 16px;
-        white-space: nowrap;
-    }
-    
-    .search-container button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(212, 175, 55, 0.3);
     }
     
     /* КАРТОЧКИ ПОГОДЫ */
@@ -432,7 +413,7 @@ st.markdown("""
         border-radius: 24px;
         padding: 30px;
         color: white;
-        box-shadow: 0 20px 40px rgba(212, 175, 55, 0.3);
+        box-shadow: 0 20px 40px rgba(212, 175, 55, 0.2);
         border: 2px solid rgba(255, 255, 255, 0.2);
         margin-bottom: 20px;
     }
@@ -451,18 +432,19 @@ st.markdown("""
     
     .weather-detail-item {
         background: white;
-        border: 2px solid #D4AF37;
+        border: 2px solid rgba(212, 175, 55, 0.3);
         border-radius: 16px;
         padding: 15px;
         color: #1a1a1a;
         text-align: center;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 10px rgba(212, 175, 55, 0.1);
+        box-shadow: 0 4px 10px rgba(212, 175, 55, 0.05);
     }
     
     .weather-detail-item:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(212, 175, 55, 0.2);
+        box-shadow: 0 8px 20px rgba(212, 175, 55, 0.15);
+        border-color: rgba(212, 175, 55, 0.8);
     }
     
     /* КАРТОЧКИ НОВОСТЕЙ */
@@ -473,13 +455,13 @@ st.markdown("""
         margin-bottom: 20px;
         border: 2px solid rgba(212, 175, 55, 0.3);
         transition: all 0.3s ease;
-        box-shadow: 0 5px 20px rgba(212, 175, 55, 0.1);
+        box-shadow: 0 5px 20px rgba(212, 175, 55, 0.05);
     }
     
     .news-card:hover {
         transform: translateY(-5px);
-        border-color: #D4AF37;
-        box-shadow: 0 15px 30px rgba(212, 175, 55, 0.2);
+        border-color: rgba(212, 175, 55, 0.8);
+        box-shadow: 0 15px 30px rgba(212, 175, 55, 0.15);
     }
     
     .news-title {
@@ -511,14 +493,14 @@ st.markdown("""
     }
     
     .contact-item:hover {
-        border-color: #D4AF37;
+        border-color: rgba(212, 175, 55, 0.8);
         transform: translateX(5px);
-        box-shadow: 0 5px 15px rgba(212, 175, 55, 0.15);
+        box-shadow: 0 5px 15px rgba(212, 175, 55, 0.1);
     }
     
     .contact-item.active {
         background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.15));
-        border-color: #D4AF37;
+        border-color: rgba(212, 175, 55, 0.8);
     }
     
     .contact-avatar {
@@ -581,11 +563,11 @@ st.markdown("""
     
     .file-item:hover {
         transform: translateY(-5px);
-        border-color: #D4AF37;
-        box-shadow: 0 10px 25px rgba(212, 175, 55, 0.2);
+        border-color: rgba(212, 175, 55, 0.8);
+        box-shadow: 0 10px 25px rgba(212, 175, 55, 0.15);
     }
     
-    /* ПРОФИЛЬ - УБРАЛ ЛИШНИЙ БЕЛЫЙ ПРЯМОУГОЛЬНИК */
+    /* ПРОФИЛЬ */
     .profile-card {
         background: transparent;
         padding: 20px;
@@ -606,8 +588,8 @@ st.markdown("""
         font-size: 3rem;
         font-weight: 700;
         margin: 0 auto 20px;
-        border: 4px solid #D4AF37;
-        box-shadow: 0 10px 30px rgba(212, 175, 55, 0.3);
+        border: 4px solid rgba(212, 175, 55, 0.5);
+        box-shadow: 0 10px 30px rgba(212, 175, 55, 0.2);
     }
     
     .profile-name {
@@ -632,7 +614,7 @@ st.markdown("""
         display: inline-block;
         color: #D4AF37;
         font-weight: 600;
-        border: 2px solid #D4AF37;
+        border: 2px solid rgba(212, 175, 55, 0.3);
     }
     
     /* ФОРМЫ ВХОДА/РЕГИСТРАЦИИ */
@@ -642,14 +624,14 @@ st.markdown("""
         background: white;
         border-radius: 30px;
         padding: 40px;
-        box-shadow: 0 20px 40px rgba(212, 175, 55, 0.15);
-        border: 2px solid #D4AF37;
+        box-shadow: 0 20px 40px rgba(212, 175, 55, 0.1);
+        border: 2px solid rgba(212, 175, 55, 0.3);
     }
     
     /* ИНПУТЫ */
     .stTextInput > div > div > input {
         border-radius: 16px !important;
-        border: 2px solid #D4AF37 !important;
+        border: 2px solid rgba(212, 175, 55, 0.3) !important;
         padding: 12px 20px !important;
         font-size: 1rem !important;
         transition: all 0.3s ease !important;
@@ -657,8 +639,8 @@ st.markdown("""
     }
     
     .stTextInput > div > div > input:focus {
-        border-color: #B8860B !important;
-        box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.2) !important;
+        border-color: rgba(212, 175, 55, 0.8) !important;
+        box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.1) !important;
     }
     
     /* РАЗДЕЛИТЕЛИ */
@@ -666,7 +648,7 @@ st.markdown("""
         margin: 30px 0 !important;
         border: none !important;
         height: 2px !important;
-        background: linear-gradient(90deg, transparent, #D4AF37, transparent) !important;
+        background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.3), transparent) !important;
     }
     
     /* АНИМАЦИИ */
@@ -708,6 +690,32 @@ st.markdown("""
         margin: 0;
         color: #D4AF37;
         font-size: 1.5rem;
+        font-weight: 600;
+    }
+    
+    /* КНОПКА В ЗАГОЛОВКЕ */
+    .header-button {
+        background: white !important;
+        border: 2px solid rgba(212, 175, 55, 0.3) !important;
+        color: #D4AF37 !important;
+        padding: 8px 20px !important;
+        border-radius: 30px !important;
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 4px 10px rgba(212, 175, 55, 0.05) !important;
+        height: 40px !important;
+        min-height: 40px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    .header-button:hover {
+        background: linear-gradient(135deg, #D4AF37, #B8860B) !important;
+        color: white !important;
+        transform: translateY(-2px);
+        border-color: transparent !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1002,7 +1010,7 @@ with st.sidebar:
     if st.session_state.is_logged_in:
         user = st.session_state.user_data
         st.markdown(f"""
-        <div style="background: white; border: 2px solid #D4AF37; border-radius: 16px; padding: 15px; margin-bottom: 20px;">
+        <div style="background: white; border: 2px solid rgba(212, 175, 55, 0.3); border-radius: 16px; padding: 15px; margin-bottom: 20px;">
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="width: 45px; height: 45px; border-radius: 12px; background: linear-gradient(135deg, #D4AF37, #B8860B); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.2rem;">
                     {user.get('first_name', 'U')[0]}
@@ -1161,29 +1169,23 @@ if st.session_state.page == "Главная":
     
     st.markdown("---")
     
-    # Поиск Google - кнопка прямо на строке
+    # Поиск Google - возвращаем прежний вид
     components.html("""
     <div class="search-container">
-        <form action="https://www.google.com/search" method="get" target="_blank" style="display: flex; gap: 10px; width: 100%;">
-            <input type="text" name="q" placeholder="🔍 Поиск в Google...">
-            <button type="submit">Найти</button>
+        <form action="https://www.google.com/search" method="get" target="_blank">
+            <input type="text" name="q" class="search-box" placeholder="🔍 Поиск в Google..." autocomplete="off">
         </form>
     </div>
-    """, height=80)
+    """, height=100)
     
     st.markdown("---")
     
-    # Быстрые ссылки с кнопкой добавления напротив
-    st.markdown("""
-    <div class="header-with-button">
-        <h3>📌 Быстрые ссылки</h3>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Кнопка добавления справа от заголовка
+    # Быстрые ссылки с кнопкой добавления на одном уровне
     col_header, col_button = st.columns([3, 1])
+    
     with col_header:
-        st.markdown("")  # Пусто для выравнивания
+        st.markdown("### 📌 Быстрые ссылки")
+    
     with col_button:
         if st.button("➕ Добавить", key="add_link_main", use_container_width=True):
             st.session_state.show_add_link = not st.session_state.show_add_link
@@ -1314,7 +1316,7 @@ elif st.session_state.page == "Мессенджер":
             
             # Заголовок чата
             st.markdown(f"""
-            <div style="background: white; border-radius: 20px; padding: 15px; margin-bottom: 20px; border: 2px solid #D4AF37; display: flex; align-items: center; gap: 15px;">
+            <div style="background: white; border-radius: 20px; padding: 15px; margin-bottom: 20px; border: 2px solid rgba(212, 175, 55, 0.3); display: flex; align-items: center; gap: 15px;">
                 <div style="width: 45px; height: 45px; border-radius: 12px; background: linear-gradient(135deg, #D4AF37, #B8860B); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.3rem;">
                     {partner.get('first_name', '?')[0]}
                 </div>
@@ -1370,7 +1372,7 @@ elif st.session_state.page == "Мессенджер":
                         st.rerun()
         else:
             st.markdown("""
-            <div style="background: white; border-radius: 20px; padding: 60px 20px; text-align: center; border: 2px solid #D4AF37;">
+            <div style="background: white; border-radius: 20px; padding: 60px 20px; text-align: center; border: 2px solid rgba(212, 175, 55, 0.3);">
                 <div style="font-size: 4rem; margin-bottom: 20px;">💬</div>
                 <h3>Выберите контакт для начала общения</h3>
                 <p style="color: #D4AF37;">Найдите пользователя по никнейму или выберите из списка контактов</p>
@@ -1425,7 +1427,7 @@ elif st.session_state.page == "Кинотеатр":
                 # YouTube плеер
                 if video_id:
                     components.html(f"""
-                    <div style="border-radius: 20px; overflow: hidden; margin-bottom: 20px; border: 2px solid #D4AF37;">
+                    <div style="border-radius: 20px; overflow: hidden; margin-bottom: 20px; border: 2px solid rgba(212, 175, 55, 0.3);">
                         <iframe width="100%" height="500" 
                                 src="https://www.youtube.com/embed/{video_id}?autoplay=1"
                                 frameborder="0" 
@@ -1455,7 +1457,7 @@ elif st.session_state.page == "Кинотеатр":
                         timestamp = msg.get("timestamp", "")
                         
                         st.markdown(f"""
-                        <div style="background: {'#fff9e6' if username == 'Система' else 'white'}; border: 2px solid #D4AF37; padding: 10px 15px; border-radius: 15px; margin: 5px 0;">
+                        <div style="background: {'#fff9e6' if username == 'Система' else 'white'}; border: 2px solid rgba(212, 175, 55, 0.3); padding: 10px 15px; border-radius: 15px; margin: 5px 0;">
                             <div><strong>{username}:</strong> {message}</div>
                             <div style="font-size: 0.7rem; color: #666; text-align: right;">{timestamp}</div>
                         </div>
@@ -1484,7 +1486,7 @@ elif st.session_state.page == "Кинотеатр":
         
         with col1:
             st.markdown("""
-            <div style="background: white; border-radius: 20px; padding: 25px; border: 2px solid #D4AF37; margin-bottom: 20px;">
+            <div style="background: white; border-radius: 20px; padding: 25px; border: 2px solid rgba(212, 175, 55, 0.3); margin-bottom: 20px;">
                 <h3 style="color: #D4AF37;">🎥 Создать комнату</h3>
             </div>
             """, unsafe_allow_html=True)
@@ -1512,7 +1514,7 @@ elif st.session_state.page == "Кинотеатр":
         
         with col2:
             st.markdown("""
-            <div style="background: white; border-radius: 20px; padding: 25px; border: 2px solid #D4AF37; margin-bottom: 20px;">
+            <div style="background: white; border-radius: 20px; padding: 25px; border: 2px solid rgba(212, 175, 55, 0.3); margin-bottom: 20px;">
                 <h3 style="color: #D4AF37;">🔗 Присоединиться</h3>
             </div>
             """, unsafe_allow_html=True)
