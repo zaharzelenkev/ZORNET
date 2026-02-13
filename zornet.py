@@ -400,85 +400,133 @@ st.markdown("""
         padding: 0 !important;
     }
 
-    /* Стили для карточек быстрых ссылок - ИСПРАВЛЕНО ВЫРАВНИВАНИЕ */
-    .quick-link-card {
-        position: relative;
-        background: white;
-        border-radius: 16px;
-        padding: 25px 20px 20px 20px;
-        margin: 8px 0;
-        border: 3px solid #DAA520;
-        text-align: center;
-        transition: all 0.3s ease;
-        min-height: 160px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.15);
-    }
-    
-    .quick-link-card:hover {
-        transform: translateY(-5px) scale(1.02);
-        box-shadow: 0 8px 25px rgba(218, 165, 32, 0.25);
-        border-color: #B8860B;
-        background: linear-gradient(135deg, #ffffff 0%, #fff9e6 100%);
-    }
-    
-    .quick-link-icon {
-        font-size: 3.5rem !important;
-        margin-bottom: 15px;
-        text-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease;
-    }
-    
-    .quick-link-card:hover .quick-link-icon {
-        transform: scale(1.1) rotate(5deg);
-    }
-    
-    .quick-link-name {
-        font-weight: 700 !important;
-        font-size: 1.1rem !important;
-        color: #333 !important;
-        margin-bottom: 5px !important;
-        line-height: 1.4 !important;
-        font-family: 'Helvetica Neue', sans-serif;
-    }
-    
-    /* Кнопка удаления */
-    .delete-link-btn {
-        position: absolute !important;
-        top: 10px !important;
-        right: 10px !important;
-        width: 28px !important;
-        height: 28px !important;
-        min-width: 28px !important;
-        min-height: 28px !important;
-        padding: 0 !important;
-        border-radius: 50% !important;
-        background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%) !important;
-        color: white !important;
-        font-size: 14px !important;
-        font-weight: bold !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        z-index: 100;
-        opacity: 0.8;
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        border: 2px solid white;
-    }
-    
-    .quick-link-card:hover .delete-link-btn {
-        opacity: 1;
-    }
-    
-    .delete-link-btn:hover {
-        opacity: 1;
-        transform: scale(1.15);
-        box-shadow: 0 3px 8px rgba(0,0,0,0.3);
-    }
+/* Круглая кнопка добавления */
+div.stButton > button[key="add_link_btn"] {
+    background: white !important;
+    border: 2px solid #DAA520 !important;
+    color: #DAA520 !important;
+    border-radius: 40px !important;
+    padding: 12px 24px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+}
+
+div.stButton > button[key="add_link_btn"]:hover {
+    background: #DAA520 !important;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(218, 165, 32, 0.3) !important;
+}
+
+/* Стили для карточек быстрых ссылок - БЕЛЫЕ ОВАЛЫ */
+.quick-link-card {
+    position: relative;
+    background: white !important; /* Ярко-белый фон */
+    border-radius: 30px !important; /* Очень круглые овалы */
+    padding: 25px 15px 20px 15px;
+    margin: 8px 0;
+    border: 2px solid #DAA520;
+    text-align: center;
+    transition: all 0.3s ease;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 15px rgba(218, 165, 32, 0.15);
+}
+
+.quick-link-card:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(218, 165, 32, 0.25);
+    border-color: #B8860B;
+    background: white !important; /* Остается белым при наведении */
+}
+
+.quick-link-icon {
+    font-size: 3.2rem !important;
+    margin-bottom: 12px;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+
+.quick-link-card:hover .quick-link-icon {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.quick-link-name {
+    font-weight: 700 !important;
+    font-size: 1.1rem !important;
+    color: #333 !important;
+    margin-bottom: 5px !important;
+    line-height: 1.4 !important;
+    font-family: 'Helvetica Neue', sans-serif;
+}
+
+/* Контейнер для кнопок */
+.quick-link-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    width: 100%;
+    justify-content: center;
+}
+
+/* Круглые кнопки */
+.quick-link-open {
+    background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 40px !important; /* Супер-круглые */
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+    flex: 2;
+    box-shadow: 0 2px 8px rgba(218, 165, 32, 0.3) !important;
+}
+
+.quick-link-open:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(218, 165, 32, 0.4) !important;
+}
+
+.quick-link-delete {
+    background: #ff4444 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 40px !important; /* Супер-круглые */
+    padding: 8px 0 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+    flex: 1;
+    box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3) !important;
+}
+
+.quick-link-delete:hover {
+    background: #cc0000 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 68, 68, 0.4) !important;
+}
+
+/* Кнопка добавления - тоже круглая */
+.add-link-btn {
+    background: white !important;
+    border: 2px solid #DAA520 !important;
+    color: #DAA520 !important;
+    border-radius: 40px !important;
+    padding: 12px 24px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+}
+
+.add-link-btn:hover {
+    background: #DAA520 !important;
+    color: white !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(218, 165, 32, 0.3) !important;
+}
     
     /* Кнопка "Открыть" */
     .open-link-btn {
@@ -1130,48 +1178,44 @@ if st.session_state.page == "Главная":
     
     st.markdown("---")
 
-    # БЫСТРЫЕ ССЫЛКИ
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.markdown("### 📌 Быстрые ссылки")
-    with col2:
-        if st.button("➕ Добавить", key="add_link_btn", use_container_width=True):
-            st.session_state.show_add_link = not st.session_state.show_add_link
-            st.rerun()
+# БЫСТРЫЕ ССЫЛКИ - БЕЛЫЕ ОВАЛЫ
+col1, col2 = st.columns([3, 1])
+with col1:
+    st.markdown("### 📌 Быстрые ссылки")
+with col2:
+    if st.button("➕ Добавить", key="add_link_btn", use_container_width=True):
+        st.session_state.show_add_link = not st.session_state.show_add_link
+        st.rerun()
 
-    quick_links = st.session_state.quick_links
-    
-    if not quick_links:
-        st.info("📭 Нет быстрых ссылок. Нажмите 'Добавить', чтобы создать первую!")
-    else:
-        # Показываем ссылки в сетке 4 колонки
-        for i in range(0, len(quick_links), 4):
-            cols = st.columns(4)
-            for j, link in enumerate(quick_links[i:i+4]):
-                with cols[j]:
-                    # Карточка ссылки
-                    st.markdown(f"""
-                    <div class="quick-link-card">
-                        <div class="quick-link-icon">{link.get('icon', '🔗')}</div>
-                        <div class="quick-link-name">{link['name']}</div>
-                        <div style="font-size: 0.8rem; color: #666; word-break: break-all; margin: 5px 0;">
-                            {link['url'][:30]}...
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Кнопки управления
-                    col_open, col_del = st.columns(2)
-                    with col_open:
-                        if st.button("🌐", key=f"open_{i}_{j}", help="Открыть", use_container_width=True):
-                            js_code = f'window.open("{link["url"]}", "_blank");'
-                            components.html(f"<script>{js_code}</script>", height=0)
-                    with col_del:
-                        if st.button("✕", key=f"del_{i}_{j}", help="Удалить", use_container_width=True):
-                            st.session_state.quick_links.remove(link)
-                            save_quick_links(st.session_state.quick_links)
-                            st.rerun()
+quick_links = st.session_state.quick_links
 
+if not quick_links:
+    st.info("📭 Нет быстрых ссылок. Нажмите 'Добавить', чтобы создать первую!")
+else:
+    # Показываем ссылки в сетке 4 колонки
+    for i in range(0, len(quick_links), 4):
+        cols = st.columns(4)
+        for j, link in enumerate(quick_links[i:i+4]):
+            with cols[j]:
+                # Белая овальная карточка без URL
+                st.markdown(f"""
+                <div class="quick-link-card">
+                    <div class="quick-link-icon">{link.get('icon', '🔗')}</div>
+                    <div class="quick-link-name">{link['name']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Круглые кнопки управления
+                col_open, col_del = st.columns([2, 1])
+                with col_open:
+                    if st.button("🌐 Открыть", key=f"open_{i}_{j}", use_container_width=True):
+                        js_code = f'window.open("{link["url"]}", "_blank");'
+                        components.html(f"<script>{js_code}</script>", height=0)
+                with col_del:
+                    if st.button("✕", key=f"del_{i}_{j}", use_container_width=True):
+                        st.session_state.quick_links.remove(link)
+                        save_quick_links(st.session_state.quick_links)
+                        st.rerun()
     st.markdown("---")
     
     # Форма добавления новой ссылки
