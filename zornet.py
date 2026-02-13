@@ -86,7 +86,7 @@ if "user_data" not in st.session_state:
 if "user_photo" not in st.session_state:
     st.session_state.user_photo = None
 if "disk_current_path" not in st.session_state:
-    st.session_state.disk_current_path = "zornet_cloud"
+    st.session_state.disk_current_path = None
 if "disk_action" not in st.session_state:
     st.session_state.disk_action = "view"
 if "is_logged_in" not in st.session_state:
@@ -104,6 +104,9 @@ storage = load_storage()
 if "current_auth" in storage and storage["current_auth"]["is_logged_in"]:
     st.session_state.is_logged_in = True
     st.session_state.user_data = storage["current_auth"]["user_data"]
+    # Устанавливаем путь для диска при входе
+    if st.session_state.user_data.get("username"):
+        st.session_state.disk_current_path = f"zornet_cloud/{st.session_state.user_data['username']}"
 if "quick_links" not in st.session_state:
     # Загружаем сохраненные ссылки, если пользователь авторизован
     if st.session_state.is_logged_in:
@@ -163,6 +166,16 @@ st.markdown("""
         .link-name {
             font-size: 0.9rem !important;
         }
+        .search-container {
+            flex-direction: column !important;
+        }
+        .search-container input {
+            width: 100% !important;
+            margin-bottom: 10px !important;
+        }
+        .search-container button {
+            width: 100% !important;
+        }
     }
     
     @media (max-width: 480px) {
@@ -205,7 +218,7 @@ st.markdown("""
         letter-spacing: 2px;
     }
     
-    /* СТИЛИ ДЛЯ ВСЕХ КНОПОК - ЕДИНОЕ ОФОРМЛЕНИЕ */
+    /* СТИЛИ ДЛЯ ВСЕХ КНОПОК */
     .stButton > button {
         background: white !important;
         border: 2px solid #D4AF37 !important;
@@ -216,7 +229,7 @@ st.markdown("""
         transition: all 0.3s ease !important;
         box-shadow: 0 4px 10px rgba(212, 175, 55, 0.1) !important;
         height: auto !important;
-        min-height: 50px !important;
+        min-height: 55px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
@@ -241,7 +254,7 @@ st.markdown("""
         box-shadow: 0 12px 30px rgba(212, 175, 55, 0.4) !important;
     }
     
-    /* КНОПКИ В САЙДБАРЕ - ЧУТЬ ВЫШЕ */
+    /* КНОПКИ В САЙДБАРЕ */
     div[data-testid="stSidebar"] div.stButton > button {
         background: transparent !important;
         border: 2px solid transparent !important;
@@ -263,21 +276,22 @@ st.markdown("""
         color: #D4AF37 !important;
     }
     
-    /* ВИДЖЕТ ВРЕМЕНИ НА ГЛАВНОЙ */
+    /* ВИДЖЕТ ВРЕМЕНИ НА ГЛАВНОЙ - ОДИНАКОВЫЙ С ДРУГИМИ КНОПКАМИ */
     .time-widget {
         background: white;
         border: 2px solid #D4AF37;
         border-radius: 16px;
-        padding: 15px;
+        padding: 12px 16px;
         text-align: center;
         box-shadow: 0 4px 10px rgba(212, 175, 55, 0.1);
         height: 100%;
-        min-height: 100px;
+        min-height: 55px;
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
+        gap: 8px;
         transition: all 0.3s ease;
+        cursor: default;
     }
     
     .time-widget:hover {
@@ -286,14 +300,13 @@ st.markdown("""
     }
     
     .time-icon {
-        font-size: 1.8rem;
-        margin-bottom: 5px;
+        font-size: 1.3rem;
         color: #D4AF37;
     }
     
     .time-display {
-        font-weight: 700;
-        font-size: 1.3rem;
+        font-weight: 600;
+        font-size: 1.1rem;
         color: #1a1a1a;
     }
     
@@ -337,7 +350,7 @@ st.markdown("""
         letter-spacing: 0.3px;
     }
     
-    /* КНОПКА ОТКРЫТИЯ - ОВАЛЬНАЯ */
+    /* КНОПКА ОТКРЫТИЯ */
     .open-link-btn {
         background: linear-gradient(135deg, #D4AF37, #B8860B) !important;
         color: white !important;
@@ -351,10 +364,9 @@ st.markdown("""
         margin-bottom: 5px !important;
         width: 100% !important;
         box-shadow: 0 8px 20px rgba(212, 175, 55, 0.3) !important;
-        letter-spacing: 0.5px;
     }
     
-    /* КНОПКА УДАЛЕНИЯ - УЗКАЯ */
+    /* КНОПКА УДАЛЕНИЯ */
     .delete-btn {
         background: linear-gradient(135deg, #ff4444, #cc0000) !important;
         color: white !important;
@@ -366,6 +378,52 @@ st.markdown("""
         transition: all 0.3s ease !important;
         width: 100% !important;
         box-shadow: 0 4px 10px rgba(255, 68, 68, 0.2) !important;
+    }
+    
+    /* КОНТЕЙНЕР ДЛЯ ПОИСКА */
+    .search-container {
+        display: flex;
+        gap: 10px;
+        margin: 30px 0;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .search-container input {
+        flex: 1;
+        padding: 15px 25px;
+        font-size: 16px;
+        border: 2px solid #D4AF37;
+        border-radius: 30px;
+        outline: none;
+        transition: all 0.3s ease;
+        background: white;
+        min-height: 55px;
+    }
+    
+    .search-container input:focus {
+        border-color: #B8860B;
+        box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.2);
+    }
+    
+    .search-container button {
+        background: linear-gradient(135deg, #D4AF37, #B8860B);
+        color: white;
+        border: none;
+        padding: 0 30px;
+        border-radius: 30px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        min-height: 55px;
+        font-size: 16px;
+        white-space: nowrap;
+    }
+    
+    .search-container button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(212, 175, 55, 0.3);
     }
     
     /* КАРТОЧКИ ПОГОДЫ */
@@ -422,6 +480,20 @@ st.markdown("""
         transform: translateY(-5px);
         border-color: #D4AF37;
         box-shadow: 0 15px 30px rgba(212, 175, 55, 0.2);
+    }
+    
+    .news-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 15px;
+        line-height: 1.4;
+    }
+    
+    .news-summary {
+        color: #666;
+        line-height: 1.6;
+        font-size: 0.95rem;
     }
     
     /* ЧАТ МЕССЕНДЖЕРА */
@@ -513,14 +585,11 @@ st.markdown("""
         box-shadow: 0 10px 25px rgba(212, 175, 55, 0.2);
     }
     
-    /* ПРОФИЛЬ */
+    /* ПРОФИЛЬ - УБРАЛ ЛИШНИЙ БЕЛЫЙ ПРЯМОУГОЛЬНИК */
     .profile-card {
-        background: white;
-        border-radius: 30px;
-        padding: 40px;
+        background: transparent;
+        padding: 20px;
         text-align: center;
-        box-shadow: 0 30px 60px rgba(212, 175, 55, 0.15);
-        border: 2px solid #D4AF37;
         max-width: 500px;
         margin: 0 auto;
     }
@@ -537,8 +606,33 @@ st.markdown("""
         font-size: 3rem;
         font-weight: 700;
         margin: 0 auto 20px;
-        border: 4px solid white;
+        border: 4px solid #D4AF37;
         box-shadow: 0 10px 30px rgba(212, 175, 55, 0.3);
+    }
+    
+    .profile-name {
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 5px;
+        background: linear-gradient(135deg, #D4AF37, #B8860B);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    .profile-username {
+        font-size: 1.1rem;
+        color: #666;
+        margin-bottom: 20px;
+    }
+    
+    .profile-email {
+        background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(184, 134, 11, 0.1));
+        padding: 12px 20px;
+        border-radius: 50px;
+        display: inline-block;
+        color: #D4AF37;
+        font-weight: 600;
+        border: 2px solid #D4AF37;
     }
     
     /* ФОРМЫ ВХОДА/РЕГИСТРАЦИИ */
@@ -591,24 +685,29 @@ st.markdown("""
         animation: fadeIn 0.5s ease;
     }
     
-    /* ЕДИНЫЙ ЗОЛОТОЙ ЦВЕТ */
-    .gold-text {
-        color: #D4AF37 !important;
+    /* ЗАГОЛОВОК НОВОСТЕЙ */
+    .news-header {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #D4AF37;
+        margin-bottom: 20px;
+        text-align: center;
     }
     
-    .gold-border {
-        border-color: #D4AF37 !important;
+    /* КОНТЕЙНЕР ДЛЯ ЗАГОЛОВКА С КНОПКОЙ */
+    .header-with-button {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 10px;
     }
     
-    .gold-bg {
-        background: linear-gradient(135deg, #D4AF37, #B8860B) !important;
-    }
-    
-    /* КОНТЕЙНЕРЫ ДЛЯ АДАПТИВНОСТИ */
-    .responsive-container {
-        width: 100%;
-        padding: 0 15px;
-        margin: 0 auto;
+    .header-with-button h3 {
+        margin: 0;
+        color: #D4AF37;
+        font-size: 1.5rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1040,8 +1139,8 @@ if st.session_state.page == "Главная":
     with col1:
         st.markdown(f"""
         <div class="time-widget">
-            <div class="time-icon">🕒</div>
-            <div class="time-display">{current_time}</div>
+            <span class="time-icon">🕒</span>
+            <span class="time-display">{current_time}</span>
         </div>
         """, unsafe_allow_html=True)
     
@@ -1062,40 +1161,40 @@ if st.session_state.page == "Главная":
     
     st.markdown("---")
     
-    if not st.session_state.is_logged_in:
-        st.info("👋 Добро пожаловать! Для полного доступа к функциям войдите в профиль.")
-    
-    # Поиск Google
+    # Поиск Google - кнопка прямо на строке
     components.html("""
-    <div style="margin: 30px 0; text-align: center;">
-        <form action="https://www.google.com/search" method="get" target="_blank" style="max-width: 600px; margin: 0 auto;">
-            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                <input type="text" name="q" placeholder="🔍 Поиск в Google..." 
-                       style="flex: 1; min-width: 200px; padding: 15px 25px; font-size: 16px; border: 2px solid #D4AF37; border-radius: 30px; outline: none; transition: all 0.3s ease; background: white;">
-                <button type="submit" 
-                        style="background: linear-gradient(135deg, #D4AF37, #B8860B); color: white; border: none; padding: 0 40px; border-radius: 30px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; min-height: 55px;">
-                    Найти
-                </button>
-            </div>
+    <div class="search-container">
+        <form action="https://www.google.com/search" method="get" target="_blank" style="display: flex; gap: 10px; width: 100%;">
+            <input type="text" name="q" placeholder="🔍 Поиск в Google...">
+            <button type="submit">Найти</button>
         </form>
     </div>
-    """, height=120)
+    """, height=80)
     
     st.markdown("---")
     
-    # Быстрые ссылки
+    # Быстрые ссылки с кнопкой добавления напротив
     st.markdown("""
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h3 style="margin: 0; color: #D4AF37;">📌 Быстрые ссылки</h3>
+    <div class="header-with-button">
+        <h3>📌 Быстрые ссылки</h3>
     </div>
     """, unsafe_allow_html=True)
+    
+    # Кнопка добавления справа от заголовка
+    col_header, col_button = st.columns([3, 1])
+    with col_header:
+        st.markdown("")  # Пусто для выравнивания
+    with col_button:
+        if st.button("➕ Добавить", key="add_link_main", use_container_width=True):
+            st.session_state.show_add_link = not st.session_state.show_add_link
+            st.rerun()
     
     quick_links = st.session_state.quick_links
     
     if not quick_links:
         st.info("📭 Нет быстрых ссылок. Добавьте первую!")
     else:
-        # Показываем ссылки в сетке 4 колонки (адаптивно)
+        # Показываем ссылки в сетке 4 колонки
         for i in range(0, len(quick_links), 4):
             cols = st.columns(4)
             row_links = quick_links[i:i+4]
@@ -1122,11 +1221,6 @@ if st.session_state.page == "Главная":
                             st.session_state.quick_links.remove(link)
                             save_quick_links(st.session_state.quick_links)
                             st.rerun()
-    
-    # Кнопка добавления ссылки
-    if st.button("➕ Добавить новую ссылку", use_container_width=True, type="primary"):
-        st.session_state.show_add_link = not st.session_state.show_add_link
-        st.rerun()
     
     # Форма добавления ссылки
     if st.session_state.show_add_link:
@@ -1164,16 +1258,11 @@ elif st.session_state.page == "Мессенджер":
             st.rerun()
         st.stop()
     
-    # Создаем две колонки с адаптивным поведением
+    # Создаем две колонки
     col_contacts, col_chat = st.columns([1, 2])
     
     with col_contacts:
-        st.markdown("""
-        <div style="background: white; border-radius: 20px; padding: 20px; border: 2px solid #D4AF37; margin-bottom: 20px;">
-            <h4 style="margin: 0 0 20px 0; color: #D4AF37;">🔍 Поиск</h4>
-        </div>
-        """, unsafe_allow_html=True)
-        
+        # Просто поиск без заголовка
         search_username = st.text_input("", placeholder="@username", label_visibility="collapsed")
         
         if st.button("🔍 Найти пользователя", use_container_width=True, type="primary"):
@@ -1452,8 +1541,20 @@ elif st.session_state.page == "Кинотеатр":
 elif st.session_state.page == "Диск":
     st.markdown('<div class="gold-title fade-in">💾 ДИСК</div>', unsafe_allow_html=True)
     
-    # Создаем корневую папку
-    os.makedirs("zornet_cloud", exist_ok=True)
+    if not st.session_state.is_logged_in:
+        st.warning("⚠️ Для использования диска войдите в систему")
+        if st.button("Перейти к входу", type="primary"):
+            st.session_state.page = "Профиль"
+            st.rerun()
+        st.stop()
+    
+    # Устанавливаем путь для пользователя
+    username = st.session_state.user_data.get("username")
+    if not st.session_state.disk_current_path:
+        st.session_state.disk_current_path = f"zornet_cloud/{username}"
+    
+    # Создаем папку пользователя если не существует
+    os.makedirs(st.session_state.disk_current_path, exist_ok=True)
     
     # Функции для работы с диском
     def format_size(size):
@@ -1467,7 +1568,7 @@ elif st.session_state.page == "Диск":
         total = 0
         files = 0
         folders = 0
-        for root, dirs, files_list in os.walk("zornet_cloud"):
+        for root, dirs, files_list in os.walk(st.session_state.disk_current_path):
             folders += len(dirs)
             for file in files_list:
                 files += 1
@@ -1480,7 +1581,7 @@ elif st.session_state.page == "Диск":
     st.markdown(f"""
     <div class="disk-stats-card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-            <h3 style="margin: 0; color: white;">📊 Статистика</h3>
+            <h3 style="margin: 0; color: white;">📊 Статистика {username}</h3>
             <span style="background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 30px;">{format_size(total_size)} / 1 GB</span>
         </div>
         <div style="background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; margin-bottom: 15px;">
@@ -1520,7 +1621,7 @@ elif st.session_state.page == "Диск":
         uploaded_files = st.file_uploader("Выберите файлы", accept_multiple_files=True)
         if uploaded_files:
             for file in uploaded_files:
-                file_path = os.path.join("zornet_cloud", file.name)
+                file_path = os.path.join(st.session_state.disk_current_path, file.name)
                 with open(file_path, "wb") as f:
                     f.write(file.getbuffer())
             st.success(f"✅ Загружено {len(uploaded_files)} файлов!")
@@ -1532,7 +1633,7 @@ elif st.session_state.page == "Диск":
         folder_name = st.text_input("Название папки")
         if st.button("✅ Создать", use_container_width=True, type="primary"):
             if folder_name:
-                os.makedirs(os.path.join("zornet_cloud", folder_name), exist_ok=True)
+                os.makedirs(os.path.join(st.session_state.disk_current_path, folder_name), exist_ok=True)
                 st.success(f"✅ Папка '{folder_name}' создана!")
                 st.session_state.disk_action = "view"
                 st.rerun()
@@ -1542,7 +1643,7 @@ elif st.session_state.page == "Диск":
         query = st.text_input("Введите название")
         if query:
             results = []
-            for root, dirs, files in os.walk("zornet_cloud"):
+            for root, dirs, files in os.walk(st.session_state.disk_current_path):
                 for name in dirs + files:
                     if query.lower() in name.lower():
                         results.append(os.path.join(root, name))
@@ -1560,7 +1661,7 @@ elif st.session_state.page == "Диск":
         
         # Навигация
         current_path = st.session_state.disk_current_path
-        if current_path != "zornet_cloud":
+        if current_path != f"zornet_cloud/{username}":
             if st.button("← Назад", use_container_width=True):
                 st.session_state.disk_current_path = os.path.dirname(current_path)
                 st.rerun()
@@ -1576,7 +1677,7 @@ elif st.session_state.page == "Диск":
             # Сортируем: папки сверху
             items.sort(key=lambda x: (not os.path.isdir(os.path.join(current_path, x)), x.lower()))
             
-            # Показываем в сетке (адаптивно)
+            # Показываем в сетке
             cols = st.columns(4)
             for idx, item in enumerate(items):
                 with cols[idx % 4]:
@@ -1614,6 +1715,7 @@ elif st.session_state.page == "Диск":
 # ================= НОВОСТИ =================
 elif st.session_state.page == "Новости":
     st.markdown('<div class="gold-title fade-in">📰 НОВОСТИ</div>', unsafe_allow_html=True)
+    st.markdown('<div class="news-header">Последние новости</div>', unsafe_allow_html=True)
     
     with st.spinner("Загружаю новости..."):
         news = get_belta_news()
@@ -1633,7 +1735,7 @@ elif st.session_state.page == "Новости":
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title fade-in">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
     
-    # Просто поиск без лишней таблички
+    # Поиск города
     col1, col2 = st.columns([3, 1])
     with col1:
         city_input = st.text_input("", placeholder="Введите город...", label_visibility="collapsed")
@@ -1773,6 +1875,7 @@ elif st.session_state.page == "Профиль":
             save_quick_links(st.session_state.quick_links)
             st.session_state.is_logged_in = False
             st.session_state.user_data = {}
+            st.session_state.disk_current_path = None
             st.session_state.page = "Главная"
             st.rerun()
     
@@ -1794,6 +1897,7 @@ elif st.session_state.page == "Профиль":
                     if user:
                         st.session_state.user_data = user
                         st.session_state.is_logged_in = True
+                        st.session_state.disk_current_path = f"zornet_cloud/{user['username']}"
                         
                         saved_links = load_quick_links()
                         if saved_links:
@@ -1846,7 +1950,7 @@ if __name__ == "__main__":
     # Создаем тестового пользователя
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
-    c.execute("SELECT COUNT(*) FROM users")
+    c.execute("SELECT COUNT(*) FROM users WHERE username = 'test'")
     if c.fetchone()[0] == 0:
         test_password = hashlib.sha256("test123".encode()).hexdigest()
         c.execute("INSERT INTO users (email, username, first_name, last_name, password_hash) VALUES (?, ?, ?, ?, ?)",
