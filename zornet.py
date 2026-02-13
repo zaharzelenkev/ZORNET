@@ -2134,7 +2134,7 @@ elif st.session_state.page == "Погода":
                         {get_weather_icon(current['icon'])}
                     </div>
                 </div>
-                ""', unsafe_allow_html=True)
+                """, unsafe_allow_html=True)
 
             # Детали погоды
             st.markdown("#### 📊 Детали")
