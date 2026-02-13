@@ -1053,12 +1053,12 @@ def get_disk_stats():
 def get_belta_news():
     try:
         headers = {"User-Agent": "ZORNET/1.0"}
-        response = requests.get("https://www.belta.by/ru/rss", headers=headers, timeout=10)
+        response = requests.get("https://www.belta.by/rss", headers=headers, timeout=10)
         feed = feedparser.parse(response.content)
         return feed.entries[:5]
     except:
         return [
-            {"title": "Новости Беларуси", "link": "#", "summary": "Следите за обновлениями на портале"},
+            {"title": "Новости Беларуси", "link": "#", "summary": "Следите за обновлениями"},
             {"title": "Экономические новости", "link": "#", "summary": "Развитие экономики страны"},
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
