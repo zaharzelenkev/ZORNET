@@ -8,7 +8,6 @@ import requests
 import feedparser
 from PIL import Image
 from pathlib import Path
-import mimetypes
 import uuid
 import re
 import hashlib
@@ -16,7 +15,6 @@ import streamlit.components.v1 as components
 
 # ================= ПЕРСИСТЕНТНОЕ ХРАНЕНИЕ =================
 def load_storage():
-    """Загружает данные из файла"""
     storage_file = Path("zornet_storage.json")
     if storage_file.exists():
         try:
@@ -27,13 +25,11 @@ def load_storage():
     return {}
 
 def save_storage(data):
-    """Сохраняет данные в файл"""
     storage_file = Path("zornet_storage.json")
     with open(storage_file, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 def save_quick_links(links):
-    """Сохраняет быстрые ссылки для текущего пользователя"""
     storage = load_storage()
     if st.session_state.is_logged_in:
         username = st.session_state.user_data.get("username")
@@ -46,7 +42,6 @@ def save_quick_links(links):
             save_storage(storage)
 
 def load_quick_links():
-    """Загружает быстрые ссылки для текущего пользователя"""
     if st.session_state.is_logged_in:
         username = st.session_state.user_data.get("username")
         if username:
@@ -99,25 +94,23 @@ if "chat_partner" not in st.session_state:
     st.session_state.chat_partner = None
 if "room_messages" not in st.session_state:
     st.session_state.room_messages = {}
-# Загружаем состояние входа, если есть
+
 storage = load_storage()
 if "current_auth" in storage and storage["current_auth"]["is_logged_in"]:
     st.session_state.is_logged_in = True
     st.session_state.user_data = storage["current_auth"]["user_data"]
+
 if "quick_links" not in st.session_state:
-    # Загружаем сохраненные ссылки, если пользователь авторизован
     if st.session_state.is_logged_in:
         saved_links = load_quick_links()
         if saved_links:
             st.session_state.quick_links = saved_links
         else:
-            # Если нет сохраненных, используем стандартные
             st.session_state.quick_links = [
                 {"name": "YouTube", "url": "https://www.youtube.com", "icon": "📺"},
                 {"name": "Gmail", "url": "https://mail.google.com", "icon": "📧"},
             ]
     else:
-        # Для неавторизованных пользователей - стандартные ссылки
         st.session_state.quick_links = [
             {"name": "YouTube", "url": "https://www.youtube.com", "icon": "📺"},
             {"name": "Gmail", "url": "https://mail.google.com", "icon": "📧"},
@@ -134,9 +127,18 @@ if "new_user_email" not in st.session_state:
 if "new_user_username" not in st.session_state:
     st.session_state.new_user_username = ""
 
-# ================= ИСПРАВЛЕННЫЙ CSS СТИЛИ =================
+# ================= ПРОФЕССИОНАЛЬНЫЙ CSS =================
 st.markdown("""
 <style>
+    /* ОСНОВНЫЕ НАСТРОЙКИ */
+    .main {
+        background: #ffffff;
+    }
+    
+    .stApp {
+        background: #ffffff;
+    }
+
     /* ГЛАВНЫЙ ЗАГОЛОВОК */
     .gold-title {
         font-family: 'Helvetica Neue', sans-serif;
@@ -151,7 +153,7 @@ st.markdown("""
         margin: 10px 0 30px 0;
     }
 
-    /* ВЫРАВНИВАНИЕ КНОПОК В САЙДБАРЕ */
+    /* КНОПКИ В САЙДБАРЕ */
     section[data-testid="stSidebar"] .stButton > button {
         text-align: left !important;
         justify-content: flex-start !important;
@@ -161,6 +163,7 @@ st.markdown("""
         border: none !important;
         color: #1a1a1a !important;
         font-weight: 400 !important;
+        border-radius: 0 25px 25px 0 !important;
     }
     
     section[data-testid="stSidebar"] .stButton > button:hover {
@@ -168,7 +171,7 @@ st.markdown("""
         border: 1px solid #DAA520 !important;
     }
 
-    /* КНОПКИ ГЛАВНОЙ - ИСПРАВЛЕНО ВЫРАВНИВАНИЕ */
+    /* КНОПКИ НА ГЛАВНОЙ */
     div.stButton > button {
         background: #f8f9fa !important;
         border: 1px solid #dee2e6 !important;
@@ -246,7 +249,7 @@ st.markdown("""
         border-left: 4px solid #DAA520;
     }
 
-    /* СТИЛИ ДЛЯ ПОГОДЫ - ИСПРАВЛЕНО */
+    /* СТИЛИ ДЛЯ ПОГОДЫ */
     .weather-widget {
         background: linear-gradient(135deg, #6ecbf5 0%, #059be5 100%);
         border-radius: 15px;
@@ -333,7 +336,6 @@ st.markdown("""
         margin: 10px 0;
         border-left: 4px solid #DAA520;
         transition: all 0.3s ease;
-        text-align: center;
     }
     
     .file-card:hover {
@@ -347,7 +349,6 @@ st.markdown("""
         padding: 15px;
         margin: 10px 0;
         border: 2px solid #ffd966;
-        text-align: center;
     }
     
     .storage-bar {
@@ -364,7 +365,7 @@ st.markdown("""
         border-radius: 4px;
     }
     
-    /* Стили для профиля */
+    /* Стили для профиля - GOOGLE STYLE */
     .giant-id-title {
         font-size: 5rem !important;
         font-weight: 900 !important;
@@ -383,6 +384,8 @@ st.markdown("""
         border: 1px solid #f0f0f0;
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
         text-align: center;
+        max-width: 500px;
+        margin: 0 auto;
     }
     
     .user-avatar-main {
@@ -394,170 +397,222 @@ st.markdown("""
         margin-bottom: 20px;
     }
     
-    .stFileUploader section {
-        background-color: transparent !important;
+    /* GOOGLE STYLE LOGIN */
+    .login-container {
+        max-width: 450px;
+        margin: 30px auto;
+        padding: 48px 40px;
+        background: white;
+        border-radius: 28px;
+        border: 1px solid #e8eaed;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+    }
+    
+    .google-input {
+        border: 1px solid #dadce0 !important;
+        border-radius: 24px !important;
+        padding: 14px 18px !important;
+        font-size: 16px !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .google-input:focus {
+        border-color: #DAA520 !important;
+        box-shadow: 0 1px 6px rgba(218, 165, 32, 0.3) !important;
+    }
+    
+    .google-button {
+        background: #DAA520 !important;
+        color: white !important;
         border: none !important;
-        padding: 0 !important;
+        border-radius: 24px !important;
+        padding: 14px 24px !important;
+        font-weight: 600 !important;
+        font-size: 16px !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 2px 8px rgba(218, 165, 32, 0.3) !important;
+    }
+    
+    .google-button:hover {
+        background: #B8860B !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(218, 165, 32, 0.4) !important;
+    }
+    
+    .google-tabs {
+        margin-bottom: 24px;
+        border-bottom: 1px solid #e8eaed;
+    }
+    
+    .google-tabs button {
+        background: transparent !important;
+        border: none !important;
+        color: #5f6368 !important;
+        font-weight: 500 !important;
+        padding: 12px 24px !important;
+        margin-right: 8px !important;
+        border-radius: 24px 24px 0 0 !important;
+    }
+    
+    .google-tabs button[aria-selected="true"] {
+        color: #DAA520 !important;
+        border-bottom: 3px solid #DAA520 !important;
     }
 
-    /* Стили для карточек быстрых ссылок - ИСПРАВЛЕНО ВЫРАВНИВАНИЕ */
+    /* Стили для карточек быстрых ссылок - ИДЕАЛЬНЫЕ БЕЛЫЕ ОВАЛЫ */
     .quick-link-card {
         position: relative;
-        background: white;
-        border-radius: 16px;
-        padding: 25px 20px 20px 20px;
-        margin: 8px 0;
+        background: white !important;
+        border-radius: 60px !important;
         border: 3px solid #DAA520;
+        padding: 30px 15px !important;
+        margin: 10px 0;
         text-align: center;
         transition: all 0.3s ease;
-        min-height: 160px;
-        display: flex;
+        min-height: 200px;
+        display: flex !important;
         flex-direction: column;
-        justify-content: center;
-        align-items: center;
+        justify-content: center !important;
+        align-items: center !important;
         box-shadow: 0 4px 15px rgba(218, 165, 32, 0.15);
+        width: 100%;
+        box-sizing: border-box;
     }
-    
+
     .quick-link-card:hover {
-        transform: translateY(-5px) scale(1.02);
+        transform: translateY(-5px);
         box-shadow: 0 8px 25px rgba(218, 165, 32, 0.25);
         border-color: #B8860B;
-        background: linear-gradient(135deg, #ffffff 0%, #fff9e6 100%);
+        background: white !important;
     }
-    
+
     .quick-link-icon {
-        font-size: 3.5rem !important;
-        margin-bottom: 15px;
+        font-size: 4rem !important;
+        margin-bottom: 15px !important;
         text-shadow: 0 2px 5px rgba(0,0,0,0.1);
         transition: transform 0.3s ease;
+        display: block !important;
     }
-    
+
     .quick-link-card:hover .quick-link-icon {
         transform: scale(1.1) rotate(5deg);
     }
-    
+
     .quick-link-name {
-        font-weight: 700 !important;
-        font-size: 1.1rem !important;
+        font-weight: 800 !important;
+        font-size: 1.3rem !important;
         color: #333 !important;
-        margin-bottom: 5px !important;
+        margin: 0 !important;
+        padding: 0 !important;
         line-height: 1.4 !important;
         font-family: 'Helvetica Neue', sans-serif;
-    }
-    
-    /* Кнопка удаления */
-    .delete-link-btn {
-        position: absolute !important;
-        top: 10px !important;
-        right: 10px !important;
-        width: 28px !important;
-        height: 28px !important;
-        min-width: 28px !important;
-        min-height: 28px !important;
-        padding: 0 !important;
-        border-radius: 50% !important;
-        background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%) !important;
-        color: white !important;
-        font-size: 14px !important;
-        font-weight: bold !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        z-index: 100;
-        opacity: 0.8;
-        transition: all 0.3s ease;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        border: 2px solid white;
-    }
-    
-    .quick-link-card:hover .delete-link-btn {
-        opacity: 1;
-    }
-    
-    .delete-link-btn:hover {
-        opacity: 1;
-        transform: scale(1.15);
-        box-shadow: 0 3px 8px rgba(0,0,0,0.3);
-    }
-    
-    /* Кнопка "Открыть" */
-    .open-link-btn {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
-        color: white !important;
-        border: none !important;
-        border-radius: 10px !important;
-        padding: 8px 15px !important;
-        font-weight: 600 !important;
-        font-size: 14px !important;
-        transition: all 0.3s ease !important;
-        margin-top: 10px !important;
-        width: 100% !important;
-    }
-    
-    .open-link-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(218, 165, 32, 0.4);
+        display: block !important;
+        text-align: center !important;
+        word-break: break-word;
     }
 
-    /* Мессенджер стили - ИСПРАВЛЕНО */
-    .chat-header {
-        background: white;
-        padding: 15px;
-        border-radius: 10px;
-        border: 1px solid #e0e0e0;
-        margin-bottom: 15px;
+    /* Круглые кнопки */
+    .stButton > button {
+        border-radius: 40px !important;
     }
     
-    .message-you {
-        background: #DCF8C6;
-        padding: 10px 15px;
-        border-radius: 18px;
-        margin: 5px 0;
-        margin-left: auto;
+    button[key="add_link_btn"] {
+        background: white !important;
+        border: 2px solid #DAA520 !important;
+        color: #DAA520 !important;
+        border-radius: 40px !important;
+        padding: 12px 24px !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease !important;
+    }
+
+    button[key="add_link_btn"]:hover {
+        background: #DAA520 !important;
+        color: white !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(218, 165, 32, 0.3) !important;
+    }
+
+    /* Мессенджер стили */
+    .messenger-container {
+        display: flex;
+        height: 700px;
+        background: white;
+        border-radius: 16px;
+        border: 1px solid #e0e0e0;
+        overflow: hidden;
+    }
+    
+    .contacts-sidebar {
+        width: 350px;
+        border-right: 1px solid #e0e0e0;
+        background: #f8f9fa;
+        overflow-y: auto;
+    }
+    
+    .chat-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .chat-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid #e0e0e0;
+        background: white;
+    }
+    
+    .messages-container {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        background: #f0f2f5;
+    }
+    
+    .message-input-area {
+        padding: 16px 20px;
+        border-top: 1px solid #e0e0e0;
+        background: white;
+    }
+    
+    .contact-item {
+        padding: 12px 16px;
+        border-bottom: 1px solid #e0e0e0;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .contact-item:hover {
+        background: #e9ecef;
+    }
+    
+    .contact-item.active {
+        background: #e3f2fd;
+        border-left: 3px solid #DAA520;
+    }
+    
+    .message-bubble {
         max-width: 70%;
+        padding: 10px 14px;
+        border-radius: 18px;
+        margin-bottom: 8px;
+        word-wrap: break-word;
+    }
+    
+    .message-bubble.you {
+        background: #DCF8C6;
+        margin-left: auto;
         border-bottom-right-radius: 4px;
     }
     
-    .message-other {
+    .message-bubble.other {
         background: white;
-        padding: 10px 15px;
-        border-radius: 18px;
-        margin: 5px 0;
         margin-right: auto;
-        max-width: 70%;
         border-bottom-left-radius: 4px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
-    
-    /* Логин контейнер */
-    .login-container {
-        max-width: 500px;
-        margin: 50px auto;
-        padding: 40px;
-        background: white;
-        border-radius: 20px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        border: 1px solid #e0e0e0;
-    }
 
-    /* Стили для сообщения об успешной регистрации */
-    .success-message {
-        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
-        color: white;
-        padding: 20px;
-        border-radius: 10px;
-        margin: 15px 0;
-        border-left: 5px solid #2E7D32;
-    }
-
-    /* ВЫРАВНИВАНИЕ КОЛОНОК */
-    div[data-testid="column"] {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-    
-    /* Стили для новостей */
+    /* Новости */
     .news-item {
         background: #f8f9fa;
         border-left: 4px solid #DAA520;
@@ -576,6 +631,16 @@ st.markdown("""
     .news-title:hover {
         text-decoration: underline;
     }
+
+    /* Стили для сообщения об успешной регистрации */
+    .success-message {
+        background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin: 15px 0;
+        border-left: 5px solid #2E7D32;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -584,7 +649,6 @@ def init_db():
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
     
-    # Пользователи
     c.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -597,7 +661,6 @@ def init_db():
         )
     """)
     
-    # Сообщения мессенджера
     c.execute("""
         CREATE TABLE IF NOT EXISTS chat_messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -608,7 +671,6 @@ def init_db():
         )
     """)
     
-    # Комнаты совместного просмотра
     c.execute("""
         CREATE TABLE IF NOT EXISTS watch_rooms (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -621,7 +683,6 @@ def init_db():
         )
     """)
     
-    # Сообщения в комнатах
     c.execute("""
         CREATE TABLE IF NOT EXISTS room_messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -636,26 +697,21 @@ def init_db():
     conn.close()
 
 def register_user(email, username, first_name, last_name, password):
-    """Регистрация пользователя"""
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
     
     try:
-        # Проверяем почту
         c.execute("SELECT email FROM users WHERE LOWER(email) = LOWER(?)", (email,))
         if c.fetchone():
             return {"success": False, "message": "Email уже используется"}
         
-        # Проверяем никнейм (без учета регистра)
         c.execute("SELECT username FROM users WHERE LOWER(username) = LOWER(?)", (username,))
         if c.fetchone():
             return {"success": False, "message": "Никнейм уже занят"}
         
-        # Проверяем длину пароля
         if len(password) < 6:
             return {"success": False, "message": "Пароль должен быть не менее 6 символов"}
         
-        # Проверяем валидность email
         if '@' not in email or '.' not in email:
             return {"success": False, "message": "Неверный формат email"}
         
@@ -669,7 +725,6 @@ def register_user(email, username, first_name, last_name, password):
         
         conn.commit()
         
-        # Создаем папку для пользователя в облачном хранилище
         user_folder = Path(f"zornet_cloud/{username}")
         user_folder.mkdir(parents=True, exist_ok=True)
         
@@ -693,7 +748,6 @@ def register_user(email, username, first_name, last_name, password):
         conn.close()
 
 def login_user(email, password):
-    """Вход пользователя"""
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
     
@@ -721,7 +775,6 @@ def login_user(email, password):
         conn.close()
 
 def get_user_by_username(username):
-    """Поиск пользователя по никнейму"""
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
     
@@ -745,7 +798,6 @@ def get_user_by_username(username):
     return None
 
 def save_chat_message(sender, receiver, message):
-    """Сохранение сообщения в чате"""
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
     
@@ -758,7 +810,6 @@ def save_chat_message(sender, receiver, message):
     conn.close()
 
 def save_room_message_to_db(room_id, username, message):
-    """Сохранение сообщения в комнате в БД"""
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
     
@@ -771,7 +822,6 @@ def save_room_message_to_db(room_id, username, message):
     conn.close()
 
 def save_room_message(room_id, username, message):
-    """Сохранение сообщения в комнате"""
     if room_id not in st.session_state.room_messages:
         st.session_state.room_messages[room_id] = []
     
@@ -782,7 +832,6 @@ def save_room_message(room_id, username, message):
     })
 
 def get_chat_history(user1, user2):
-    """Получение истории чата"""
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
     
@@ -800,7 +849,6 @@ def get_chat_history(user1, user2):
     return messages
 
 def create_watch_room(room_id, name, youtube_url, password, owner_username):
-    """Создание комнаты в БД"""
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
     
@@ -819,7 +867,6 @@ def create_watch_room(room_id, name, youtube_url, password, owner_username):
         conn.close()
 
 def get_watch_room(room_id, password):
-    """Получение комнаты из БД"""
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
     
@@ -843,7 +890,6 @@ def get_watch_room(room_id, password):
     return None
 
 def get_all_watch_rooms():
-    """Получение всех комнат из БД"""
     conn = sqlite3.connect("zornet.db")
     c = conn.cursor()
     
@@ -1005,12 +1051,12 @@ def get_disk_stats():
 def get_belta_news():
     try:
         headers = {"User-Agent": "ZORNET/1.0"}
-        response = requests.get("https://www.belta.by/ru/rss", headers=headers, timeout=10)
+        response = requests.get("https://www.belta.by/rss", headers=headers, timeout=10)
         feed = feedparser.parse(response.content)
         return feed.entries[:5]
     except:
         return [
-            {"title": "Новости Беларуси", "link": "#", "summary": "Следите за обновлениями на портале"},
+            {"title": "Новости Беларуси", "link": "#", "summary": "Следите за обновлениями"},
             {"title": "Экономические новости", "link": "#", "summary": "Развитие экономики страны"},
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
@@ -1021,7 +1067,6 @@ if st.session_state.page == "Главная":
     
     current_time = datetime.datetime.now(pytz.timezone('Europe/Minsk')).strftime('%H:%M')
     
-    # Создаем 4 колонки одинаковой ширины для верхней панели
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
@@ -1044,7 +1089,6 @@ if st.session_state.page == "Главная":
     if not st.session_state.is_logged_in:
         st.warning("⚠️ Вы не авторизованы. Перейдите в профиль для входа.")
     
-    # Поисковая строка
     components.html("""
     <!DOCTYPE html>
     <html>
@@ -1130,7 +1174,6 @@ if st.session_state.page == "Главная":
     
     st.markdown("---")
 
-    # БЫСТРЫЕ ССЫЛКИ
     col1, col2 = st.columns([3, 1])
     with col1:
         st.markdown("### 📌 Быстрые ссылки")
@@ -1140,41 +1183,34 @@ if st.session_state.page == "Главная":
             st.rerun()
 
     quick_links = st.session_state.quick_links
-    
+
     if not quick_links:
         st.info("📭 Нет быстрых ссылок. Нажмите 'Добавить', чтобы создать первую!")
     else:
-        # Показываем ссылки в сетке 4 колонки
         for i in range(0, len(quick_links), 4):
             cols = st.columns(4)
             for j, link in enumerate(quick_links[i:i+4]):
                 with cols[j]:
-                    # Карточка ссылки
                     st.markdown(f"""
                     <div class="quick-link-card">
                         <div class="quick-link-icon">{link.get('icon', '🔗')}</div>
                         <div class="quick-link-name">{link['name']}</div>
-                        <div style="font-size: 0.8rem; color: #666; word-break: break-all; margin: 5px 0;">
-                            {link['url'][:30]}...
-                        </div>
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # Кнопки управления
-                    col_open, col_del = st.columns(2)
+                    col_open, col_del = st.columns([2, 1])
                     with col_open:
-                        if st.button("🌐", key=f"open_{i}_{j}", help="Открыть", use_container_width=True):
+                        if st.button("🌐", key=f"open_{i}_{j}", use_container_width=True):
                             js_code = f'window.open("{link["url"]}", "_blank");'
                             components.html(f"<script>{js_code}</script>", height=0)
                     with col_del:
-                        if st.button("✕", key=f"del_{i}_{j}", help="Удалить", use_container_width=True):
+                        if st.button("✕", key=f"del_{i}_{j}", use_container_width=True):
                             st.session_state.quick_links.remove(link)
                             save_quick_links(st.session_state.quick_links)
                             st.rerun()
 
     st.markdown("---")
     
-    # Форма добавления новой ссылки
     if st.session_state.show_add_link:
         st.markdown("#### 📝 Добавить новую ссылку")
         
@@ -1242,7 +1278,6 @@ elif st.session_state.page == "Новости":
 elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
     
-    # Поиск города
     st.markdown("### Введите город для поиска погоды")
     
     col_search, col_btn = st.columns([3, 1])
@@ -1258,14 +1293,12 @@ elif st.session_state.page == "Погода":
     with col_btn:
         search_clicked = st.button("🔍 Найти", type="primary", use_container_width=True)
     
-    # Обработка поиска
     city_to_show = st.session_state.user_city if st.session_state.user_city else "Минск"
     
     if search_clicked and city_input:
         city_to_show = city_input
         st.session_state.user_city = city_input
     
-    # Получаем погоду
     with st.spinner(f"Получаю погоду для {city_to_show}..."):
         weather_data = get_weather_by_city(city_to_show)
         
@@ -1280,17 +1313,15 @@ elif st.session_state.page == "Погода":
             current = weather_data["current"]
             st.session_state.user_city = city_to_show
 
-            # Показываем город
             st.markdown(f"### 🌤️ Погода в {current['city']}, {current['country']}")
 
-            # Основная информация
             col_temp, col_icon = st.columns([2, 1])
 
             with col_temp:
                 st.markdown(f"""
                 <div style="text-align: center;">
-                    <div class="weather-temp">{current['temp']}°C</div>
-                    <div class="weather-description">{get_weather_icon(current['icon'])} {current['description']}</div>
+                    <div style="font-size: 4rem; font-weight: 800;">{current['temp']}°C</div>
+                    <div style="font-size: 1.5rem;">{get_weather_icon(current['icon'])} {current['description']}</div>
                     <div style="font-size: 1rem; color: #888;">💁 Ощущается как {current['feels_like']}°C</div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -1298,11 +1329,10 @@ elif st.session_state.page == "Погода":
             with col_icon:
                 st.markdown(f"""
                 <div style="text-align: center; padding-top: 15px;">
-                    <div class="weather-icon">{get_weather_icon(current['icon'])}</div>
+                    <div style="font-size: 5rem;">{get_weather_icon(current['icon'])}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
-            # Детали погоды
             st.markdown("#### 📊 Детали")
 
             details = [
@@ -1316,7 +1346,6 @@ elif st.session_state.page == "Погода":
                 ("🌇 Закат", current['sunset'])
             ]
 
-            # Показываем детали в 2 колонки
             for i in range(0, len(details), 2):
                 col1, col2 = st.columns(2)
                 
@@ -1339,7 +1368,6 @@ elif st.session_state.page == "Погода":
                         </div>
                         """, unsafe_allow_html=True)
 
-            # Прогноз на 5 дней
             if weather_data.get("forecast"):
                 st.markdown("#### 📅 Прогноз на 5 дней")
 
@@ -1362,14 +1390,13 @@ elif st.session_state.page == "Погода":
                         ]
 
                         st.markdown(f"""
-                        <div class="forecast-day">
+                        <div style="background: #f8f9fa; border-radius: 10px; padding: 15px; text-align: center;">
                             <div style="font-weight: bold;">{day_name}</div>
                             <div style="font-size: 2rem;">{get_weather_icon(day['weather'][0]['icon'])}</div>
                             <div style="font-size: 1.2rem; font-weight: bold;">{round(day['main']['temp'])}°C</div>
                         </div>
                         """, unsafe_allow_html=True)
 
-    # Блок с городами Беларуси
     st.markdown("---")
     st.markdown("### 🇧🇾 Города Беларуси")
 
@@ -1399,59 +1426,60 @@ elif st.session_state.page == "Мессенджер":
         
         with col_search:
             st.markdown("### Найти пользователя")
-            search = st.text_input("Введите никнейм:", placeholder="@username", key="search_user")
+            search_username = st.text_input("Введите никнейм:", placeholder="@username", key="search_user")
             
-            if st.button("🔍 Найти", use_container_width=True) and search:
-                if search == st.session_state.user_data.get("username"):
-                    st.error("Нельзя написать самому себе")
-                else:
-                    user = get_user_by_username(search)
-                    if user:
-                        st.session_state.chat_partner = user
-                        st.success(f"Найден: {user['first_name']} {user['last_name']}")
+            if st.button("🔍 Найти", use_container_width=True):
+                if search_username:
+                    if search_username == st.session_state.user_data.get("username"):
+                        st.error("Нельзя написать самому себе")
                     else:
-                        st.error("Пользователь не найден")
+                        user = get_user_by_username(search_username)
+                        if user:
+                            st.session_state.chat_partner = user
+                            st.success(f"Найден: {user['first_name']} {user['last_name']}")
+                        else:
+                            st.error("Пользователь не найден")
             
             st.markdown("---")
             st.markdown("### Контакты")
             
             contacts = [
-                {"username": "alex", "first_name": "Алексей"},
-                {"username": "marina", "first_name": "Марина"},
-                {"username": "dmitry", "first_name": "Дмитрий"},
+                {"id": 2, "username": "alex", "first_name": "Алексей", "last_name": "Петров"},
+                {"id": 3, "username": "marina", "first_name": "Марина", "last_name": "Иванова"},
             ]
             
             for contact in contacts:
-                if st.button(f"👤 {contact['first_name']}\n@{contact['username']}", 
-                           key=f"contact_{contact['username']}", use_container_width=True):
+                if st.button(f"💬 {contact['first_name']} {contact['last_name']}\n@{contact['username']}", 
+                            key=f"contact_{contact['id']}", use_container_width=True):
                     st.session_state.chat_partner = contact
                     st.rerun()
 
         with col_chat:
             if st.session_state.chat_partner:
                 partner = st.session_state.chat_partner
-                
+
                 st.markdown(f"""
-                <div class="chat-header">
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <div style="width:40px; height:40px; border-radius:50%; 
-                                  background:linear-gradient(135deg,#DAA520,#B8860B); 
-                                  display:flex; align-items:center; justify-content:center;
-                                  color:white; font-weight:bold;">
-                            {partner.get('first_name', '?')[0]}
+                <div style="background: white; padding: 15px; border-radius: 10px; border: 1px solid #e0e0e0; margin-bottom: 15px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #DAA520, #B8860B); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                            {partner.get("first_name", "?")[0]}
                         </div>
                         <div>
-                            <div style="font-weight:600; font-size:18px;">{partner.get('first_name', '')}</div>
-                            <div style="font-size:14px; color:#666;">@{partner.get('username', '')}</div>
+                            <div style="font-weight: 600; font-size: 18px;">
+                                {partner.get("first_name", "")} {partner.get("last_name", "")}
+                            </div>
+                            <div style="font-size: 14px; color: #666;">
+                                @{partner.get("username", "")}
+                            </div>
                         </div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-                
+
                 current_user = st.session_state.user_data.get("username", "")
                 partner_user = partner.get("username", "")
                 chat_key = f"{current_user}_{partner_user}"
-                
+
                 if chat_key not in st.session_state.messages:
                     db_messages = get_chat_history(current_user, partner_user)
                     st.session_state.messages[chat_key] = []
@@ -1459,36 +1487,35 @@ elif st.session_state.page == "Мессенджер":
                         st.session_state.messages[chat_key].append({
                             "sender": msg[0], "text": msg[2], "time": msg[3]
                         })
-                
+
                 chat_container = st.container(height=400)
                 with chat_container:
                     for msg in st.session_state.messages.get(chat_key, []):
-                        time_display = msg['time'][11:16] if len(msg['time']) > 16 else msg['time'][:5]
+                        time_display = msg['time'].split(" ")[1][:5] if " " in msg['time'] else msg['time'][:5]
                         
                         if msg.get("sender") == current_user:
                             st.markdown(f"""
-                            <div class="message-you">
+                            <div style="background: #DCF8C6; padding: 10px 15px; border-radius: 18px; margin: 5px 0; margin-left: auto; max-width: 70%; border-bottom-right-radius: 4px;">
                                 <div>{msg['text']}</div>
-                                <div style="font-size:11px; color:#666; text-align:right;">{time_display}</div>
+                                <div style="font-size: 11px; color: #666; text-align: right;">{time_display}</div>
                             </div>
                             """, unsafe_allow_html=True)
                         else:
                             st.markdown(f"""
-                            <div class="message-other">
+                            <div style="background: white; padding: 10px 15px; border-radius: 18px; margin: 5px 0; margin-right: auto; max-width: 70%; border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                                 <div>{msg['text']}</div>
-                                <div style="font-size:11px; color:#666; text-align:right;">{time_display}</div>
+                                <div style="font-size: 11px; color: #666; text-align: right;">{time_display}</div>
                             </div>
                             """, unsafe_allow_html=True)
                 
                 col_input, col_send = st.columns([5, 1])
                 with col_input:
-                    new_msg = st.text_input("Сообщение", placeholder="Введите сообщение...", 
-                                          label_visibility="collapsed", key="new_msg")
+                    new_message = st.text_input("", placeholder="Введите сообщение...", key="new_msg")
                 with col_send:
-                    if st.button("📤", use_container_width=True, type="primary") and new_msg:
-                        save_chat_message(current_user, partner_user, new_msg)
+                    if st.button("📤", use_container_width=True, type="primary") and new_message:
+                        save_chat_message(current_user, partner_user, new_message)
                         st.session_state.messages[chat_key].append({
-                            "sender": current_user, "text": new_msg,
+                            "sender": current_user, "text": new_message,
                             "time": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         })
                         st.rerun()
@@ -1504,257 +1531,328 @@ elif st.session_state.page == "Кинотеатр":
         if st.button("Перейти к входу", use_container_width=True):
             st.session_state.page = "Профиль"
             st.rerun()
-    elif st.session_state.get("watch_room"):
-        room_id = st.session_state.watch_room
-        room_data = None
-        
-        for room in st.session_state.rooms:
-            if room["id"] == room_id:
-                room_data = room
-                break
-        
-        if room_data:
-            video_url = room_data.get("youtube_url", "")
-            video_id = None
+    else:
+        if st.session_state.get("watch_room"):
+            room_id = st.session_state.watch_room
+            room_data = None
             
-            patterns = [
-                r'(?:youtube\.com\/watch\?v=|youtu\.be\/)([0-9A-Za-z_-]{11})',
-                r'youtube\.com\/embed\/([0-9A-Za-z_-]{11})'
-            ]
-            
-            for pattern in patterns:
-                match = re.search(pattern, video_url)
-                if match:
-                    video_id = match.group(1)
+            for room in st.session_state.rooms:
+                if room["id"] == room_id:
+                    room_data = room
                     break
             
-            st.markdown(f"### 🎥 {room_data['name']}")
-            st.markdown(f"**ID комнаты:** `{room_id}` | **Создатель:** @{room_data['owner']}")
+            if not room_data:
+                db_rooms = get_all_watch_rooms()
+                for room in db_rooms:
+                    if room["id"] == room_id:
+                        room_data = room
+                        if room not in st.session_state.rooms:
+                            st.session_state.rooms.append(room)
+                        break
             
-            if video_id:
-                components.html(f"""
-                <iframe width="100%" height="500" 
-                        src="https://www.youtube.com/embed/{video_id}?autoplay=1"
-                        frameborder="0" allowfullscreen>
-                </iframe>
-                """, height=520)
-            else:
-                st.warning("Некорректная ссылка на YouTube видео")
-            
-            st.markdown("### 💬 Чат комнаты")
-            
-            room_chat = f"room_{room_id}"
-            if room_chat not in st.session_state.room_messages:
-                st.session_state.room_messages[room_chat] = [{
-                    "username": "Система",
-                    "message": f"Добро пожаловать в комнату!",
-                    "timestamp": datetime.datetime.now().strftime("%H:%M")
-                }]
-            
-            chat_container = st.container(height=200)
-            with chat_container:
-                for msg in st.session_state.room_messages[room_chat]:
-                    st.markdown(f"""
-                    <div style="margin:8px 0; padding:8px; background:#f8f9fa; border-radius:8px;">
-                        <strong>{msg['username']}:</strong> {msg['message']}
-                        <span style="color:#666; font-size:11px; margin-left:8px;">{msg['timestamp']}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-            
-            col_msg, col_send = st.columns([5, 1])
-            with col_msg:
-                room_msg = st.text_input("Сообщение", placeholder="Ваше сообщение...", 
-                                       label_visibility="collapsed", key="room_msg")
-            with col_send:
-                if st.button("📤", use_container_width=True) and room_msg:
-                    username = st.session_state.user_data.get("username", "Гость")
-                    save_room_message(room_chat, username, room_msg)
-                    save_room_message_to_db(room_id, username, room_msg)
-                    st.rerun()
-            
-            if st.button("← Выйти из комнаты", type="primary", use_container_width=True):
-                st.session_state.watch_room = None
-                st.rerun()
-    else:
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("### Создать комнату")
-            name = st.text_input("Название комнаты:", value="Моя комната", key="room_name")
-            url = st.text_input("YouTube ссылка:", placeholder="https://youtube.com/watch?v=...", key="room_url")
-            password = st.text_input("Пароль комнаты:", type="password", key="room_pass")
-            
-            if st.button("🎥 Создать комнату", type="primary", use_container_width=True) and name and url and password:
-                room_id = str(uuid.uuid4())[:8]
-                owner = st.session_state.user_data.get("username", "Гость")
+            if room_data:
+                video_url = room_data.get("youtube_url", "")
+                video_id = None
                 
-                if create_watch_room(room_id, name, url, password, owner):
-                    st.session_state.rooms.append({
-                        "id": room_id, "name": name, "youtube_url": url,
-                        "password": password, "owner": owner
-                    })
-                    st.session_state.watch_room = room_id
-                    st.success(f"✅ Комната создана! ID: {room_id}")
-                    st.rerun()
-        
-        with col2:
-            st.markdown("### Присоединиться")
-            join_id = st.text_input("ID комнаты:", placeholder="XXXXXXXX", key="join_id")
-            join_pass = st.text_input("Пароль:", type="password", key="join_pass")
-            
-            if st.button("🔗 Присоединиться", type="primary", use_container_width=True) and join_id and join_pass:
-                room = get_watch_room(join_id, join_pass)
-                if room:
-                    st.session_state.watch_room = room["id"]
-                    st.rerun()
+                patterns = [
+                    r'(?:youtube\.com\/watch\?v=|youtu\.be\/)([0-9A-Za-z_-]{11})',
+                    r'youtube\.com\/embed\/([0-9A-Za-z_-]{11})',
+                ]
+                
+                for pattern in patterns:
+                    match = re.search(pattern, video_url)
+                    if match:
+                        video_id = match.group(1)
+                        break
+                
+                st.markdown(f"### 🎥 {room_data['name']}")
+                st.markdown(f"**ID комнаты:** `{room_id}` | **Создатель:** @{room_data['owner']}")
+                
+                if video_id:
+                    components.html(f"""
+                    <iframe width="100%" height="500" 
+                            src="https://www.youtube.com/embed/{video_id}?autoplay=1&controls=1&modestbranding=1"
+                            frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                            allowfullscreen>
+                    </iframe>
+                    """, height=550)
                 else:
-                    st.error("❌ Комната не найдена или неверный пароль")
+                    st.warning("Некорректная ссылка на YouTube видео")
+                
+                st.markdown("### 💬 Чат комнаты")
+                
+                room_chat_key = f"room_{room_id}"
+                if room_chat_key not in st.session_state.room_messages:
+                    st.session_state.room_messages[room_chat_key] = [{
+                        "username": "Система",
+                        "message": f"Добро пожаловать в комнату!",
+                        "timestamp": datetime.datetime.now().strftime("%H:%M")
+                    }]
+                
+                chat_container = st.container(height=200)
+                with chat_container:
+                    for msg in st.session_state.room_messages[room_chat_key]:
+                        if msg["username"] == "Система":
+                            st.markdown(f'''
+                            <div style="background: #e3f2fd; padding: 10px 15px; border-radius: 10px; margin: 8px 0; border-left: 4px solid #DAA520;">
+                                <div><strong>{msg["username"]}:</strong> {msg["message"]}</div>
+                                <div style="font-size: 11px; color: #666; text-align: right;">{msg["timestamp"]}</div>
+                            </div>
+                            ''', unsafe_allow_html=True)
+                        else:
+                            st.markdown(f'''
+                            <div style="background: white; padding: 10px 15px; border-radius: 10px; margin: 8px 0; border: 1px solid #e0e0e0;">
+                                <div><strong>{msg["username"]}:</strong> {msg["message"]}</div>
+                                <div style="font-size: 11px; color: #666; text-align: right;">{msg["timestamp"]}</div>
+                            </div>
+                            ''', unsafe_allow_html=True)
 
-# ================= ДИСК =================
+                col_msg, col_send = st.columns([5, 1])
+                with col_msg:
+                    room_message = st.text_input("", placeholder="Ваше сообщение...", key="room_msg")
+                with col_send:
+                    if st.button("Отпр.", use_container_width=True) and room_message:
+                        username = st.session_state.user_data.get("username", "Гость")
+                        save_room_message(room_chat_key, username, room_message)
+                        save_room_message_to_db(room_id, username, room_message)
+                        st.rerun()
+
+                if st.button("← Выйти из комнаты", type="primary", use_container_width=True):
+                    st.session_state.watch_room = None
+                    st.rerun()
+        else:
+            col_create, col_join = st.columns(2)
+
+            with col_create:
+                st.markdown("### Создать комнату")
+                room_name = st.text_input("Название комнаты:", value="Моя комната", key="room_name")
+                youtube_url = st.text_input("YouTube ссылка:", placeholder="https://www.youtube.com/watch?v=...", key="youtube_url")
+                room_password = st.text_input("Пароль комнаты:", type="password", key="room_password")
+                
+                if st.button("🎥 Создать комнату", type="primary", use_container_width=True):
+                    if room_name and youtube_url and room_password:
+                        room_id = str(uuid.uuid4())[:8]
+                        owner = st.session_state.user_data.get("username", "Гость")
+                        
+                        if create_watch_room(room_id, room_name, youtube_url, room_password, owner):
+                            st.session_state.rooms.append({
+                                "id": room_id, "name": room_name, "youtube_url": youtube_url,
+                                "password": room_password, "owner": owner,
+                                "created": datetime.datetime.now().strftime("%H:%M")
+                            })
+                            st.session_state.watch_room = room_id
+                            st.success(f"✅ Комната создана! ID: `{room_id}`")
+                            st.rerun()
+                        else:
+                            st.error("Ошибка создания комнаты")
+
+            with col_join:
+                st.markdown("### Присоединиться к комнате")
+                join_id = st.text_input("ID комнаты:", placeholder="Введите ID комнаты", key="join_id")
+                join_password = st.text_input("Пароль комнаты:", type="password", key="join_password")
+                
+                if st.button("🔗 Присоединиться", type="primary", use_container_width=True):
+                    if join_id and join_password:
+                        room_data = get_watch_room(join_id, join_password)
+                        
+                        if room_data:
+                            st.session_state.watch_room = room_data["id"]
+                            st.success(f"✅ Вы присоединились к комнате!")
+                            st.rerun()
+                        else:
+                            st.error("❌ Комната не найдена или неверный пароль")
+
+# ================= ПРОФЕССИОНАЛЬНЫЙ ОБЛАЧНЫЙ ДИСК ZORNET DISK =================
 elif st.session_state.page == "Диск":
     st.markdown('<div class="gold-title">💾 ДИСК</div>', unsafe_allow_html=True)
-    
+
+    if "disk_current_path" not in st.session_state:
+        st.session_state.disk_current_path = "zornet_cloud"
+    if "disk_action" not in st.session_state:
+        st.session_state.disk_action = "view"
+
     os.makedirs(st.session_state.disk_current_path, exist_ok=True)
-    
+
+    st.markdown("### 🛠 Панель инструментов")
+
     col1, col2, col3, col4 = st.columns(4)
-    
+
     with col1:
-        if st.button("📤 Загрузить", key="disk_upload", use_container_width=True):
+        if st.button("📤 Загрузить", key="btn_upload", use_container_width=True):
             st.session_state.disk_action = "upload"
-    with col2:
-        if st.button("📁 Новая папка", key="disk_folder", use_container_width=True):
-            st.session_state.disk_action = "new_folder"
-    with col3:
-        if st.button("🔍 Поиск", key="disk_search", use_container_width=True):
-            st.session_state.disk_action = "search"
-    with col4:
-        if st.button("🔄 Обновить", key="disk_refresh", use_container_width=True):
             st.rerun()
-    
+    with col2:
+        if st.button("📁 Новая папка", key="btn_new_folder", use_container_width=True):
+            st.session_state.disk_action = "new_folder"
+            st.rerun()
+    with col3:
+        if st.button("🔍 Поиск", key="btn_search", use_container_width=True):
+            st.session_state.disk_action = "search"
+            st.rerun()
+    with col4:
+        if st.button("🔄 Обновить", key="btn_refresh", use_container_width=True):
+            st.rerun()
+
     stats = get_disk_stats()
     used_gb = stats['total_size'] / (1024 * 1024 * 1024)
     used_percent = min(100, (used_gb / 1.0) * 100)
-    
+
     st.markdown(f"""
-    <div style="background:white; padding:15px; border-radius:10px; margin:15px 0; border:1px solid #e0e0e0;">
-        <h4 style="margin:0 0 10px 0;">📊 Использование хранилища</h4>
-        <div style="display:flex; justify-content:space-between;">
+    <div style="background: white; padding: 15px; border-radius: 10px; margin: 15px 0; border: 1px solid #e0e0e0;">
+        <h4 style="margin: 0 0 10px 0;">📊 Использование хранилища</h4>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
             <span>Использовано: {format_file_size(stats['total_size'])}</span>
             <span>Лимит: 1.0 GB</span>
         </div>
         <div class="storage-bar">
-            <div class="storage-fill" style="width:{used_percent}%;"></div>
+            <div class="storage-fill" style="width: {used_percent}%;"></div>
         </div>
-        <div style="display:flex; gap:20px; margin-top:10px;">
+        <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.9rem;">
             <span>📁 Папок: {stats['folder_count']}</span>
             <span>📄 Файлов: {stats['file_count']}</span>
             <span>📊 Свободно: {format_file_size(1073741824 - stats['total_size'])}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
-    
+
     if st.session_state.disk_action == "upload":
         st.markdown("### 📤 Загрузка файлов")
-        files = st.file_uploader("Выберите файлы", accept_multiple_files=True, label_visibility="collapsed")
-        
-        if files:
-            for file in files:
-                path = os.path.join(st.session_state.disk_current_path, file.name)
-                with open(path, "wb") as f:
-                    f.write(file.getbuffer())
-            st.success(f"✅ Загружено {len(files)} файлов")
+
+        uploaded_files = st.file_uploader(
+            "Выберите файлы для загрузки",
+            accept_multiple_files=True,
+            key="file_uploader"
+        )
+
+        if uploaded_files:
+            for uploaded_file in uploaded_files:
+                file_path = os.path.join(st.session_state.disk_current_path, uploaded_file.name)
+                with open(file_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+            st.success(f"✅ Загружено {len(uploaded_files)} файлов!")
             st.session_state.disk_action = "view"
             st.rerun()
-        
+
         if st.button("← Назад к файлам", use_container_width=True):
             st.session_state.disk_action = "view"
             st.rerun()
-    
+
     elif st.session_state.disk_action == "new_folder":
-        st.markdown("### 📁 Новая папка")
-        folder = st.text_input("Название папки:", placeholder="Моя папка")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("✅ Создать", use_container_width=True) and folder:
-                path = os.path.join(st.session_state.disk_current_path, folder)
-                os.makedirs(path, exist_ok=True)
+        st.markdown("### 📁 Создание новой папки")
+
+        folder_name = st.text_input("Введите название папки:")
+
+        col_create, col_back = st.columns(2)
+
+        with col_create:
+            if st.button("✅ Создать папку", type="primary", use_container_width=True):
+                if folder_name:
+                    new_folder_path = os.path.join(st.session_state.disk_current_path, folder_name)
+                    os.makedirs(new_folder_path, exist_ok=True)
+                    st.success(f"Папка '{folder_name}' создана!")
+                    st.session_state.disk_action = "view"
+                    st.rerun()
+
+        with col_back:
+            if st.button("← Назад к файлам", use_container_width=True):
                 st.session_state.disk_action = "view"
                 st.rerun()
-        with col2:
-            if st.button("← Назад", use_container_width=True):
-                st.session_state.disk_action = "view"
-                st.rerun()
-    
+
     elif st.session_state.disk_action == "search":
-        st.markdown("### 🔍 Поиск")
-        query = st.text_input("Введите название:", placeholder="файл или папка...")
-        
-        if query:
-            found = []
+        st.markdown("### 🔍 Поиск файлов")
+
+        search_query = st.text_input("Введите название файла или папки:")
+
+        if search_query:
+            found_items = []
             for root, dirs, files in os.walk(st.session_state.disk_current_path):
                 for name in dirs + files:
-                    if query.lower() in name.lower():
-                        found.append(name)
-            
-            if found:
-                for item in found[:10]:
-                    st.markdown(f"📄 {item}")
+                    if search_query.lower() in name.lower():
+                        item_path = os.path.join(root, name)
+                        found_items.append({
+                            'name': name,
+                            'path': item_path,
+                            'is_dir': os.path.isdir(item_path),
+                            'size': os.path.getsize(item_path) if os.path.isfile(item_path) else 0
+                        })
+
+            if found_items:
+                st.markdown(f"**Найдено {len(found_items)} результатов:**")
+                for item in found_items[:10]:
+                    icon = "📁" if item['is_dir'] else "📄"
+                    st.markdown(f"{icon} **{item['name']}**")
             else:
                 st.info("Ничего не найдено")
-        
+
         if st.button("← Назад к файлам", use_container_width=True):
             st.session_state.disk_action = "view"
             st.rerun()
-    
+
     else:
-        st.markdown("### 📁 Текущая папка")
-        
+        st.markdown("### 📁 Файлы и папки")
+
         if st.session_state.disk_current_path != "zornet_cloud":
-            parts = st.session_state.disk_current_path.split(os.sep)
-            cols = st.columns(len(parts))
-            for i, part in enumerate(parts):
-                if i < len(parts) - 1:
-                    with cols[i]:
-                        if st.button(part, key=f"path_{i}"):
-                            st.session_state.disk_current_path = os.sep.join(parts[:i+1])
-                            st.rerun()
-        
-        items = os.listdir(st.session_state.disk_current_path) if os.path.exists(st.session_state.disk_current_path) else []
-        
+            current_parts = st.session_state.disk_current_path.split(os.sep)
+            breadcrumb = []
+            path_so_far = ""
+
+            for part in current_parts:
+                if part:
+                    path_so_far = os.path.join(path_so_far, part) if path_so_far else part
+                    breadcrumb.append((part, path_so_far))
+
+            st.markdown("**Путь:** ", unsafe_allow_html=True)
+            crumb_cols = st.columns(len(breadcrumb) * 2 - 1)
+
+            for i, (name, path) in enumerate(breadcrumb):
+                with crumb_cols[i * 2]:
+                    if st.button(name, key=f"breadcrumb_{i}"):
+                        st.session_state.disk_current_path = path
+                        st.rerun()
+                if i < len(breadcrumb) - 1:
+                    with crumb_cols[i * 2 + 1]:
+                        st.markdown("/", unsafe_allow_html=True)
+
+        try:
+            items = os.listdir(st.session_state.disk_current_path)
+        except:
+            items = []
+
         if not items:
-            st.info("📭 Папка пуста")
+            st.info("📭 Папка пуста. Загрузите файлы или создайте папку.")
         else:
             items.sort(key=lambda x: (not os.path.isdir(os.path.join(st.session_state.disk_current_path, x)), x.lower()))
-            
+
             cols = st.columns(3)
             for idx, item in enumerate(items):
                 with cols[idx % 3]:
-                    path = os.path.join(st.session_state.disk_current_path, item)
-                    is_dir = os.path.isdir(path)
-                    
+                    item_path = os.path.join(st.session_state.disk_current_path, item)
+                    is_dir = os.path.isdir(item_path)
+
                     if is_dir:
                         st.markdown(f"""
-                        <div class="folder-card">
-                            <div style="font-size:2.5rem;">📁</div>
-                            <div style="font-weight:600;">{item}</div>
-                            <div style="color:#666;">Папка</div>
+                        <div class="folder-card" style="text-align:center;">
+                            <div style="font-size: 2.5rem;">📁</div>
+                            <div style="font-weight: 600;">{item}</div>
+                            <div style="color: #666;">Папка</div>
                         </div>
                         """, unsafe_allow_html=True)
-                        if st.button("📂 Открыть", key=f"open_{item}", use_container_width=True):
-                            st.session_state.disk_current_path = path
+
+                        if st.button(f"Открыть", key=f"open_{item}", use_container_width=True):
+                            st.session_state.disk_current_path = item_path
                             st.rerun()
                     else:
-                        size = os.path.getsize(path)
+                        file_size = os.path.getsize(item_path)
                         st.markdown(f"""
-                        <div class="file-card">
-                            <div style="font-size:2.5rem;">📄</div>
-                            <div style="font-weight:600;">{item}</div>
-                            <div style="color:#666;">{format_file_size(size)}</div>
+                        <div class="file-card" style="text-align:center;">
+                            <div style="font-size: 2.5rem;">📄</div>
+                            <div style="font-weight: 600;">{item}</div>
+                            <div style="color: #666;">{format_file_size(file_size)}</div>
                         </div>
                         """, unsafe_allow_html=True)
-                        
-                        with open(path, 'rb') as f:
+
+                        with open(item_path, 'rb') as f:
                             st.download_button("📥 Скачать", f.read(), item, use_container_width=True)
 
 # ================= ПРОФИЛЬ =================
@@ -1763,18 +1861,20 @@ elif st.session_state.page == "Профиль":
         st.markdown('<div class="giant-id-title">ZORNET ID</div>', unsafe_allow_html=True)
         
         user = st.session_state.user_data
-        
         st.markdown(f"""
         <div class="profile-container">
-            <h2>{user.get('first_name', '')} {user.get('last_name', '')}</h2>
-            <p>@{user.get('username', '')}</p>
-            <p>✉️ {user.get('email', '')}</p>
+            <div style="width:120px; height:120px; border-radius:60px; background:linear-gradient(135deg,#DAA520,#B8860B); 
+                       margin:0 auto 20px; display:flex; align-items:center; justify-content:center; color:white; font-size:48px;">
+                {user.get('first_name', '?')[0]}
+            </div>
+            <h2 style="margin:0 0 8px 0;">{user.get('first_name', '')} {user.get('last_name', '')}</h2>
+            <p style="color:#666; margin:0 0 16px 0;">@{user.get('username', '')}</p>
+            <p style="background:#f8f9fa; padding:12px; border-radius:24px; color:#333;">✉️ {user.get('email', '')}</p>
         </div>
         """, unsafe_allow_html=True)
         
         if st.button("🚪 Выйти из аккаунта", type="primary", use_container_width=True):
             save_quick_links(st.session_state.quick_links)
-            
             st.session_state.is_logged_in = False
             st.session_state.user_data = {}
             st.session_state.quick_links = [
@@ -1786,38 +1886,70 @@ elif st.session_state.page == "Профиль":
             storage = load_storage()
             if "current_auth" in storage:
                 storage["current_auth"]["is_logged_in"] = False
-                storage["current_auth"]["user_data"] = {}
                 save_storage(storage)
             
             st.rerun()
     
     else:
         st.markdown('<div class="giant-id-title">ZORNET ID</div>', unsafe_allow_html=True)
-        
         st.markdown('<div class="login-container">', unsafe_allow_html=True)
+        
+        st.markdown("""
+        <style>
+            .stTabs [data-baseweb="tab-list"] {
+                gap: 8px;
+                background: white;
+                padding: 4px;
+                border-radius: 48px;
+                border: 1px solid #e8eaed;
+                margin-bottom: 32px;
+            }
+            .stTabs [data-baseweb="tab"] {
+                border-radius: 40px;
+                padding: 10px 24px;
+                font-weight: 500;
+                color: #5f6368;
+            }
+            .stTabs [aria-selected="true"] {
+                background: linear-gradient(135deg, #DAA520, #B8860B) !important;
+                color: white !important;
+            }
+            .stTextInput input {
+                border: 1px solid #dadce0 !important;
+                border-radius: 24px !important;
+                padding: 14px 18px !important;
+                font-size: 16px !important;
+            }
+            .stTextInput input:focus {
+                border-color: #DAA520 !important;
+                box-shadow: 0 1px 6px rgba(218, 165, 32, 0.3) !important;
+            }
+        </style>
+        """, unsafe_allow_html=True)
         
         tab1, tab2 = st.tabs(["Вход", "Регистрация"])
         
         with tab1:
-            st.markdown("### Вход")
-            email = st.text_input("Email", key="login_email")
-            password = st.text_input("Пароль", type="password", key="login_password")
+            st.markdown("### Вход в аккаунт")
+            login_email = st.text_input("Email", key="login_email")
+            login_password = st.text_input("Пароль", type="password", key="login_password")
             
-            if st.button("Войти", type="primary", use_container_width=True):
-                if email and password:
-                    user = login_user(email, password)
+            if st.button("Войти", use_container_width=True):
+                if login_email and login_password:
+                    user = login_user(login_email, login_password)
                     if user:
                         st.session_state.user_data = user
                         st.session_state.is_logged_in = True
                         
-                        saved = load_quick_links()
-                        if saved:
-                            st.session_state.quick_links = saved
+                        saved_links = load_quick_links()
+                        if saved_links:
+                            st.session_state.quick_links = saved_links
                         
                         storage = load_storage()
                         storage["current_auth"] = {"is_logged_in": True, "user_data": user}
                         save_storage(storage)
                         
+                        st.success("✅ Вход выполнен!")
                         st.session_state.page = "Главная"
                         st.rerun()
                     else:
@@ -1828,11 +1960,14 @@ elif st.session_state.page == "Профиль":
             
             if st.session_state.registration_success:
                 st.markdown(f"""
-                <div class="success-message">
-                    <div style="font-size:1.2rem; font-weight:bold;">✅ {st.session_state.registration_message}</div>
-                    <div>📝 Теперь войдите в аккаунт</div>
-                    <div style="margin-top:10px;">📧 {st.session_state.new_user_email}</div>
-                    <div>👤 @{st.session_state.new_user_username}</div>
+                <div style="background:#f1f3f4; padding:24px; border-radius:24px; text-align:center;">
+                    <div style="font-size:48px; margin-bottom:16px;">✅</div>
+                    <div style="font-size:20px; font-weight:500; margin-bottom:8px;">{st.session_state.registration_message}</div>
+                    <div style="color:#5f6368; margin-bottom:24px;">Теперь войдите в аккаунт</div>
+                    <div style="background:white; padding:16px; border-radius:16px;">
+                        <div style="margin-bottom:8px;">📧 {st.session_state.new_user_email}</div>
+                        <div>👤 @{st.session_state.new_user_username}</div>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
                 
@@ -1842,20 +1977,20 @@ elif st.session_state.page == "Профиль":
             else:
                 reg_email = st.text_input("Email", key="reg_email")
                 reg_username = st.text_input("Никнейм", key="reg_username")
-                reg_first = st.text_input("Имя", key="reg_first")
-                reg_last = st.text_input("Фамилия (необязательно)", key="reg_last")
-                reg_pass = st.text_input("Пароль", type="password", key="reg_pass")
-                reg_pass2 = st.text_input("Повторите пароль", type="password", key="reg_pass2")
+                reg_first_name = st.text_input("Имя", key="reg_first")
+                reg_last_name = st.text_input("Фамилия (необязательно)", key="reg_last")
+                reg_password = st.text_input("Пароль", type="password", key="reg_pass")
+                reg_password_confirm = st.text_input("Повторите пароль", type="password", key="reg_pass2")
                 
                 if st.button("Создать аккаунт", type="primary", use_container_width=True):
-                    if not all([reg_email, reg_username, reg_first, reg_pass, reg_pass2]):
+                    if not all([reg_email, reg_username, reg_first_name, reg_password, reg_password_confirm]):
                         st.error("❌ Заполните все обязательные поля")
-                    elif reg_pass != reg_pass2:
+                    elif reg_password != reg_password_confirm:
                         st.error("❌ Пароли не совпадают")
-                    elif len(reg_pass) < 6:
+                    elif len(reg_password) < 6:
                         st.error("❌ Пароль должен быть не менее 6 символов")
                     else:
-                        result = register_user(reg_email, reg_username, reg_first, reg_last, reg_pass)
+                        result = register_user(reg_email, reg_username, reg_first_name, reg_last_name, reg_password)
                         if result["success"]:
                             st.session_state.registration_success = True
                             st.session_state.registration_message = result["message"]
@@ -1875,8 +2010,8 @@ if __name__ == "__main__":
     c = conn.cursor()
     c.execute("SELECT COUNT(*) FROM users WHERE username = 'test'")
     if c.fetchone()[0] == 0:
-        test_pass = hashlib.sha256("test123".encode()).hexdigest()
+        test_password = hashlib.sha256("test123".encode()).hexdigest()
         c.execute("INSERT INTO users (email, username, first_name, last_name, password_hash) VALUES (?, ?, ?, ?, ?)",
-                 ("test@zornet.by", "test", "Тест", "Пользователь", test_pass))
+                 ("test@zornet.by", "test", "Тест", "Пользователь", test_password))
         conn.commit()
     conn.close()
