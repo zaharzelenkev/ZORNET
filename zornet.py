@@ -144,23 +144,29 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
     
-    /* ГЛАВНЫЙ ЗАГОЛОВОК */
+    /* ГЛАВНЫЙ ЗАГОЛОВОК - УМЕНЬШИЛ РАЗМЕР */
     .gold-title {
-        font-size: 5rem;
+        font-size: 3.5rem;
         font-weight: 800;
         text-align: center;
-        background: linear-gradient(135deg, #C5A028 0%, #F5E6B3 50%, #C5A028 100%);
+        background: linear-gradient(135deg, #D4AF37 0%, #F5E6B3 50%, #D4AF37 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        letter-spacing: -2px;
-        margin: 20px 0 40px 0;
-        text-shadow: 0 10px 30px rgba(197, 160, 40, 0.2);
-        animation: titleGlow 3s ease-in-out infinite;
+        letter-spacing: -1px;
+        margin: 15px 0 25px 0;
+        text-shadow: 0 5px 15px rgba(212, 175, 55, 0.2);
     }
     
-    @keyframes titleGlow {
-        0%, 100% { filter: drop-shadow(0 0 20px rgba(197, 160, 40, 0.3)); }
-        50% { filter: drop-shadow(0 0 40px rgba(197, 160, 40, 0.5)); }
+    /* САЙДБАР */
+    .sidebar-title {
+        font-size: 2rem;
+        font-weight: 800;
+        text-align: center;
+        background: linear-gradient(135deg, #D4AF37 0%, #F5E6B3 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 10px 0 30px 0;
+        letter-spacing: 2px;
     }
     
     /* СТИЛИ ДЛЯ КНОПОК НАВИГАЦИИ */
@@ -169,52 +175,38 @@ st.markdown("""
         border: none !important;
         border-radius: 12px !important;
         color: #1a1a1a !important;
-        padding: 12px 16px !important;
+        padding: 10px 16px !important;
         font-weight: 500 !important;
         text-align: left !important;
         transition: all 0.3s ease !important;
         margin: 2px 0 !important;
+        font-size: 0.95rem !important;
     }
     
     div[data-testid="stSidebar"] div.stButton > button:hover {
-        background: linear-gradient(135deg, rgba(197, 160, 40, 0.1) 0%, rgba(197, 160, 40, 0.2) 100%) !important;
+        background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(212, 175, 55, 0.2) 100%) !important;
         transform: translateX(5px);
+        color: #D4AF37 !important;
     }
     
-    /* КАРТОЧКИ БЫСТРЫХ ССЫЛОК */
+    /* КАРТОЧКИ БЫСТРЫХ ССЫЛОК - ОБНОВЛЕННЫЕ */
     .link-card {
         background: white;
         border-radius: 24px;
-        padding: 25px 20px;
+        padding: 25px 20px 15px 20px;
         margin: 10px 0;
-        border: 1px solid rgba(197, 160, 40, 0.2);
+        border: 2px solid rgba(212, 175, 55, 0.3);
         text-align: center;
         transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         position: relative;
         overflow: hidden;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-    }
-    
-    .link-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #C5A028, #F5E6B3, #C5A028);
-        transform: translateX(-100%);
-        transition: transform 0.6s ease;
+        box-shadow: 0 10px 25px rgba(212, 175, 55, 0.1);
     }
     
     .link-card:hover {
-        transform: translateY(-8px) scale(1.02);
-        border-color: #C5A028;
-        box-shadow: 0 20px 40px rgba(197, 160, 40, 0.15);
-    }
-    
-    .link-card:hover::before {
-        transform: translateX(100%);
+        transform: translateY(-5px) scale(1.02);
+        border-color: #D4AF37;
+        box-shadow: 0 20px 35px rgba(212, 175, 55, 0.25);
     }
     
     .link-icon {
@@ -222,6 +214,7 @@ st.markdown("""
         margin-bottom: 15px;
         display: inline-block;
         transition: transform 0.3s ease;
+        color: #D4AF37;
     }
     
     .link-card:hover .link-icon {
@@ -232,87 +225,68 @@ st.markdown("""
         font-weight: 700;
         font-size: 1.1rem;
         color: #1a1a1a;
-        margin-bottom: 8px;
+        margin-bottom: 15px;
+        letter-spacing: 0.3px;
     }
     
-    .link-url {
-        font-size: 0.8rem;
-        color: #666;
-        word-break: break-all;
-        background: #f8f9fa;
-        padding: 5px 10px;
-        border-radius: 20px;
-        display: inline-block;
-        max-width: 100%;
-    }
-    
-    /* КНОПКА УДАЛЕНИЯ */
-    .delete-btn {
-        position: absolute !important;
-        top: 10px !important;
-        right: 10px !important;
-        width: 28px !important;
-        height: 28px !important;
-        min-width: 28px !important;
-        padding: 0 !important;
-        border-radius: 50% !important;
-        background: white !important;
-        border: 1px solid #ff4444 !important;
-        color: #ff4444 !important;
-        font-size: 18px !important;
-        font-weight: bold !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        opacity: 0;
-        transition: all 0.3s ease !important;
-        z-index: 10;
-        box-shadow: 0 2px 10px rgba(255, 68, 68, 0.2);
-    }
-    
-    .link-card:hover .delete-btn {
-        opacity: 1;
-    }
-    
-    .delete-btn:hover {
-        background: #ff4444 !important;
-        color: white !important;
-        transform: scale(1.1);
-    }
-    
-    /* КНОПКА "ОТКРЫТЬ" */
+    /* КНОПКА ОТКРЫТИЯ - УВЕЛИЧИЛ И СДЕЛАЛ ОВАЛЬНОЙ */
     .open-link-btn {
-        background: linear-gradient(135deg, #C5A028, #B38F1A) !important;
+        background: linear-gradient(135deg, #D4AF37, #B8860B) !important;
         color: white !important;
         border: none !important;
-        border-radius: 30px !important;
-        padding: 10px 20px !important;
+        border-radius: 40px !important;
+        padding: 12px 25px !important;
         font-weight: 600 !important;
-        font-size: 0.9rem !important;
+        font-size: 0.95rem !important;
         transition: all 0.3s ease !important;
-        margin-top: 15px !important;
+        margin-top: 10px !important;
+        margin-bottom: 5px !important;
         width: 100% !important;
-        box-shadow: 0 4px 15px rgba(197, 160, 40, 0.3) !important;
+        box-shadow: 0 8px 20px rgba(212, 175, 55, 0.3) !important;
+        letter-spacing: 0.5px;
     }
     
     .open-link-btn:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(197, 160, 40, 0.4) !important;
+        box-shadow: 0 12px 25px rgba(212, 175, 55, 0.4) !important;
+        background: linear-gradient(135deg, #E5B73B, #C9960C) !important;
     }
     
-    /* КАРТОЧКИ ПОГОДЫ */
+    /* КНОПКА УДАЛЕНИЯ - СДЕЛАЛ УЖЕ */
+    .delete-btn {
+        background: linear-gradient(135deg, #ff4444, #cc0000) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 30px !important;
+        padding: 8px 15px !important;
+        font-weight: 600 !important;
+        font-size: 0.85rem !important;
+        transition: all 0.3s ease !important;
+        width: 100% !important;
+        box-shadow: 0 4px 10px rgba(255, 68, 68, 0.2) !important;
+    }
+    
+    .delete-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 15px rgba(255, 68, 68, 0.3) !important;
+        background: linear-gradient(135deg, #ff5555, #dd0000) !important;
+    }
+    
+    /* КАРТОЧКИ ПОГОДЫ - БОЛЕЕ ЗОЛОТЫЕ */
     .weather-main-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%);
         border-radius: 30px;
         padding: 30px;
         color: white;
-        box-shadow: 0 20px 40px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 20px 40px rgba(212, 175, 55, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }
     
     .weather-temp {
         font-size: 5rem;
         font-weight: 800;
         line-height: 1;
+        text-shadow: 0 5px 15px rgba(0,0,0,0.2);
     }
     
     .weather-icon {
@@ -321,11 +295,12 @@ st.markdown("""
     }
     
     .weather-detail-item {
-        background: rgba(255, 255, 255, 0.15);
+        background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(184, 134, 11, 0.1));
         backdrop-filter: blur(10px);
         border-radius: 16px;
         padding: 15px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        border: 1px solid #D4AF37;
+        color: #1a1a1a;
     }
     
     /* КАРТОЧКИ НОВОСТЕЙ */
@@ -334,15 +309,15 @@ st.markdown("""
         border-radius: 20px;
         padding: 25px;
         margin-bottom: 20px;
-        border: 1px solid rgba(197, 160, 40, 0.1);
+        border: 2px solid rgba(212, 175, 55, 0.2);
         transition: all 0.3s ease;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.03);
+        box-shadow: 0 5px 20px rgba(212, 175, 55, 0.05);
     }
     
     .news-card:hover {
         transform: translateY(-5px);
-        border-color: #C5A028;
-        box-shadow: 0 15px 30px rgba(197, 160, 40, 0.1);
+        border-color: #D4AF37;
+        box-shadow: 0 15px 30px rgba(212, 175, 55, 0.15);
     }
     
     .news-title {
@@ -353,18 +328,13 @@ st.markdown("""
         line-height: 1.4;
     }
     
-    .news-summary {
-        color: #666;
-        line-height: 1.6;
-    }
-    
     /* ЧАТ МЕССЕНДЖЕРА */
     .chat-container {
         background: white;
         border-radius: 30px;
         overflow: hidden;
         box-shadow: 0 20px 40px rgba(0,0,0,0.08);
-        border: 1px solid rgba(197, 160, 40, 0.1);
+        border: 2px solid rgba(212, 175, 55, 0.2);
     }
     
     .contact-item {
@@ -378,20 +348,20 @@ st.markdown("""
     }
     
     .contact-item:hover {
-        background: linear-gradient(135deg, rgba(197, 160, 40, 0.05), rgba(197, 160, 40, 0.1));
+        background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(212, 175, 55, 0.15));
         padding-left: 25px;
     }
     
     .contact-item.active {
-        background: linear-gradient(135deg, rgba(197, 160, 40, 0.1), rgba(197, 160, 40, 0.15));
-        border-left: 4px solid #C5A028;
+        background: linear-gradient(135deg, rgba(212, 175, 55, 0.15), rgba(212, 175, 55, 0.2));
+        border-left: 4px solid #D4AF37;
     }
     
     .contact-avatar {
         width: 45px;
         height: 45px;
         border-radius: 15px;
-        background: linear-gradient(135deg, #C5A028, #B38F1A);
+        background: linear-gradient(135deg, #D4AF37, #B8860B);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -421,7 +391,7 @@ st.markdown("""
     }
     
     .message-bubble.you {
-        background: linear-gradient(135deg, #C5A028, #B38F1A);
+        background: linear-gradient(135deg, #D4AF37, #B8860B);
         color: white;
         margin-left: auto;
         border-bottom-right-radius: 4px;
@@ -442,18 +412,12 @@ st.markdown("""
     
     /* ДИСК */
     .disk-stats-card {
-        background: linear-gradient(135deg, #C5A028, #B38F1A);
+        background: linear-gradient(135deg, #D4AF37, #B8860B);
         border-radius: 20px;
         padding: 25px;
         color: white;
         margin-bottom: 20px;
-    }
-    
-    .file-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 15px;
-        margin-top: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }
     
     .file-item {
@@ -461,19 +425,20 @@ st.markdown("""
         border-radius: 16px;
         padding: 20px;
         text-align: center;
-        border: 1px solid rgba(197, 160, 40, 0.1);
+        border: 2px solid rgba(212, 175, 55, 0.2);
         transition: all 0.3s ease;
     }
     
     .file-item:hover {
         transform: translateY(-5px);
-        border-color: #C5A028;
-        box-shadow: 0 10px 25px rgba(197, 160, 40, 0.15);
+        border-color: #D4AF37;
+        box-shadow: 0 10px 25px rgba(212, 175, 55, 0.2);
     }
     
     .file-icon {
         font-size: 3rem;
         margin-bottom: 10px;
+        color: #D4AF37;
     }
     
     /* ПРОФИЛЬ */
@@ -482,8 +447,8 @@ st.markdown("""
         border-radius: 30px;
         padding: 40px;
         text-align: center;
-        box-shadow: 0 30px 60px rgba(0,0,0,0.1);
-        border: 1px solid rgba(197, 160, 40, 0.2);
+        box-shadow: 0 30px 60px rgba(212, 175, 55, 0.15);
+        border: 2px solid #D4AF37;
         max-width: 500px;
         margin: 0 auto;
     }
@@ -492,7 +457,7 @@ st.markdown("""
         width: 120px;
         height: 120px;
         border-radius: 30px;
-        background: linear-gradient(135deg, #C5A028, #B38F1A);
+        background: linear-gradient(135deg, #D4AF37, #B8860B);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -501,14 +466,14 @@ st.markdown("""
         font-weight: 700;
         margin: 0 auto 20px;
         border: 4px solid white;
-        box-shadow: 0 10px 30px rgba(197, 160, 40, 0.3);
+        box-shadow: 0 10px 30px rgba(212, 175, 55, 0.3);
     }
     
     .profile-name {
         font-size: 2rem;
         font-weight: 800;
         margin-bottom: 5px;
-        background: linear-gradient(135deg, #C5A028, #B38F1A);
+        background: linear-gradient(135deg, #D4AF37, #B8860B);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
     }
@@ -520,12 +485,13 @@ st.markdown("""
     }
     
     .profile-email {
-        background: #f8f9fa;
+        background: linear-gradient(135deg, rgba(212, 175, 55, 0.1), rgba(184, 134, 11, 0.1));
         padding: 12px 20px;
         border-radius: 50px;
         display: inline-block;
-        color: #333;
-        font-weight: 500;
+        color: #D4AF37;
+        font-weight: 600;
+        border: 1px solid #D4AF37;
     }
     
     /* ФОРМЫ ВХОДА/РЕГИСТРАЦИИ */
@@ -535,58 +501,8 @@ st.markdown("""
         background: white;
         border-radius: 30px;
         padding: 40px;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.08);
-        border: 1px solid rgba(197, 160, 40, 0.2);
-    }
-    
-    .auth-tabs {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 30px;
-    }
-    
-    .auth-tab {
-        flex: 1;
-        padding: 12px;
-        text-align: center;
-        font-weight: 600;
-        border-radius: 15px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-    
-    .auth-tab.active {
-        background: linear-gradient(135deg, #C5A028, #B38F1A);
-        color: white;
-    }
-    
-    /* КИНОТЕАТР */
-    .room-card {
-        background: white;
-        border-radius: 20px;
-        padding: 20px;
-        margin: 10px 0;
-        border: 1px solid rgba(197, 160, 40, 0.1);
-        transition: all 0.3s ease;
-    }
-    
-    .room-card:hover {
-        transform: translateY(-5px);
-        border-color: #C5A028;
-        box-shadow: 0 15px 30px rgba(197, 160, 40, 0.1);
-    }
-    
-    .room-name {
-        font-size: 1.3rem;
-        font-weight: 700;
-        margin-bottom: 10px;
-        color: #1a1a1a;
-    }
-    
-    .room-meta {
-        color: #666;
-        font-size: 0.9rem;
-        margin-bottom: 5px;
+        box-shadow: 0 20px 40px rgba(212, 175, 55, 0.1);
+        border: 2px solid #D4AF37;
     }
     
     /* КНОПКИ */
@@ -598,14 +514,14 @@ st.markdown("""
     }
     
     .stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, #C5A028, #B38F1A) !important;
+        background: linear-gradient(135deg, #D4AF37, #B8860B) !important;
         color: white !important;
-        box-shadow: 0 8px 20px rgba(197, 160, 40, 0.3) !important;
+        box-shadow: 0 8px 20px rgba(212, 175, 55, 0.3) !important;
     }
     
     .stButton > button[kind="primary"]:hover {
         transform: translateY(-2px);
-        box-shadow: 0 12px 30px rgba(197, 160, 40, 0.4) !important;
+        box-shadow: 0 12px 30px rgba(212, 175, 55, 0.4) !important;
     }
     
     /* ИНПУТЫ */
@@ -618,8 +534,8 @@ st.markdown("""
     }
     
     .stTextInput > div > div > input:focus {
-        border-color: #C5A028 !important;
-        box-shadow: 0 0 0 4px rgba(197, 160, 40, 0.1) !important;
+        border-color: #D4AF37 !important;
+        box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.1) !important;
     }
     
     /* РАЗДЕЛИТЕЛИ */
@@ -627,7 +543,7 @@ st.markdown("""
         margin: 30px 0 !important;
         border: none !important;
         height: 2px !important;
-        background: linear-gradient(90deg, transparent, #C5A028, transparent) !important;
+        background: linear-gradient(90deg, transparent, #D4AF37, transparent) !important;
     }
     
     /* АНИМАЦИИ */
@@ -644,6 +560,19 @@ st.markdown("""
     
     .fade-in {
         animation: fadeIn 0.5s ease;
+    }
+    
+    /* ЕДИНЫЙ ЗОЛОТОЙ ЦВЕТ ВЕЗДЕ */
+    .gold-text {
+        color: #D4AF37 !important;
+    }
+    
+    .gold-border {
+        border-color: #D4AF37 !important;
+    }
+    
+    .gold-bg {
+        background: linear-gradient(135deg, #D4AF37, #B8860B) !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -933,23 +862,19 @@ def get_all_watch_rooms():
 
 # ================= САЙДБАР =================
 with st.sidebar:
-    st.markdown("""
-    <div style="text-align: center; margin-bottom: 30px;">
-        <span style="font-size: 2.5rem; font-weight: 800; background: linear-gradient(135deg, #C5A028, #F5E6B3); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Z</span>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-title">ZORNET</div>', unsafe_allow_html=True)
     
     if st.session_state.is_logged_in:
         user = st.session_state.user_data
         st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #f8f9fa, #ffffff); padding: 20px; border-radius: 20px; margin-bottom: 20px; border: 1px solid rgba(197, 160, 40, 0.2);">
+        <div style="background: linear-gradient(135deg, #f8f9fa, #ffffff); padding: 15px; border-radius: 16px; margin-bottom: 20px; border: 2px solid rgba(212, 175, 55, 0.3);">
             <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 50px; height: 50px; border-radius: 15px; background: linear-gradient(135deg, #C5A028, #B38F1A); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.5rem;">
+                <div style="width: 45px; height: 45px; border-radius: 12px; background: linear-gradient(135deg, #D4AF37, #B8860B); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.2rem;">
                     {user.get('first_name', 'U')[0]}
                 </div>
                 <div>
-                    <div style="font-weight: 700; color: #1a1a1a;">{user.get('first_name', '')} {user.get('last_name', '')}</div>
-                    <div style="font-size: 0.8rem; color: #666;">@{user.get('username', '')}</div>
+                    <div style="font-weight: 700; color: #1a1a1a; font-size: 0.95rem;">{user.get('first_name', '')} {user.get('last_name', '')}</div>
+                    <div style="font-size: 0.75rem; color: #D4AF37;">@{user.get('username', '')}</div>
                 </div>
             </div>
         </div>
@@ -1078,10 +1003,10 @@ if st.session_state.page == "Главная":
     
     with col1:
         st.markdown(f"""
-        <div style="background: linear-gradient(135deg, #f8f9fa, #ffffff); padding: 20px; border-radius: 20px; text-align: center; border: 1px solid rgba(197, 160, 40, 0.2);">
-            <div style="font-size: 2rem;">🕒</div>
-            <div style="font-weight: 700; font-size: 1.2rem;">{current_time}</div>
-            <div style="color: #666; font-size: 0.9rem;">Минск</div>
+        <div style="background: linear-gradient(135deg, #f8f9fa, #ffffff); padding: 15px; border-radius: 16px; text-align: center; border: 2px solid rgba(212, 175, 55, 0.3);">
+            <div style="font-size: 1.8rem;">🕒</div>
+            <div style="font-weight: 700; font-size: 1.1rem;">{current_time}</div>
+            <div style="color: #D4AF37; font-size: 0.8rem;">Минск</div>
         </div>
         """, unsafe_allow_html=True)
     
@@ -1111,9 +1036,9 @@ if st.session_state.page == "Главная":
         <form action="https://www.google.com/search" method="get" target="_blank" style="max-width: 600px; margin: 0 auto;">
             <div style="display: flex; gap: 10px;">
                 <input type="text" name="q" placeholder="🔍 Поиск в Google..." 
-                       style="flex: 1; padding: 18px 25px; font-size: 16px; border: 2px solid #e0e0e0; border-radius: 30px; outline: none; transition: all 0.3s ease; background: white;">
+                       style="flex: 1; padding: 15px 25px; font-size: 16px; border: 2px solid #D4AF37; border-radius: 30px; outline: none; transition: all 0.3s ease; background: white;">
                 <button type="submit" 
-                        style="background: linear-gradient(135deg, #C5A028, #B38F1A); color: white; border: none; padding: 0 40px; border-radius: 30px; font-weight: 700; cursor: pointer; transition: all 0.3s ease;">
+                        style="background: linear-gradient(135deg, #D4AF37, #B8860B); color: white; border: none; padding: 0 40px; border-radius: 30px; font-weight: 700; cursor: pointer; transition: all 0.3s ease;">
                     Найти
                 </button>
             </div>
@@ -1126,7 +1051,7 @@ if st.session_state.page == "Главная":
     # Быстрые ссылки
     st.markdown("""
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h3 style="margin: 0;">📌 Быстрые ссылки</h3>
+        <h3 style="margin: 0; color: #D4AF37;">📌 Быстрые ссылки</h3>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1142,23 +1067,23 @@ if st.session_state.page == "Главная":
             
             for j, link in enumerate(row_links):
                 with cols[j]:
-                    # Карточка ссылки
+                    # Карточка ссылки (без URL)
                     st.markdown(f"""
                     <div class="link-card">
                         <div class="link-icon">{link.get('icon', '🔗')}</div>
                         <div class="link-name">{link['name']}</div>
-                        <div class="link-url">{link['url'][:30]}...</div>
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    col1, col2 = st.columns(2)
-                    with col1:
+                    # Две кнопки рядом
+                    col_btn1, col_btn2 = st.columns([3, 1])
+                    with col_btn1:
                         if st.button("🌐 Открыть", key=f"open_{link['name']}_{i}_{j}", use_container_width=True):
                             js_code = f'window.open("{link["url"]}", "_blank");'
                             components.html(f"<script>{js_code}</script>", height=0)
                     
-                    with col2:
-                        if st.button("✖", key=f"delete_{link['name']}_{i}_{j}", use_container_width=True):
+                    with col_btn2:
+                        if st.button("✕", key=f"delete_{link['name']}_{i}_{j}", use_container_width=True):
                             st.session_state.quick_links.remove(link)
                             save_quick_links(st.session_state.quick_links)
                             st.rerun()
@@ -1209,8 +1134,8 @@ elif st.session_state.page == "Мессенджер":
     
     with col_contacts:
         st.markdown("""
-        <div style="background: white; border-radius: 20px; padding: 20px; border: 1px solid rgba(197, 160, 40, 0.1);">
-            <h4 style="margin: 0 0 20px 0;">🔍 Поиск</h4>
+        <div style="background: white; border-radius: 20px; padding: 20px; border: 2px solid rgba(212, 175, 55, 0.3);">
+            <h4 style="margin: 0 0 20px 0; color: #D4AF37;">🔍 Поиск</h4>
         </div>
         """, unsafe_allow_html=True)
         
@@ -1246,7 +1171,7 @@ elif st.session_state.page == "Мессенджер":
                 <div class="contact-avatar">{contact['first_name'][0]}</div>
                 <div>
                     <div style="font-weight: 600;">{contact['first_name']} {contact['last_name']}</div>
-                    <div style="font-size: 0.8rem; color: #666;">@{contact['username']}</div>
+                    <div style="font-size: 0.8rem; color: #D4AF37;">@{contact['username']}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -1265,13 +1190,13 @@ elif st.session_state.page == "Мессенджер":
             
             # Заголовок чата
             st.markdown(f"""
-            <div style="background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(197, 160, 40, 0.1); display: flex; align-items: center; gap: 15px;">
-                <div style="width: 50px; height: 50px; border-radius: 15px; background: linear-gradient(135deg, #C5A028, #B38F1A); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.5rem;">
+            <div style="background: white; border-radius: 20px; padding: 15px; margin-bottom: 20px; border: 2px solid rgba(212, 175, 55, 0.3); display: flex; align-items: center; gap: 15px;">
+                <div style="width: 45px; height: 45px; border-radius: 12px; background: linear-gradient(135deg, #D4AF37, #B8860B); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.3rem;">
                     {partner.get('first_name', '?')[0]}
                 </div>
                 <div>
-                    <div style="font-weight: 700; font-size: 1.2rem;">{partner.get('first_name', '')} {partner.get('last_name', '')}</div>
-                    <div style="color: #666;">@{partner.get('username', '')}</div>
+                    <div style="font-weight: 700; font-size: 1.1rem;">{partner.get('first_name', '')} {partner.get('last_name', '')}</div>
+                    <div style="color: #D4AF37; font-size: 0.9rem;">@{partner.get('username', '')}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -1321,10 +1246,10 @@ elif st.session_state.page == "Мессенджер":
                         st.rerun()
         else:
             st.markdown("""
-            <div style="background: white; border-radius: 20px; padding: 60px 20px; text-align: center; border: 1px solid rgba(197, 160, 40, 0.1);">
+            <div style="background: white; border-radius: 20px; padding: 60px 20px; text-align: center; border: 2px solid rgba(212, 175, 55, 0.3);">
                 <div style="font-size: 4rem; margin-bottom: 20px;">💬</div>
                 <h3>Выберите контакт для начала общения</h3>
-                <p style="color: #666;">Найдите пользователя по никнейму или выберите из списка контактов</p>
+                <p style="color: #D4AF37;">Найдите пользователя по никнейму или выберите из списка контактов</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -1367,16 +1292,16 @@ elif st.session_state.page == "Кинотеатр":
                 
                 # Информация о комнате
                 st.markdown(f"""
-                <div style="background: linear-gradient(135deg, #C5A028, #B38F1A); border-radius: 20px; padding: 25px; color: white; margin-bottom: 20px;">
-                    <h2 style="margin: 0 0 10px 0;">{room_data['name']}</h2>
-                    <p>ID: {room_id} | Создатель: @{room_data['owner']}</p>
+                <div style="background: linear-gradient(135deg, #D4AF37, #B8860B); border-radius: 20px; padding: 20px; color: white; margin-bottom: 20px;">
+                    <h2 style="margin: 0 0 5px 0;">{room_data['name']}</h2>
+                    <p style="margin: 0; opacity: 0.9;">ID: {room_id} | Создатель: @{room_data['owner']}</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
                 # YouTube плеер
                 if video_id:
                     components.html(f"""
-                    <div style="border-radius: 20px; overflow: hidden; margin-bottom: 20px;">
+                    <div style="border-radius: 20px; overflow: hidden; margin-bottom: 20px; border: 2px solid #D4AF37;">
                         <iframe width="100%" height="500" 
                                 src="https://www.youtube.com/embed/{video_id}?autoplay=1"
                                 frameborder="0" 
@@ -1406,7 +1331,7 @@ elif st.session_state.page == "Кинотеатр":
                         timestamp = msg.get("timestamp", "")
                         
                         st.markdown(f"""
-                        <div style="background: {'#e3f2fd' if username == 'Система' else 'white'}; padding: 10px 15px; border-radius: 15px; margin: 5px 0; border-left: 4px solid #C5A028;">
+                        <div style="background: {'#fff9e6' if username == 'Система' else 'white'}; padding: 10px 15px; border-radius: 15px; margin: 5px 0; border-left: 4px solid #D4AF37;">
                             <div><strong>{username}:</strong> {message}</div>
                             <div style="font-size: 0.7rem; color: #666; text-align: right;">{timestamp}</div>
                         </div>
@@ -1435,8 +1360,8 @@ elif st.session_state.page == "Кинотеатр":
         
         with col1:
             st.markdown("""
-            <div style="background: white; border-radius: 20px; padding: 25px; border: 1px solid rgba(197, 160, 40, 0.1);">
-                <h3>🎥 Создать комнату</h3>
+            <div style="background: white; border-radius: 20px; padding: 25px; border: 2px solid rgba(212, 175, 55, 0.3);">
+                <h3 style="color: #D4AF37;">🎥 Создать комнату</h3>
             </div>
             """, unsafe_allow_html=True)
             
@@ -1463,8 +1388,8 @@ elif st.session_state.page == "Кинотеатр":
         
         with col2:
             st.markdown("""
-            <div style="background: white; border-radius: 20px; padding: 25px; border: 1px solid rgba(197, 160, 40, 0.1);">
-                <h3>🔗 Присоединиться</h3>
+            <div style="background: white; border-radius: 20px; padding: 25px; border: 2px solid rgba(212, 175, 55, 0.3);">
+                <h3 style="color: #D4AF37;">🔗 Присоединиться</h3>
             </div>
             """, unsafe_allow_html=True)
             
@@ -1628,7 +1553,7 @@ elif st.session_state.page == "Диск":
                         <div class="file-item">
                             <div class="file-icon">📁</div>
                             <div style="font-weight: 600;">{item[:20]}</div>
-                            <div style="font-size: 0.8rem; color: #666;">Папка</div>
+                            <div style="font-size: 0.8rem; color: #D4AF37;">Папка</div>
                         </div>
                         """, unsafe_allow_html=True)
                         
@@ -1644,7 +1569,7 @@ elif st.session_state.page == "Диск":
                         <div class="file-item">
                             <div class="file-icon">{icon}</div>
                             <div style="font-weight: 600;">{item[:15]}</div>
-                            <div style="font-size: 0.8rem; color: #666;">{format_size(size)}</div>
+                            <div style="font-size: 0.8rem; color: #D4AF37;">{format_size(size)}</div>
                         </div>
                         """, unsafe_allow_html=True)
                         
@@ -1664,7 +1589,7 @@ elif st.session_state.page == "Новости":
                 <div class="news-title">{item.title}</div>
                 <div class="news-summary">{item.summary[:200]}...</div>
                 <div style="margin-top: 15px;">
-                    <a href="{item.link}" target="_blank" style="color: #C5A028; text-decoration: none; font-weight: 600;">Читать далее →</a>
+                    <a href="{item.link}" target="_blank" style="color: #D4AF37; text-decoration: none; font-weight: 600;">Читать далее →</a>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -1674,8 +1599,8 @@ elif st.session_state.page == "Погода":
     st.markdown('<div class="gold-title fade-in">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
     
     st.markdown("""
-    <div style="background: white; border-radius: 20px; padding: 25px; margin-bottom: 30px; border: 1px solid rgba(197, 160, 40, 0.1);">
-        <h4 style="margin: 0 0 15px 0;">🔍 Поиск города</h4>
+    <div style="background: white; border-radius: 20px; padding: 25px; margin-bottom: 30px; border: 2px solid rgba(212, 175, 55, 0.3);">
+        <h4 style="margin: 0 0 15px 0; color: #D4AF37;">🔍 Поиск города</h4>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1782,7 +1707,7 @@ elif st.session_state.page == "Погода":
                         ]
                         
                         st.markdown(f"""
-                        <div style="background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 15px; padding: 15px; text-align: center; color: white;">
+                        <div style="background: linear-gradient(135deg, #D4AF37, #B8860B); border-radius: 15px; padding: 15px; text-align: center; color: white;">
                             <div style="font-weight: 600;">{day_name}</div>
                             <div style="font-size: 2rem;">{get_weather_icon(day['weather'][0]['icon'])}</div>
                             <div style="font-size: 1.2rem; font-weight: 600;">{round(day['main']['temp'])}°C</div>
