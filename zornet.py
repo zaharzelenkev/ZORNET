@@ -1063,6 +1063,30 @@ def get_belta_news():
             {"title": "Спортивные события", "link": "#", "summary": "Последние спортивные новости"},
         ]
 
+# ================= СТРАНИЦА НОВОСТЕЙ =================
+elif st.session_state.page == "Новости":
+    st.markdown('<div class="gold-title">📰 НОВОСТИ</div>', unsafe_allow_html=True)
+    
+    with st.spinner("Загружаю новости..."):
+        news = get_belta_news()
+        
+        for item in news:
+            st.markdown(f"""
+            <div style="
+                background: #f8f9fa;
+                border-left: 4px solid #DAA520;
+                padding: 15px;
+                margin-bottom: 15px;
+                border-radius: 8px;
+            ">
+                <a href="{item.link}" target="_blank" 
+                   style="color:#DAA520; font-size:1.2rem; font-weight:bold; text-decoration:none;">
+                    {item.title}
+                </a>
+                <p style="color:#1a1a1a; margin-top:10px;">{item.summary[:200]}...</p>
+            </div>
+            """, unsafe_allow_html=True)
+
 # ================= СТРАНИЦА ГЛАВНАЯ =================
 if st.session_state.page == "Главная":
     st.markdown('<div class="gold-title">ZORNET</div>', unsafe_allow_html=True)
@@ -1178,44 +1202,45 @@ if st.session_state.page == "Главная":
     
     st.markdown("---")
 
-# БЫСТРЫЕ ССЫЛКИ - БЕЛЫЕ ОВАЛЫ
-col1, col2 = st.columns([3, 1])
-with col1:
-    st.markdown("### 📌 Быстрые ссылки")
-with col2:
-    if st.button("➕ Добавить", key="add_link_btn", use_container_width=True):
-        st.session_state.show_add_link = not st.session_state.show_add_link
-        st.rerun()
+    # БЫСТРЫЕ ССЫЛКИ - БЕЛЫЕ ОВАЛЫ
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.markdown("### 📌 Быстрые ссылки")
+    with col2:
+        if st.button("➕ Добавить", key="add_link_btn", use_container_width=True):
+            st.session_state.show_add_link = not st.session_state.show_add_link
+            st.rerun()
 
-quick_links = st.session_state.quick_links
+    quick_links = st.session_state.quick_links
 
-if not quick_links:
-    st.info("📭 Нет быстрых ссылок. Нажмите 'Добавить', чтобы создать первую!")
-else:
-    # Показываем ссылки в сетке 4 колонки
-    for i in range(0, len(quick_links), 4):
-        cols = st.columns(4)
-        for j, link in enumerate(quick_links[i:i+4]):
-            with cols[j]:
-                # Белая овальная карточка без URL
-                st.markdown(f"""
-                <div class="quick-link-card">
-                    <div class="quick-link-icon">{link.get('icon', '🔗')}</div>
-                    <div class="quick-link-name">{link['name']}</div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Круглые кнопки управления
-                col_open, col_del = st.columns([2, 1])
-                with col_open:
-                    if st.button("🌐 Открыть", key=f"open_{i}_{j}", use_container_width=True):
-                        js_code = f'window.open("{link["url"]}", "_blank");'
-                        components.html(f"<script>{js_code}</script>", height=0)
-                with col_del:
-                    if st.button("✕", key=f"del_{i}_{j}", use_container_width=True):
-                        st.session_state.quick_links.remove(link)
-                        save_quick_links(st.session_state.quick_links)
-                        st.rerun()
+    if not quick_links:
+        st.info("📭 Нет быстрых ссылок. Нажмите 'Добавить', чтобы создать первую!")
+    else:
+        # Показываем ссылки в сетке 4 колонки
+        for i in range(0, len(quick_links), 4):
+            cols = st.columns(4)
+            for j, link in enumerate(quick_links[i:i+4]):
+                with cols[j]:
+                    # Белая овальная карточка без URL
+                    st.markdown(f"""
+                    <div class="quick-link-card">
+                        <div class="quick-link-icon">{link.get('icon', '🔗')}</div>
+                        <div class="quick-link-name">{link['name']}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Круглые кнопки управления
+                    col_open, col_del = st.columns([2, 1])
+                    with col_open:
+                        if st.button("🌐 Открыть", key=f"open_{i}_{j}", use_container_width=True):
+                            js_code = f'window.open("{link["url"]}", "_blank");'
+                            components.html(f"<script>{js_code}</script>", height=0)
+                    with col_del:
+                        if st.button("✕", key=f"del_{i}_{j}", use_container_width=True):
+                            st.session_state.quick_links.remove(link)
+                            save_quick_links(st.session_state.quick_links)
+                            st.rerun()
+
     st.markdown("---")
     
     # Форма добавления новой ссылки
@@ -1266,21 +1291,6 @@ else:
             if st.button("❌ Отмена", use_container_width=True):
                 st.session_state.show_add_link = False
                 st.rerun()
-
-# ================= СТРАНИЦА НОВОСТЕЙ =================
-elif st.session_state.page == "Новости":
-    st.markdown('<div class="gold-title">📰 НОВОСТИ</div>', unsafe_allow_html=True)
-    
-    with st.spinner("Загружаю новости..."):
-        news = get_belta_news()
-        
-        for item in news:
-            st.markdown(f"""
-            <div class="news-item">
-                <a href="{item.link}" target="_blank" class="news-title">{item.title}</a>
-                <p style="color:#1a1a1a; margin-top:10px;">{item.summary[:200]}...</p>
-            </div>
-            """, unsafe_allow_html=True)
 
 # ================= СТРАНИЦА ПОГОДЫ =================
 elif st.session_state.page == "Погода":
