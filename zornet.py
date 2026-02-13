@@ -1169,11 +1169,18 @@ if st.session_state.page == "Главная":
     
     st.markdown("---")
     
-    # Поиск Google - возвращаем прежний вид
+# Поиск Google
     components.html("""
-    <div class="search-container">
-        <form action="https://www.google.com/search" method="get" target="_blank">
-            <input type="text" name="q" class="search-box" placeholder="🔍 Поиск в Google..." autocomplete="off">
+    <div style="margin: 30px 0; text-align: center;">
+        <form action="https://www.google.com/search" method="get" target="_blank" style="max-width: 600px; margin: 0 auto;">
+            <div style="display: flex; gap: 10px;">
+                <input type="text" name="q" placeholder="🔍 Поиск в Google..." 
+                       style="flex: 1; padding: 15px 25px; font-size: 16px; border: 2px solid #D4AF37; border-radius: 30px; outline: none; transition: all 0.3s ease; background: white;">
+                <button type="submit" 
+                        style="background: linear-gradient(135deg, #D4AF37, #B8860B); color: white; border: none; padding: 0 40px; border-radius: 30px; font-weight: 700; cursor: pointer; transition: all 0.3s ease;">
+                    Найти
+                </button>
+            </div>
         </form>
     </div>
     """, height=100)
