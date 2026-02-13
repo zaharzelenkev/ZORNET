@@ -130,103 +130,78 @@ if "new_user_username" not in st.session_state:
 # ================= ПРОФЕССИОНАЛЬНЫЙ CSS =================
 st.markdown("""
 <style>
-    /* ================= LIQUID GLASS НА БЕЛОМ ФОНЕ ================= */
-
-    /* ОСНОВНОЙ ФОН - теперь строго белый */
+<style>
+    /* ОСНОВНЫЕ НАСТРОЙКИ */
     .stApp {
         background: #ffffff !important;
     }
 
-    /* САЙДБАР */
-    section[data-testid="stSidebar"] {
-        background: #ffffff !important;
-        border-right: 1px solid #f0f0f0 !important;
-    }
-
-    /* КНОПКИ В САЙДБАРЕ (Белые стеклянные овалы) */
+    /* КНОПКИ В САЙДБАРЕ — БОЛЬШИЕ БЕЛЫЕ ОВАЛЫ */
     section[data-testid="stSidebar"] .stButton > button {
         display: flex !important;
-        justify-content: center !important; /* Текст по центру */
+        justify-content: center !important; 
         align-items: center !important;
         text-align: center !important;
-        padding: 12px 20px !important;
-        margin: 10px auto !important;
-        width: 90% !important;
         
-        /* Эффект Liquid Glass на белом */
-        background: rgba(255, 255, 255, 0.7) !important;
-        backdrop-filter: blur(10px) !important;
-        -webkit-backdrop-filter: blur(10px) !important;
+        /* Размер кнопок */
+        min-height: 60px !important; 
+        width: 100% !important;
+        margin: 12px 0 !important;
+        padding: 15px 25px !important;
+
+        /* Стиль: Белый овал */
+        background: #ffffff !important;
+        border: 2px solid #f0f0f0 !important; /* Легкий контур, чтобы видеть овал на белом */
+        border-radius: 50px !important;
         
-        /* Тонкая граница, чтобы овал был виден на белом фоне */
-        border: 1px solid rgba(0, 0, 0, 0.05) !important; 
-        
-        /* Шрифт: Крупно, Капсом, По центру */
+        /* Текст: ЖИРНЫЙ, КАПС, ПО ЦЕНТРУ */
         color: #1a1a1a !important;
-        font-weight: 700 !important;
-        text-transform: uppercase !important; /* ВОТ ТВОЙ КАПС */
-        letter-spacing: 1px !important;
+        font-size: 16px !important;
+        font-weight: 900 !important;
+        text-transform: uppercase !important; /* ПРИНУДИТЕЛЬНЫЙ КАПС */
+        letter-spacing: 1.5px !important;
         
-        border-radius: 40px !important; /* Идеальный овал */
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
     }
     
-    /* ЭФФЕКТ ПРИ НАВЕДЕНИИ */
+    /* ЭФФЕКТ ПРИ НАВЕДЕНИИ (Liquid Glass + Золото) */
     section[data-testid="stSidebar"] .stButton > button:hover {
         background: #ffffff !important;
-        border: 2px solid #DAA520 !important; /* Желтое обрамление */
-        transform: scale(1.05) !important; /* Увеличение */
-        color: #DAA520 !important; /* Текст тоже становится золотистым */
-        box-shadow: 0 8px 25px rgba(218, 165, 32, 0.2) !important;
+        border: 3px solid #DAA520 !important; /* Желтое/Золотое обрамление */
+        transform: scale(1.06) !important; /* Увеличение */
+        box-shadow: 0 8px 25px rgba(218, 165, 32, 0.3) !important;
+        color: #B8860B !important;
     }
 
-    /* Исправляем отступы внутри кнопок, чтобы иконка и текст были в ряд */
-    section[data-testid="stSidebar"] .stButton > button div p {
-        margin: 0 !important;
-        font-size: 14px !important;
-    }
-
-    /* ВРЕМЯ В ЗОЛОТОЙ РАМКЕ */
-    .time-widget {
-        background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
-        border-radius: 12px;
-        padding: 12px 15px;
-        text-align: center;
-        color: white;
-        font-weight: 600;
-        font-size: 16px;
-        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);
-    }
-
-    /* РЕЗУЛЬТАТЫ ПОИСКА */
-    .search-result {
-        background: #f8f9fa;
+    /* НОВОСТИ В ЖЕЛТОМ ЦВЕТЕ */
+    .news-item {
+        background: #ffffff !important;
+        border-left: 6px solid #DAA520 !important; /* Жирная желтая полоса */
+        border: 1px solid #f0f0f0;
         padding: 15px;
-        border-radius: 10px;
-        margin-bottom: 10px;
-        border-left: 4px solid #DAA520;
+        margin-bottom: 15px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(218, 165, 32, 0.1) !important;
+    }
+    
+    .news-title {
+        color: #DAA520 !important; /* Желтый заголовок */
+        font-size: 1.2rem;
+        font-weight: 800 !important;
+        text-decoration: none;
+        text-transform: uppercase; /* Тоже сделаем новости серьезными */
     }
 
-    /* ЧАТ AI */
-    .user-message {
-        background: #f0f0f0;
-        padding: 12px 18px;
-        border-radius: 18px;
-        max-width: 70%;
-        margin-left: auto;
-        margin-bottom: 15px;
+    /* ИСПРАВЛЕНИЕ ДЛЯ ТЕКСТА ВНУТРИ КНОПОК */
+    section[data-testid="stSidebar"] .stButton > button div {
+        width: 100%;
     }
-
-    .ai-message {
-        background: #f9f9f9;
-        padding: 12px 18px;
-        border-radius: 18px;
-        max-width: 70%;
-        margin-right: auto;
-        margin-bottom: 15px;
-        border-left: 4px solid #DAA520;
+    section[data-testid="stSidebar"] .stButton > button p {
+        font-size: 16px !important;
+        margin: 0 auto !important;
     }
+</style>
 
     /* СТИЛИ ДЛЯ ПОГОДЫ */
     .weather-widget {
