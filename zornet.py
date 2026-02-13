@@ -195,50 +195,86 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(218, 165, 32, 0.2) !important;
     }
 
-    /* КАРТОЧКИ БЫСТРЫХ ССЫЛОК - БЕЛЫЕ ОВАЛЫ */
-    .quick-link-card {
-        position: relative;
-        background: white !important;
-        border-radius: 30px !important;
-        padding: 25px 15px 20px 15px;
-        margin: 8px 0;
-        border: 2px solid #DAA520;
-        text-align: center;
-        transition: all 0.3s ease;
-        min-height: 160px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        box-shadow: 0 4px 15px rgba(218, 165, 32, 0.15);
-    }
+/* ИДЕАЛЬНЫЕ БЕЛЫЕ ОВАЛЫ */
+.quick-link-card {
+    position: relative;
+    background: white !important;
+    border-radius: 50px !important; /* Идеальный овал */
+    border: 2px solid #DAA520;
+    padding: 30px 20px !important;
+    margin: 10px 0;
+    text-align: center;
+    transition: all 0.3s ease;
+    min-height: 180px;
+    display: flex !important;
+    flex-direction: column;
+    justify-content: center !important;
+    align-items: center !important;
+    box-shadow: 0 4px 15px rgba(218, 165, 32, 0.15);
+    width: 100%;
+    box-sizing: border-box;
+}
 
-    .quick-link-card:hover {
-        transform: translateY(-5px) scale(1.02);
-        box-shadow: 0 8px 25px rgba(218, 165, 32, 0.25);
-        border-color: #B8860B;
-        background: white !important;
-    }
+.quick-link-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(218, 165, 32, 0.25);
+    border-color: #B8860B;
+    background: white !important;
+}
 
-    .quick-link-icon {
-        font-size: 3.2rem !important;
-        margin-bottom: 12px;
-        text-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease;
-    }
+.quick-link-icon {
+    font-size: 3.5rem !important;
+    margin-bottom: 15px !important;
+    text-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+    display: block !important;
+}
 
-    .quick-link-card:hover .quick-link-icon {
-        transform: scale(1.1) rotate(5deg);
-    }
+.quick-link-card:hover .quick-link-icon {
+    transform: scale(1.1) rotate(5deg);
+}
 
-    .quick-link-name {
-        font-weight: 700 !important;
-        font-size: 1.1rem !important;
-        color: #333 !important;
-        margin-bottom: 5px !important;
-        line-height: 1.4 !important;
-        font-family: 'Helvetica Neue', sans-serif;
-    }
+.quick-link-name {
+    font-weight: 700 !important;
+    font-size: 1.2rem !important;
+    color: #333 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.4 !important;
+    font-family: 'Helvetica Neue', sans-serif;
+    display: block !important;
+    text-align: center !important;
+}
+
+/* Круглые кнопки */
+.quick-link-open, .quick-link-delete {
+    border-radius: 40px !important;
+    padding: 8px 16px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease !important;
+    border: none !important;
+}
+
+.quick-link-open {
+    background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%) !important;
+    color: white !important;
+}
+
+.quick-link-open:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(218, 165, 32, 0.4) !important;
+}
+
+.quick-link-delete {
+    background: #ff4444 !important;
+    color: white !important;
+}
+
+.quick-link-delete:hover {
+    background: #cc0000 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 68, 68, 0.4) !important;
+}
 
     /* Круглые кнопки */
     .stButton > button {
@@ -854,68 +890,44 @@ if st.session_state.page == "Главная":
     
     st.markdown("---")
 
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.markdown("### 📌 Быстрые ссылки")
-    with col2:
-        if st.button("➕ Добавить", key="add_link_btn", use_container_width=True):
-            st.session_state.show_add_link = not st.session_state.show_add_link
-            st.rerun()
+# БЫСТРЫЕ ССЫЛКИ - ИДЕАЛЬНЫЕ БЕЛЫЕ ОВАЛЫ
+col1, col2 = st.columns([3, 1])
+with col1:
+    st.markdown("### 📌 Быстрые ссылки")
+with col2:
+    if st.button("➕ Добавить", key="add_link_btn", use_container_width=True):
+        st.session_state.show_add_link = not st.session_state.show_add_link
+        st.rerun()
 
-    quick_links = st.session_state.quick_links
+quick_links = st.session_state.quick_links
 
-    if not quick_links:
-        st.info("📭 Нет быстрых ссылок. Нажмите 'Добавить', чтобы создать первую!")
-    else:
-        for i in range(0, len(quick_links), 4):
-            cols = st.columns(4)
-            for j, link in enumerate(quick_links[i:i+4]):
-                with cols[j]:
-                    st.markdown(f"""
-                    <div class="quick-link-card">
-                        <div class="quick-link-icon">{link.get('icon', '🔗')}</div>
-                        <div class="quick-link-name">{link['name']}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    col_open, col_del = st.columns([2, 1])
-                    with col_open:
-                        if st.button("🌐 Открыть", key=f"open_{i}_{j}", use_container_width=True):
-                            js_code = f'window.open("{link["url"]}", "_blank");'
-                            components.html(f"<script>{js_code}</script>", height=0)
-                    with col_del:
-                        if st.button("✕", key=f"del_{i}_{j}", use_container_width=True):
-                            st.session_state.quick_links.remove(link)
-                            save_quick_links(st.session_state.quick_links)
-                            st.rerun()
-
-    st.markdown("---")
-    
-    if st.session_state.show_add_link:
-        st.markdown("#### 📝 Добавить новую ссылку")
-        
-        col_name, col_url, col_icon = st.columns([2, 3, 1])
-        
-        with col_name:
-            new_name = st.text_input("Название", placeholder="YouTube", key="new_name")
-        with col_url:
-            new_url = st.text_input("URL", placeholder="https://youtube.com", key="new_url")
-        with col_icon:
-            new_icon = st.selectbox("Иконка", ["🔍", "📺", "📧", "🤖", "💻", "🌐", "🎮"], key="new_icon")
-        
-        col_save, col_cancel = st.columns(2)
-        with col_save:
-            if st.button("💾 Сохранить", use_container_width=True) and new_name and new_url:
-                if not new_url.startswith(('http://', 'https://')):
-                    new_url = 'https://' + new_url
-                st.session_state.quick_links.append({"name": new_name, "url": new_url, "icon": new_icon})
-                save_quick_links(st.session_state.quick_links)
-                st.session_state.show_add_link = False
-                st.rerun()
-        with col_cancel:
-            if st.button("❌ Отмена", use_container_width=True):
-                st.session_state.show_add_link = False
-                st.rerun()
+if not quick_links:
+    st.info("📭 Нет быстрых ссылок. Нажмите 'Добавить', чтобы создать первую!")
+else:
+    # Показываем ссылки в сетке 4 колонки
+    for i in range(0, len(quick_links), 4):
+        cols = st.columns(4)
+        for j, link in enumerate(quick_links[i:i+4]):
+            with cols[j]:
+                # ИДЕАЛЬНЫЙ БЕЛЫЙ ОВАЛ
+                st.markdown(f"""
+                <div class="quick-link-card">
+                    <div class="quick-link-icon">{link.get('icon', '🔗')}</div>
+                    <div class="quick-link-name">{link['name']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Круглые кнопки
+                col_open, col_del = st.columns([2, 1])
+                with col_open:
+                    if st.button("🌐 Открыть", key=f"open_{i}_{j}", use_container_width=True):
+                        js_code = f'window.open("{link["url"]}", "_blank");'
+                        components.html(f"<script>{js_code}</script>", height=0)
+                with col_del:
+                    if st.button("✕", key=f"del_{i}_{j}", use_container_width=True):
+                        st.session_state.quick_links.remove(link)
+                        save_quick_links(st.session_state.quick_links)
+                        st.rerun()
 
 # ================= СТРАНИЦА НОВОСТЕЙ =================
 elif st.session_state.page == "Новости":
