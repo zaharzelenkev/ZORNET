@@ -1419,22 +1419,89 @@ if st.session_state.page == "Главная":
             st.rerun()
     
     st.markdown("---")
-    
-    # Поиск ZORNET - красивая строка с золотой кнопкой
-    with st.form("search_form"):
-        col_search, col_button = st.columns([4, 1])
-        with col_search:
-            search_input = st.text_input("", placeholder="🔍 Поиск в интернете...", label_visibility="collapsed", key="main_search")
-        with col_button:
-            submitted = st.form_submit_button("Найти", use_container_width=True, type="primary")
+
+    components.html("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: transparent;
+            font-family: 'Helvetica Neue', sans-serif;
+            display: flex;
+            justify-content: center;
+        }
         
-        if submitted and search_input:
-            st.session_state.search_query = search_input
-            st.session_state.search_loading = True
-            st.session_state.search_results = search_zornet(search_input)
-            st.session_state.search_loading = False
-            st.session_state.page = "Поиск"
-            st.rerun()
+        .search-container {
+            width: 100%;
+            max-width: 600px;
+            padding: 10px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 18px 25px;
+            font-size: 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 30px;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            background-color: #ffffff;
+            color: #333;
+            box-sizing: border-box;
+            -webkit-appearance: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: #DAA520;
+            box-shadow: 0 0 15px rgba(218, 165, 32, 0.2);
+        }
+
+        button {
+            margin-top: 20px;
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            -webkit-appearance: none;
+            width: 100%;
+            max-width: 250px;
+        }
+
+        button:hover {
+            transform: scale(1.03);
+            box-shadow: 0 6px 20px rgba(218, 165, 32, 0.6);
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+    </style>
+    </head>
+    <body>
+        <div class="search-container">
+            <form action="https://www.google.com/search" method="get" target="_top">
+                <input type="text" name="q" placeholder="🔍 Введите запрос..." required autocomplete="off">
+                <br>
+                <button type="submit">ИСКАТЬ</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    """, height=220)
     
     st.markdown("---")
     
