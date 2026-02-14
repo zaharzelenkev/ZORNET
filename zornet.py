@@ -13,6 +13,7 @@ import uuid
 import re
 import hashlib
 import streamlit.components.v1 as components
+import urllib.parse
 
 # ================= ПЕРСИСТЕНТНОЕ ХРАНЕНИЕ =================
 def load_storage():
@@ -136,6 +137,10 @@ if "new_user_email" not in st.session_state:
     st.session_state.new_user_email = ""
 if "new_user_username" not in st.session_state:
     st.session_state.new_user_username = ""
+if "search_query" not in st.session_state:
+    st.session_state.search_query = ""
+if "search_results" not in st.session_state:
+    st.session_state.search_results = []
 
 # ================= ОБНОВЛЕННЫЕ CSS СТИЛИ =================
 st.markdown("""
@@ -375,7 +380,7 @@ st.markdown("""
         box-shadow: 0 4px 10px rgba(255, 68, 68, 0.1) !important;
     }
     
-    /* ПОИСКОВАЯ СТРОКА - ВОЗВРАЩАЕМ ПРЕЖНИЙ ВИД */
+    /* ПОИСКОВАЯ СТРОКА */
     .search-container {
         margin: 30px 0;
         max-width: 600px;
@@ -405,6 +410,76 @@ st.markdown("""
     .search-box::placeholder {
         color: #999;
         font-size: 16px;
+    }
+    
+    /* РЕЗУЛЬТАТЫ ПОИСКА */
+    .search-result {
+        background: white;
+        border: 2px solid rgba(212, 175, 55, 0.3);
+        border-radius: 20px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+    
+    .search-result:hover {
+        transform: translateY(-3px);
+        border-color: rgba(212, 175, 55, 0.8);
+        box-shadow: 0 10px 25px rgba(212, 175, 55, 0.1);
+    }
+    
+    .search-result-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #D4AF37;
+        margin-bottom: 8px;
+        text-decoration: none;
+    }
+    
+    .search-result-title:hover {
+        text-decoration: underline;
+    }
+    
+    .search-result-url {
+        color: #006621;
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+        word-break: break-all;
+    }
+    
+    .search-result-description {
+        color: #545454;
+        line-height: 1.5;
+    }
+    
+    .search-header {
+        background: linear-gradient(135deg, #D4AF37, #B8860B);
+        padding: 15px 30px;
+        border-radius: 30px;
+        color: white;
+        margin-bottom: 30px;
+        text-align: center;
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    
+    .search-back-button {
+        display: inline-block;
+        background: white;
+        border: 2px solid rgba(212, 175, 55, 0.3);
+        color: #D4AF37;
+        padding: 10px 20px;
+        border-radius: 30px;
+        font-weight: 600;
+        text-decoration: none;
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+    }
+    
+    .search-back-button:hover {
+        background: linear-gradient(135deg, #D4AF37, #B8860B);
+        color: white;
+        border-color: transparent;
     }
     
     /* КАРТОЧКИ ПОГОДЫ */
@@ -1003,6 +1078,50 @@ def get_all_watch_rooms():
         for room in rooms
     ]
 
+# ================= ПОИСКОВАЯ СИСТЕМА ZORNET =================
+def search_zornet(query):
+    """Поиск по сайтам (имитация поисковой системы)"""
+    if not query:
+        return []
+    
+    # База данных сайтов для поиска
+    sites = [
+        {"title": "YouTube - Видеохостинг", "url": "https://www.youtube.com/results?search_query=" + urllib.parse.quote(query), "description": "Смотрите видео на YouTube по запросу: " + query},
+        {"title": "Google Поиск", "url": "https://www.google.com/search?q=" + urllib.parse.quote(query), "description": "Искать в Google: " + query},
+        {"title": "Wikipedia", "url": "https://ru.wikipedia.org/wiki/" + urllib.parse.quote(query.replace(" ", "_")), "description": "Статья в Википедии о " + query},
+        {"title": "Яндекс", "url": "https://yandex.ru/search/?text=" + urllib.parse.quote(query), "description": "Поиск в Яндексе: " + query},
+        {"title": "GitHub", "url": "https://github.com/search?q=" + urllib.parse.quote(query), "description": "Поиск репозиториев на GitHub"},
+        {"title": "Stack Overflow", "url": "https://stackoverflow.com/search?q=" + urllib.parse.quote(query), "description": "Ответы на вопросы программистов"},
+        {"title": "Википедия", "url": "https://ru.wikipedia.org/wiki/" + urllib.parse.quote(query.replace(" ", "_")), "description": "Свободная энциклопедия"},
+        {"title": "Кинопоиск", "url": "https://www.kinopoisk.ru/index.php?kp_query=" + urllib.parse.quote(query), "description": "Поиск фильмов и сериалов"},
+        {"title": "Ozon", "url": "https://www.ozon.ru/search/?text=" + urllib.parse.quote(query), "description": "Интернет-магазин Ozon"},
+        {"title": "Wildberries", "url": "https://www.wildberries.ru/catalog/0/search.aspx?search=" + urllib.parse.quote(query), "description": "Поиск на Wildberries"},
+        {"title": "Habr", "url": "https://habr.com/ru/search/?q=" + urllib.parse.quote(query), "description": "Статьи и новости IT"},
+        {"title": "BBC News", "url": "https://www.bbc.com/search?q=" + urllib.parse.quote(query), "description": "Новости BBC"},
+    ]
+    
+    # Добавляем поиск по быстрым ссылкам пользователя
+    if "quick_links" in st.session_state:
+        for link in st.session_state.quick_links:
+            if query.lower() in link["name"].lower() or query.lower() in link["url"].lower():
+                sites.append({
+                    "title": f"{link['name']} (ваша ссылка)",
+                    "url": link["url"],
+                    "description": f"Быстрая ссылка: {link['name']}"
+                })
+    
+    # Фильтруем сайты по запросу
+    results = []
+    for site in sites:
+        if query.lower() in site["title"].lower() or query.lower() in site["description"].lower():
+            results.append(site)
+    
+    # Если ничего не найдено, возвращаем все сайты
+    if len(results) < 3:
+        results = sites
+    
+    return results[:10]  # Возвращаем первые 10 результатов
+
 # ================= САЙДБАР =================
 with st.sidebar:
     st.markdown('<div class="sidebar-title">ZORNET</div>', unsafe_allow_html=True)
@@ -1169,14 +1288,19 @@ if st.session_state.page == "Главная":
     
     st.markdown("---")
     
-    # Поиск Google - возвращаем прежний вид
-    components.html("""
-    <div class="search-container">
-        <form action="https://www.google.com/search" method="get" target="_blank">
-            <input type="text" name="q" class="search-box" placeholder="🔍 Поиск в Google..." autocomplete="off">
-        </form>
-    </div>
-    """, height=100)
+    # Поиск ZORNET
+    with st.form("search_form"):
+        col_search, col_button = st.columns([4, 1])
+        with col_search:
+            search_input = st.text_input("", placeholder="🔍 Поиск в ZORNET...", label_visibility="collapsed", key="main_search")
+        with col_button:
+            submitted = st.form_submit_button("Найти", use_container_width=True, type="primary")
+        
+        if submitted and search_input:
+            st.session_state.search_query = search_input
+            st.session_state.search_results = search_zornet(search_input)
+            st.session_state.page = "Поиск"
+            st.rerun()
     
     st.markdown("---")
     
@@ -1248,6 +1372,50 @@ if st.session_state.page == "Главная":
                     save_quick_links(st.session_state.quick_links)
                     st.session_state.show_add_link = False
                     st.rerun()
+
+# ================= СТРАНИЦА ПОИСКА =================
+elif st.session_state.page == "Поиск":
+    # Кнопка возврата на главную
+    if st.button("← Вернуться на главную", key="back_to_main", use_container_width=False):
+        st.session_state.page = "Главная"
+        st.rerun()
+    
+    # Заголовок поиска
+    st.markdown(f"""
+    <div class="search-header">
+        🔍 ZORNET ПОИСК: {st.session_state.search_query}
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Строка поиска на странице результатов
+    with st.form("search_results_form"):
+        col_search, col_button = st.columns([4, 1])
+        with col_search:
+            new_search = st.text_input("", value=st.session_state.search_query, placeholder="Новый поиск...", label_visibility="collapsed")
+        with col_button:
+            new_submitted = st.form_submit_button("Найти", use_container_width=True, type="primary")
+        
+        if new_submitted and new_search:
+            st.session_state.search_query = new_search
+            st.session_state.search_results = search_zornet(new_search)
+            st.rerun()
+    
+    st.markdown("---")
+    
+    # Результаты поиска
+    if st.session_state.search_results:
+        st.markdown(f"### Найдено результатов: {len(st.session_state.search_results)}")
+        
+        for i, result in enumerate(st.session_state.search_results):
+            st.markdown(f"""
+            <div class="search-result">
+                <a href="{result['url']}" target="_blank" class="search-result-title">{result['title']}</a>
+                <div class="search-result-url">{result['url']}</div>
+                <div class="search-result-description">{result['description']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.info("Ничего не найдено. Попробуйте изменить запрос.")
 
 # ================= МЕССЕНДЖЕР =================
 elif st.session_state.page == "Мессенджер":
