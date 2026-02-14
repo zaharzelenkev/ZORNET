@@ -51,6 +51,12 @@ st.markdown("""
     .st-emotion-cache-18ni7ap {display: none !important;}
     .st-emotion-cache-1f3w8xq {display: none !important;}
     .st-emotion-cache-1mi2ry5 {display: none !important;}
+    
+    /* Сохраняем кнопку для открытия/закрытия панели со вкладками */
+    button[data-testid="baseButton-header"] {
+        display: flex !important;
+        visibility: visible !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
