@@ -15,51 +15,6 @@ import hashlib
 import streamlit.components.v1 as components
 import urllib.parse
 
-# ================= СКРЫТИЕ ЭЛЕМЕНТОВ STREAMLIT =================
-st.markdown("""
-<style>
-    /* Скрываем иконку Streamlit внизу справа */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    .stAppDeployButton {display: none;}
-    
-    /* Скрываем элементы GitHub сверху справа */
-    header .st-emotion-cache-18ni7ap {display: none !important;}
-    header .st-emotion-cache-1dp5vir {display: none !important;}
-    header .st-emotion-cache-1f3w8xq {display: none !important;}
-    header [data-testid="stStatusWidget"] {display: none !important;}
-    
-    /* Скрываем Fork, троеточие и другие элементы */
-    button[title="View source"] {display: none !important;}
-    button[title="Report bug"] {display: none !important;}
-    button[title="Fork this app"] {display: none !important;}
-    button[title="Share"] {display: none !important;}
-    button[title="Manage app"] {display: none !important;}
-    
-    /* Скрываем весь header */
-    header {visibility: hidden !important; height: 0 !important;}
-    
-    /* Убираем отступ сверху */
-    .stApp > header {display: none !important;}
-    .main > div {padding-top: 0 !important;}
-    
-    /* Скрываем деплоймент кнопки */
-    .stDeployButton {display: none !important;}
-    
-    /* Скрываем все, что связано с Streamlit в интерфейсе */
-    .st-emotion-cache-1dp5vir {display: none !important;}
-    .st-emotion-cache-18ni7ap {display: none !important;}
-    .st-emotion-cache-1f3w8xq {display: none !important;}
-    .st-emotion-cache-1mi2ry5 {display: none !important;}
-    
-    /* Сохраняем кнопку для открытия/закрытия панели со вкладками */
-    button[data-testid="baseButton-header"] {
-        display: flex !important;
-        visibility: visible !important;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 # ================= ПЕРСИСТЕНТНОЕ ХРАНЕНИЕ =================
 def load_storage():
     """Загружает данные из файла"""
@@ -477,9 +432,8 @@ st.markdown("""
         font-size: 1.3rem;
         font-weight: 700;
         color: #D4AF37;
-        margin-bottom: 5px;
+        margin-bottom: 8px;
         text-decoration: none;
-        display: block;
     }
     
     .search-result-title:hover {
@@ -488,7 +442,7 @@ st.markdown("""
     
     .search-result-url {
         color: #006621;
-        font-size: 0.85rem;
+        font-size: 0.9rem;
         margin-bottom: 8px;
         word-break: break-all;
     }
@@ -496,7 +450,6 @@ st.markdown("""
     .search-result-description {
         color: #545454;
         line-height: 1.5;
-        font-size: 0.95rem;
     }
     
     .search-header {
@@ -508,12 +461,6 @@ st.markdown("""
         text-align: center;
         font-size: 1.5rem;
         font-weight: 700;
-    }
-    
-    .search-stats {
-        color: #666;
-        margin-bottom: 20px;
-        font-size: 0.95rem;
     }
     
     .search-back-button {
@@ -1133,69 +1080,47 @@ def get_all_watch_rooms():
 
 # ================= ПОИСКОВАЯ СИСТЕМА ZORNET =================
 def search_zornet(query):
-    """Реальный поиск через Google Custom Search API"""
+    """Поиск по сайтам (имитация поисковой системы)"""
     if not query:
         return []
     
-    try:
-        # Используем публичный API для поиска
-        # В реальном проекте нужно заменить на свой API ключ
-        api_key = "AIzaSyD7VJxK3GqVxY5Q5X5Q5X5Q5X5Q5X5Q5X5"  # Замените на реальный ключ
-        search_engine_id = "017576662512468239146:omuauf_lfve"  # Замените на свой ID
-        
-        url = f"https://www.googleapis.com/customsearch/v1?q={urllib.parse.quote(query)}&key={api_key}&cx={search_engine_id}&num=10"
-        
-        response = requests.get(url, timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            results = []
-            
-            for item in data.get("items", []):
-                results.append({
-                    "title": item.get("title", "Без названия"),
-                    "url": item.get("link", "#"),
-                    "description": item.get("snippet", "Нет описания")
-                })
-            
-            return results
-        else:
-            # Если API не работает, используем демо-результаты
-            return get_demo_search_results(query)
-            
-    except Exception as e:
-        print(f"Ошибка поиска: {e}")
-        return get_demo_search_results(query)
-
-def get_demo_search_results(query):
-    """Демо-результаты для примера"""
-    return [
-        {
-            "title": f"{query} — Википедия",
-            "url": f"https://ru.wikipedia.org/wiki/{urllib.parse.quote(query)}",
-            "description": f"Статья о {query} в свободной энциклопедии"
-        },
-        {
-            "title": f"{query} — Яндекс",
-            "url": f"https://yandex.ru/search/?text={urllib.parse.quote(query)}",
-            "description": f"Результаты поиска в Яндексе по запросу {query}"
-        },
-        {
-            "title": f"{query} — Google",
-            "url": f"https://www.google.com/search?q={urllib.parse.quote(query)}",
-            "description": f"Результаты поиска в Google по запросу {query}"
-        },
-        {
-            "title": f"{query} — YouTube",
-            "url": f"https://www.youtube.com/results?search_query={urllib.parse.quote(query)}",
-            "description": f"Видео по запросу {query} на YouTube"
-        },
-        {
-            "title": f"{query} — Habr",
-            "url": f"https://habr.com/ru/search/?q={urllib.parse.quote(query)}",
-            "description": f"Статьи и публикации о {query} на Habr"
-        }
+    # База данных сайтов для поиска
+    sites = [
+        {"title": "YouTube - Видеохостинг", "url": "https://www.youtube.com/results?search_query=" + urllib.parse.quote(query), "description": "Смотрите видео на YouTube по запросу: " + query},
+        {"title": "Google Поиск", "url": "https://www.google.com/search?q=" + urllib.parse.quote(query), "description": "Искать в Google: " + query},
+        {"title": "Wikipedia", "url": "https://ru.wikipedia.org/wiki/" + urllib.parse.quote(query.replace(" ", "_")), "description": "Статья в Википедии о " + query},
+        {"title": "Яндекс", "url": "https://yandex.ru/search/?text=" + urllib.parse.quote(query), "description": "Поиск в Яндексе: " + query},
+        {"title": "GitHub", "url": "https://github.com/search?q=" + urllib.parse.quote(query), "description": "Поиск репозиториев на GitHub"},
+        {"title": "Stack Overflow", "url": "https://stackoverflow.com/search?q=" + urllib.parse.quote(query), "description": "Ответы на вопросы программистов"},
+        {"title": "Википедия", "url": "https://ru.wikipedia.org/wiki/" + urllib.parse.quote(query.replace(" ", "_")), "description": "Свободная энциклопедия"},
+        {"title": "Кинопоиск", "url": "https://www.kinopoisk.ru/index.php?kp_query=" + urllib.parse.quote(query), "description": "Поиск фильмов и сериалов"},
+        {"title": "Ozon", "url": "https://www.ozon.ru/search/?text=" + urllib.parse.quote(query), "description": "Интернет-магазин Ozon"},
+        {"title": "Wildberries", "url": "https://www.wildberries.ru/catalog/0/search.aspx?search=" + urllib.parse.quote(query), "description": "Поиск на Wildberries"},
+        {"title": "Habr", "url": "https://habr.com/ru/search/?q=" + urllib.parse.quote(query), "description": "Статьи и новости IT"},
+        {"title": "BBC News", "url": "https://www.bbc.com/search?q=" + urllib.parse.quote(query), "description": "Новости BBC"},
     ]
+    
+    # Добавляем поиск по быстрым ссылкам пользователя
+    if "quick_links" in st.session_state:
+        for link in st.session_state.quick_links:
+            if query.lower() in link["name"].lower() or query.lower() in link["url"].lower():
+                sites.append({
+                    "title": f"{link['name']} (ваша ссылка)",
+                    "url": link["url"],
+                    "description": f"Быстрая ссылка: {link['name']}"
+                })
+    
+    # Фильтруем сайты по запросу
+    results = []
+    for site in sites:
+        if query.lower() in site["title"].lower() or query.lower() in site["description"].lower():
+            results.append(site)
+    
+    # Если ничего не найдено, возвращаем все сайты
+    if len(results) < 3:
+        results = sites
+    
+    return results[:10]  # Возвращаем первые 10 результатов
 
 # ================= САЙДБАР =================
 with st.sidebar:
@@ -1373,8 +1298,7 @@ if st.session_state.page == "Главная":
         
         if submitted and search_input:
             st.session_state.search_query = search_input
-            with st.spinner("🔍 Ищем..."):
-                st.session_state.search_results = search_zornet(search_input)
+            st.session_state.search_results = search_zornet(search_input)
             st.session_state.page = "Поиск"
             st.rerun()
     
@@ -1473,19 +1397,14 @@ elif st.session_state.page == "Поиск":
         
         if new_submitted and new_search:
             st.session_state.search_query = new_search
-            with st.spinner("🔍 Ищем..."):
-                st.session_state.search_results = search_zornet(new_search)
+            st.session_state.search_results = search_zornet(new_search)
             st.rerun()
     
     st.markdown("---")
     
     # Результаты поиска
     if st.session_state.search_results:
-        st.markdown(f"""
-        <div class="search-stats">
-            Найдено результатов: {len(st.session_state.search_results)}
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"### Найдено результатов: {len(st.session_state.search_results)}")
         
         for i, result in enumerate(st.session_state.search_results):
             st.markdown(f"""
