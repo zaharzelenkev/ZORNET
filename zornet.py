@@ -2297,7 +2297,7 @@ elif st.session_state.page == "Профиль":
             st.rerun()
     
     else:
-        st.markdown('<div class="gold-title fade-in">ZORNET ID</div>', unsafe_allow_html=True)
+        st.markdown('<div class="gold-title fade-in">👤 ZORNET ID</div>', unsafe_allow_html=True)
         
         tab1, tab2 = st.tabs(["🔐 Вход", "📝 Регистрация"])
         
