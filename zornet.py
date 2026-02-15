@@ -14,6 +14,8 @@ import re
 import hashlib
 import streamlit.components.v1 as components
 import urllib.parse
+from huggingface_hub import InferenceClient
+import requests
 
 # ================= ПЕРСИСТЕНТНОЕ ХРАНЕНИЕ =================
 def load_storage():
@@ -1282,6 +1284,7 @@ with st.sidebar:
         ("🎬", "Кинотеатр"),
         ("💾", "Диск"),
         ("👤", "Профиль"),
+        ("🔍", "Поиск"),
     ]
     
     for icon, page in pages:
@@ -1573,6 +1576,34 @@ if st.session_state.page == "Главная":
                     save_quick_links(st.session_state.quick_links)
                     st.session_state.show_add_link = False
                     st.rerun()
+
+# ================= ФУНКЦИИ AI =================
+def get_huggingface_response(prompt, api_token):
+    """Получает ответ от бесплатных моделей Hugging Face"""
+    try:
+        # Используем бесплатную русскоязычную модель
+        API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+        headers = {"Authorization": f"Bearer {api_token}"}
+        
+        payload = {
+            "inputs": f"<s>[INST] {prompt} [/INST]",
+            "parameters": {
+                "max_new_tokens": 250,
+                "temperature": 0.7,
+                "top_p": 0.95,
+                "do_sample": True
+            }
+        }
+        
+        response = requests.post(API_URL, headers=headers, json=payload, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            if isinstance(result, list) and len(result) > 0:
+                return result[0].get('generated_text', '').split('[/INST]')[-1].strip()
+        return "❌ Не удалось получить ответ"
+    except Exception as e:
+        return f"❌ Ошибка: {str(e)}"
 
 # ================= СТРАНИЦА ПОИСКА =================
 elif st.session_state.page == "Поиск":
