@@ -14,8 +14,6 @@ import re
 import hashlib
 import streamlit.components.v1 as components
 import urllib.parse
-import time
-import random
 
 # ================= ПЕРСИСТЕНТНОЕ ХРАНЕНИЕ =================
 def load_storage():
@@ -145,13 +143,6 @@ if "search_results" not in st.session_state:
     st.session_state.search_results = []
 if "search_loading" not in st.session_state:
     st.session_state.search_loading = False
-# Добавляем переменные для AI
-if "ai_model" not in st.session_state:
-    st.session_state.ai_model = "simple"  # simple, openrouter
-if "openrouter_key" not in st.session_state:
-    st.session_state.openrouter_key = ""
-if "ai_configured" not in st.session_state:
-    st.session_state.ai_configured = False
 
 # ================= ОБНОВЛЕННЫЕ CSS СТИЛИ =================
 st.markdown("""
@@ -401,77 +392,36 @@ st.markdown("""
         box-shadow: 0 4px 10px rgba(255, 68, 68, 0.1) !important;
     }
     
-    /* ПОИСКОВАЯ СТРОКА НА ГЛАВНОЙ */
-    .main-search-container {
-        margin: 30px 0 50px 0;
-        max-width: 700px;
+    /* ПОИСКОВАЯ СТРОКА */
+    .search-container {
+        margin: 30px 0;
+        max-width: 600px;
         margin-left: auto;
         margin-right: auto;
-        position: relative;
     }
     
-    .main-search-box {
+    .search-box {
         width: 100%;
-        padding: 20px 30px;
+        padding: 18px 25px;
         font-size: 18px;
-        border: 3px solid rgba(212, 175, 55, 0.3);
-        border-radius: 60px;
+        border: 2px solid rgba(212, 175, 55, 0.3);
+        border-radius: 30px;
         outline: none;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 20px rgba(212, 175, 55, 0.1);
+        box-shadow: 0 4px 10px rgba(212, 175, 55, 0.05);
         background-color: #ffffff;
         color: #333;
-        text-align: left;
-        padding-right: 80px;
+        text-align: center;
     }
     
-    .main-search-box:focus {
-        border-color: #D4AF37;
-        box-shadow: 0 0 25px rgba(212, 175, 55, 0.3);
+    .search-box:focus {
+        border-color: rgba(212, 175, 55, 0.8);
+        box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
     }
     
-    .main-search-box::placeholder {
+    .search-box::placeholder {
         color: #999;
         font-size: 16px;
-    }
-    
-    .main-search-button {
-        position: absolute;
-        right: 8px;
-        top: 8px;
-        background: linear-gradient(135deg, #D4AF37, #B8860B);
-        color: white;
-        border: none;
-        width: 50px;
-        height: 50px;
-        border-radius: 50px;
-        font-size: 1.3rem;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .main-search-button:hover {
-        transform: scale(1.05) rotate(5deg);
-        box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
-    }
-    
-    /* ИКОНКА ZORNET */
-    .zornet-icon {
-        width: 32px;
-        height: 32px;
-        background: linear-gradient(135deg, #D4AF37, #B8860B);
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: 800;
-        font-size: 1.2rem;
-        box-shadow: 0 4px 10px rgba(212, 175, 55, 0.3);
     }
     
     /* РЕЗУЛЬТАТЫ ПОИСКА */
@@ -898,40 +848,6 @@ st.markdown("""
         transform: translateY(-2px);
         border-color: transparent !important;
     }
-    
-    /* СТИЛИ ДЛЯ AI ЧАТА */
-    .ai-message {
-        background: white;
-        border: 2px solid rgba(212, 175, 55, 0.3);
-        border-radius: 20px;
-        padding: 15px 20px;
-        margin: 10px 0;
-        color: #1a1a1a;
-    }
-    
-    .ai-message.user {
-        background: linear-gradient(135deg, #D4AF37, #B8860B);
-        color: white;
-        margin-left: auto;
-        max-width: 80%;
-    }
-    
-    .ai-message.assistant {
-        background: white;
-        margin-right: auto;
-        max-width: 80%;
-    }
-    
-    .ai-timestamp {
-        font-size: 0.7rem;
-        color: rgba(0,0,0,0.4);
-        margin-top: 5px;
-        text-align: right;
-    }
-    
-    .ai-timestamp.white {
-        color: rgba(255,255,255,0.8);
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1226,9 +1142,11 @@ def search_google(query):
     
     try:
         # Используем публичный API для поиска
+        # Это бесплатный поиск через сервис
         search_url = f"https://www.googleapis.com/customsearch/v1"
         
         # Публичный ключ для демонстрации (ограничен)
+        # В реальном проекте нужно заменить на свой
         api_key = "AIzaSyA1xY6jK5kY7zL8mN9pQ2rS3tU4vW5xY6z"  # Демо-ключ
         cx = "017576662512468239146:omuauf_lfve"  # Демо-ID поиска
         
@@ -1236,7 +1154,7 @@ def search_google(query):
             'q': query,
             'key': api_key,
             'cx': cx,
-            'num': 10
+            'num': 10  # Количество результатов
         }
         
         response = requests.get(search_url, params=params, timeout=10)
@@ -1255,10 +1173,12 @@ def search_google(query):
                     })
             return results
         else:
+            # Если API не работает, используем альтернативный метод
             return search_alternative(query)
             
     except Exception as e:
         print(f"Ошибка поиска: {e}")
+        # В случае ошибки используем альтернативный метод
         return search_alternative(query)
 
 def search_alternative(query):
@@ -1273,6 +1193,7 @@ def search_alternative(query):
         if response.status_code == 200:
             data = response.json()
             
+            # Основной результат
             if data.get('Abstract'):
                 results.append({
                     'title': data.get('Heading', query),
@@ -1281,6 +1202,7 @@ def search_alternative(query):
                     'displayLink': 'wikipedia.org'
                 })
             
+            # Связанные темы
             if data.get('RelatedTopics'):
                 for topic in data.get('RelatedTopics')[:5]:
                     if isinstance(topic, dict) and 'Text' in topic:
@@ -1293,6 +1215,7 @@ def search_alternative(query):
     except:
         pass
     
+    # Если результатов мало, добавляем прямые ссылки на популярные сайты
     if len(results) < 3:
         sites = [
             {'title': f'Поиск {query} на Google', 'url': f'https://www.google.com/search?q={urllib.parse.quote(query)}', 'desc': 'Искать в Google'},
@@ -1315,8 +1238,10 @@ def search_zornet(query):
     if not query:
         return []
     
+    # Сначала пробуем реальный поиск
     results = search_google(query)
     
+    # Добавляем быстрые ссылки пользователя, если они есть
     if "quick_links" in st.session_state:
         for link in st.session_state.quick_links:
             if query.lower() in link["name"].lower() or query.lower() in link["url"].lower():
@@ -1328,44 +1253,6 @@ def search_zornet(query):
                 })
     
     return results
-
-# ================= ФУНКЦИИ AI =================
-def get_ai_response(prompt):
-    """Простой AI без API ключей"""
-    prompt_lower = prompt.lower()
-    
-    # База ответов на русском
-    responses = {
-        "привет": "Здравствуйте! Я ZORNET AI. Чем могу помочь?",
-        "здравствуй": "Добрый день! Рад вас видеть!",
-        "как дела": "У меня всё отлично! Работаю, помогаю пользователям.",
-        "что ты умеешь": "Я могу отвечать на вопросы, помогать с поиском, общаться на разные темы. Задавайте вопросы!",
-        "кто ты": "Я ZORNET AI - ваш персональный помощник в экосистеме ZORNET.",
-        "пока": "До свидания! Буду рад помочь снова!",
-        "спасибо": "Пожалуйста! Обращайтесь ещё!",
-        "как тебя зовут": "Меня зовут ZORNET AI. Приятно познакомиться!",
-        "сколько времени": f"Сейчас {datetime.datetime.now().strftime('%H:%M')} по минскому времени.",
-        "какая погода": "Я могу показать погоду во вкладке 'Погода' в меню слева.",
-        "что нового": "Следите за новостями во вкладке 'Новости'!",
-        "помощь": "Я могу помочь с вопросами, поиском информации или просто поболтать.",
-    }
-    
-    # Поиск по ключевым словам
-    for key, response in responses.items():
-        if key in prompt_lower:
-            return response
-    
-    # Если ничего не нашли, генерируем простой ответ
-    answers = [
-        f"Интересный вопрос про '{prompt[:20]}...'. Давайте подумаем...",
-        f"Хороший вопрос! Если честно, я ещё учусь отвечать на такие вопросы.",
-        f"Я слышал о '{prompt[:20]}'. Может быть, поискать в интернете?",
-        f"Задайте вопрос по-другому, и я постараюсь помочь.",
-        f"Извините, я пока не могу точно ответить на этот вопрос. Попробуйте спросить что-то ещё!",
-        f"Вы спросили про '{prompt[:15]}...' - это интересная тема!",
-    ]
-    
-    return random.choice(answers)
 
 # ================= САЙДБАР =================
 with st.sidebar:
@@ -1392,7 +1279,6 @@ with st.sidebar:
         ("📰", "Новости"),
         ("🌤️", "Погода"),
         ("💬", "Мессенджер"),
-        ("🤖", "ZORNET AI"),
         ("🎬", "Кинотеатр"),
         ("💾", "Диск"),
         ("👤", "Профиль"),
@@ -1533,38 +1419,93 @@ if st.session_state.page == "Главная":
             st.rerun()
     
     st.markdown("---")
-    
-    # Поисковая строка с иконкой ZORNET
-    st.markdown("""
-    <div class="main-search-container">
-        <form id="searchForm" onsubmit="event.preventDefault(); searchZornet();">
-            <input type="text" id="searchInput" class="main-search-box" placeholder="Поиск в ZORNET..." autocomplete="off">
-            <button type="submit" class="main-search-button">🔍</button>
-        </form>
-    </div>
-    
-    <script>
-    function searchZornet() {
-        var query = document.getElementById('searchInput').value;
-        if (query) {
-            window.parent.postMessage({
-                type: 'streamlit:setComponentValue',
-                value: query
-            }, '*');
+
+    components.html("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: transparent;
+            font-family: 'Helvetica Neue', sans-serif;
+            display: flex;
+            justify-content: center;
         }
-    }
-    </script>
-    """, unsafe_allow_html=True)
+        
+        .search-container {
+            width: 100%;
+            max-width: 600px;
+            padding: 10px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 18px 25px;
+            font-size: 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 30px;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            background-color: #ffffff;
+            color: #333;
+            box-sizing: border-box;
+            -webkit-appearance: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: #DAA520;
+            box-shadow: 0 0 15px rgba(218, 165, 32, 0.2);
+        }
+
+        button {
+            margin-top: 20px;
+            background: linear-gradient(135deg, #DAA520 0%, #B8860B 100%);
+            color: white;
+            border: none;
+            padding: 14px 40px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(218, 165, 32, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            -webkit-appearance: none;
+            width: 100%;
+            max-width: 250px;
+        }
+
+        button:hover {
+            transform: scale(1.03);
+            box-shadow: 0 6px 20px rgba(218, 165, 32, 0.6);
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+    </style>
+    </head>
+    <body>
+        <div class="search-container">
+            <form action="https://www.google.com/search" method="get" target="_top">
+                <input type="text" name="q" placeholder="🔍 Введите запрос..." required autocomplete="off">
+                <br>
+                <button type="submit">ИСКАТЬ</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    """, height=220)
     
-    # Обработка поиска
-    search_query = st.text_input("", key="main_search", label_visibility="collapsed", placeholder="Поиск в ZORNET...")
-    if search_query:
-        st.session_state.search_query = search_query
-        st.session_state.search_results = search_zornet(search_query)
-        st.session_state.page = "Результаты поиска"
-        st.rerun()
+    st.markdown("---")
     
-    # Быстрые ссылки (подняты выше, сразу после поиска)
+    # Быстрые ссылки с кнопкой добавления на одном уровне
     col_header, col_button = st.columns([3, 1])
     
     with col_header:
@@ -1633,8 +1574,8 @@ if st.session_state.page == "Главная":
                     st.session_state.show_add_link = False
                     st.rerun()
 
-# ================= СТРАНИЦА РЕЗУЛЬТАТОВ ПОИСКА =================
-elif st.session_state.page == "Результаты поиска":
+# ================= СТРАНИЦА ПОИСКА =================
+elif st.session_state.page == "Поиск":
     # Кнопка возврата на главную
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
@@ -1643,18 +1584,17 @@ elif st.session_state.page == "Результаты поиска":
             st.rerun()
     
     # Заголовок поиска
-    if st.session_state.search_query:
-        st.markdown(f"""
-        <div class="search-header">
-            🔍 {st.session_state.search_query}
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="search-header">
+        🔍 {st.session_state.search_query}
+    </div>
+    """, unsafe_allow_html=True)
     
     # Строка поиска на странице результатов
     with st.form("search_results_form"):
         col_search, col_button = st.columns([4, 1])
         with col_search:
-            new_search = st.text_input("", value=st.session_state.search_query if st.session_state.search_query else "", placeholder="Новый поиск...", label_visibility="collapsed", key="results_search")
+            new_search = st.text_input("", value=st.session_state.search_query, placeholder="Новый поиск...", label_visibility="collapsed", key="results_search")
         with col_button:
             new_submitted = st.form_submit_button("Найти", use_container_width=True, type="primary")
         
@@ -1700,7 +1640,7 @@ elif st.session_state.page == "Результаты поиска":
                 <div class="search-result-description">{result.get('snippet', 'Нет описания')}</div>
             </div>
             """, unsafe_allow_html=True)
-    elif st.session_state.search_query:
+    else:
         st.markdown("""
         <div class="search-error">
             <h3>😕 Ничего не найдено</h3>
@@ -1709,168 +1649,22 @@ elif st.session_state.page == "Результаты поиска":
         """, unsafe_allow_html=True)
         
         # Предлагаем прямые ссылки для поиска
-        if st.session_state.search_query:
-            st.markdown("### 🔍 Попробуйте поискать на:")
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                if st.button("Google", use_container_width=True):
-                    js_code = f'window.open("https://www.google.com/search?q={urllib.parse.quote(st.session_state.search_query)}", "_blank");'
-                    components.html(f"<script>{js_code}</script>", height=0)
-            with col2:
-                if st.button("YouTube", use_container_width=True):
-                    js_code = f'window.open("https://www.youtube.com/results?search_query={urllib.parse.quote(st.session_state.search_query)}", "_blank");'
-                    components.html(f"<script>{js_code}</script>", height=0)
-            with col3:
-                if st.button("Wikipedia", use_container_width=True):
-                    js_code = f'window.open("https://ru.wikipedia.org/wiki/{urllib.parse.quote(st.session_state.search_query.replace(" ", "_"))}", "_blank");'
-                    components.html(f"<script>{js_code}</script>", height=0)
+        st.markdown("### 🔍 Попробуйте поискать на:")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if st.button("Google", use_container_width=True):
+                js_code = f'window.open("https://www.google.com/search?q={urllib.parse.quote(st.session_state.search_query)}", "_blank");'
+                components.html(f"<script>{js_code}</script>", height=0)
+        with col2:
+            if st.button("YouTube", use_container_width=True):
+                js_code = f'window.open("https://www.youtube.com/results?search_query={urllib.parse.quote(st.session_state.search_query)}", "_blank");'
+                components.html(f"<script>{js_code}</script>", height=0)
+        with col3:
+            if st.button("Wikipedia", use_container_width=True):
+                js_code = f'window.open("https://ru.wikipedia.org/wiki/{urllib.parse.quote(st.session_state.search_query.replace(" ", "_"))}", "_blank");'
+                components.html(f"<script>{js_code}</script>", height=0)
 
-# ================= СТРАНИЦА НОВОСТЕЙ =================
-elif st.session_state.page == "Новости":
-    st.markdown('<div class="gold-title fade-in">📰 НОВОСТИ</div>', unsafe_allow_html=True)
-    st.markdown('<div class="news-header">Последние новости</div>', unsafe_allow_html=True)
-    
-    with st.spinner("Загружаю новости..."):
-        news = get_belta_news()
-        
-        for item in news:
-            st.markdown(f"""
-            <div class="news-card">
-                <div class="news-title">{item.title}</div>
-                <div class="news-summary">{item.summary[:200]}...</div>
-                <div style="margin-top: 15px;">
-                    <a href="{item.link}" target="_blank" style="color: #D4AF37; text-decoration: none; font-weight: 600;">Читать далее →</a>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-# ================= СТРАНИЦА ПОГОДЫ =================
-elif st.session_state.page == "Погода":
-    st.markdown('<div class="gold-title fade-in">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
-    
-    # Поиск города
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        city_input = st.text_input("", placeholder="Введите город...", label_visibility="collapsed")
-    with col2:
-        search_clicked = st.button("🔍 Найти", type="primary", use_container_width=True)
-    
-    city_to_show = st.session_state.user_city if st.session_state.user_city else "Минск"
-    
-    if search_clicked and city_input:
-        city_to_show = city_input
-        st.session_state.user_city = city_input
-    
-    with st.spinner(f"Получаю погоду..."):
-        weather_data = get_weather_by_city(city_to_show)
-        
-        if not weather_data:
-            st.error(f"❌ Город {city_to_show} не найден")
-            weather_data = get_weather_by_city("Минск")
-        
-        if weather_data:
-            current = weather_data["current"]
-            
-            # Основная карточка
-            st.markdown(f"""
-            <div class="weather-main-card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                    <h2 style="margin: 0; color: white;">{current['city']}, {current['country']}</h2>
-                    <div style="font-size: 1.2rem; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 30px;">
-                        {current['description']}
-                    </div>
-                </div>
-                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
-                    <div>
-                        <div class="weather-temp">{current['temp']}°C</div>
-                        <div style="font-size: 1.2rem;">Ощущается как {current['feels_like']}°C</div>
-                    </div>
-                    <div class="weather-icon">{get_weather_icon(current['icon'])}</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Детали
-            st.markdown("### Детали")
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                st.markdown(f"""
-                <div class="weather-detail-item">
-                    <div style="font-size: 1.5rem;">💧</div>
-                    <div style="font-weight: 600;">{current['humidity']}%</div>
-                    <div style="font-size: 0.9rem;">Влажность</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col2:
-                st.markdown(f"""
-                <div class="weather-detail-item">
-                    <div style="font-size: 1.5rem;">💨</div>
-                    <div style="font-weight: 600;">{current['wind_speed']} м/с</div>
-                    <div style="font-size: 0.9rem;">Ветер</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col3:
-                st.markdown(f"""
-                <div class="weather-detail-item">
-                    <div style="font-size: 1.5rem;">📊</div>
-                    <div style="font-weight: 600;">{current['pressure']} гПа</div>
-                    <div style="font-size: 0.9rem;">Давление</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            with col4:
-                st.markdown(f"""
-                <div class="weather-detail-item">
-                    <div style="font-size: 1.5rem;">☁️</div>
-                    <div style="font-weight: 600;">{current['clouds']}%</div>
-                    <div style="font-size: 0.9rem;">Облачность</div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # Прогноз
-            if weather_data.get("forecast"):
-                st.markdown("### Прогноз на 5 дней")
-                
-                forecast = weather_data["forecast"]["list"]
-                days = {}
-                for item in forecast:
-                    date = item["dt_txt"].split(" ")[0]
-                    if date not in days:
-                        days[date] = item
-                
-                forecast_dates = list(days.keys())[:5]
-                cols = st.columns(len(forecast_dates))
-                
-                for idx, date in enumerate(forecast_dates):
-                    with cols[idx]:
-                        day = days[date]
-                        day_name = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"][
-                            datetime.datetime.strptime(date, "%Y-%m-%d").weekday()
-                        ]
-                        
-                        st.markdown(f"""
-                        <div style="background: linear-gradient(135deg, #D4AF37, #B8860B); border-radius: 15px; padding: 15px; text-align: center; color: white;">
-                            <div style="font-weight: 600;">{day_name}</div>
-                            <div style="font-size: 2rem;">{get_weather_icon(day['weather'][0]['icon'])}</div>
-                            <div style="font-size: 1.2rem; font-weight: 600;">{round(day['main']['temp'])}°C</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    st.markdown("### 🇧🇾 Города Беларуси")
-    
-    cities = ["Минск", "Гомель", "Витебск", "Могилёв", "Брест", "Гродно"]
-    cols = st.columns(3)
-    for idx, city in enumerate(cities):
-        with cols[idx % 3]:
-            if st.button(city, use_container_width=True):
-                st.session_state.user_city = city
-                st.rerun()
-
-# ================= СТРАНИЦА МЕССЕНДЖЕР =================
+# ================= МЕССЕНДЖЕР =================
 elif st.session_state.page == "Мессенджер":
     st.markdown('<div class="gold-title fade-in">💬 МЕССЕНДЖЕР</div>', unsafe_allow_html=True)
     
@@ -2000,64 +1794,7 @@ elif st.session_state.page == "Мессенджер":
             </div>
             """, unsafe_allow_html=True)
 
-# ================= СТРАНИЦА ZORNET AI =================
-elif st.session_state.page == "ZORNET AI":
-    st.markdown('<div class="gold-title fade-in">🤖 ZORNET AI</div>', unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div style="background: linear-gradient(135deg, #D4AF37, #B8860B); border-radius: 20px; padding: 20px; color: white; margin-bottom: 30px; text-align: center;">
-        <h3 style="margin: 0;">Простой AI без ключей и регистрации</h3>
-        <p style="margin: 10px 0 0 0; opacity: 0.9;">Просто спросите что угодно!</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # История чата
-    if "ai_simple_messages" not in st.session_state:
-        st.session_state.ai_simple_messages = []
-    
-    # Контейнер для сообщений
-    chat_container = st.container(height=400)
-    with chat_container:
-        for msg in st.session_state.ai_simple_messages:
-            if msg["role"] == "user":
-                st.markdown(f"""
-                <div class="ai-message user">
-                    <div>{msg['content']}</div>
-                    <div class="ai-timestamp white">Вы</div>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="ai-message assistant">
-                    <div>{msg['content']}</div>
-                    <div class="ai-timestamp">ZORNET AI</div>
-                </div>
-                """, unsafe_allow_html=True)
-    
-    # Поле ввода
-    col_input, col_send = st.columns([5, 1])
-    with col_input:
-        user_input = st.text_input("", placeholder="Спроси меня о чем угодно...", 
-                                  key="ai_input", label_visibility="collapsed")
-    with col_send:
-        if st.button("📤", use_container_width=True, type="primary") and user_input:
-            # Добавляем сообщение пользователя
-            st.session_state.ai_simple_messages.append({"role": "user", "content": user_input})
-            
-            with st.spinner("🤖 Думаю..."):
-                time.sleep(0.5)  # Небольшая задержка для эффекта
-                response = get_ai_response(user_input)
-            
-            # Добавляем ответ AI
-            st.session_state.ai_simple_messages.append({"role": "assistant", "content": response})
-            st.rerun()
-    
-    # Кнопка очистки
-    if st.button("🔄 Очистить историю", use_container_width=True):
-        st.session_state.ai_simple_messages = []
-        st.rerun()
-
-# ================= СТРАНИЦА КИНОТЕАТР =================
+# ================= КИНОТЕАТР =================
 elif st.session_state.page == "Кинотеатр":
     st.markdown('<div class="gold-title fade-in">🎬 КИНОТЕАТР</div>', unsafe_allow_html=True)
     
@@ -2217,7 +1954,7 @@ elif st.session_state.page == "Кинотеатр":
                     else:
                         st.error("❌ Комната не найдена или неверный пароль")
 
-# ================= СТРАНИЦА ДИСК =================
+# ================= ДИСК =================
 elif st.session_state.page == "Диск":
     st.markdown('<div class="gold-title fade-in">💾 ДИСК</div>', unsafe_allow_html=True)
     
@@ -2392,7 +2129,152 @@ elif st.session_state.page == "Диск":
                         with open(item_path, 'rb') as f:
                             st.download_button("📥 Скачать", f.read(), item, use_container_width=True)
 
-# ================= СТРАНИЦА ПРОФИЛЬ =================
+# ================= НОВОСТИ =================
+elif st.session_state.page == "Новости":
+    st.markdown('<div class="gold-title fade-in">📰 НОВОСТИ</div>', unsafe_allow_html=True)
+    st.markdown('<div class="news-header">Последние новости</div>', unsafe_allow_html=True)
+    
+    with st.spinner("Загружаю новости..."):
+        news = get_belta_news()
+        
+        for item in news:
+            st.markdown(f"""
+            <div class="news-card">
+                <div class="news-title">{item.title}</div>
+                <div class="news-summary">{item.summary[:200]}...</div>
+                <div style="margin-top: 15px;">
+                    <a href="{item.link}" target="_blank" style="color: #D4AF37; text-decoration: none; font-weight: 600;">Читать далее →</a>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+# ================= ПОГОДА =================
+elif st.session_state.page == "Погода":
+    st.markdown('<div class="gold-title fade-in">🌤️ ПОГОДА</div>', unsafe_allow_html=True)
+    
+    # Поиск города
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        city_input = st.text_input("", placeholder="Введите город...", label_visibility="collapsed")
+    with col2:
+        search_clicked = st.button("🔍 Найти", type="primary", use_container_width=True)
+    
+    city_to_show = st.session_state.user_city if st.session_state.user_city else "Минск"
+    
+    if search_clicked and city_input:
+        city_to_show = city_input
+        st.session_state.user_city = city_input
+    
+    with st.spinner(f"Получаю погоду..."):
+        weather_data = get_weather_by_city(city_to_show)
+        
+        if not weather_data:
+            st.error(f"❌ Город {city_to_show} не найден")
+            weather_data = get_weather_by_city("Минск")
+        
+        if weather_data:
+            current = weather_data["current"]
+            
+            # Основная карточка
+            st.markdown(f"""
+            <div class="weather-main-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                    <h2 style="margin: 0; color: white;">{current['city']}, {current['country']}</h2>
+                    <div style="font-size: 1.2rem; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 30px;">
+                        {current['description']}
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+                    <div>
+                        <div class="weather-temp">{current['temp']}°C</div>
+                        <div style="font-size: 1.2rem;">Ощущается как {current['feels_like']}°C</div>
+                    </div>
+                    <div class="weather-icon">{get_weather_icon(current['icon'])}</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Детали
+            st.markdown("### Детали")
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.markdown(f"""
+                <div class="weather-detail-item">
+                    <div style="font-size: 1.5rem;">💧</div>
+                    <div style="font-weight: 600;">{current['humidity']}%</div>
+                    <div style="font-size: 0.9rem;">Влажность</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown(f"""
+                <div class="weather-detail-item">
+                    <div style="font-size: 1.5rem;">💨</div>
+                    <div style="font-weight: 600;">{current['wind_speed']} м/с</div>
+                    <div style="font-size: 0.9rem;">Ветер</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col3:
+                st.markdown(f"""
+                <div class="weather-detail-item">
+                    <div style="font-size: 1.5rem;">📊</div>
+                    <div style="font-weight: 600;">{current['pressure']} гПа</div>
+                    <div style="font-size: 0.9rem;">Давление</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col4:
+                st.markdown(f"""
+                <div class="weather-detail-item">
+                    <div style="font-size: 1.5rem;">☁️</div>
+                    <div style="font-weight: 600;">{current['clouds']}%</div>
+                    <div style="font-size: 0.9rem;">Облачность</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # Прогноз
+            if weather_data.get("forecast"):
+                st.markdown("### Прогноз на 5 дней")
+                
+                forecast = weather_data["forecast"]["list"]
+                days = {}
+                for item in forecast:
+                    date = item["dt_txt"].split(" ")[0]
+                    if date not in days:
+                        days[date] = item
+                
+                forecast_dates = list(days.keys())[:5]
+                cols = st.columns(len(forecast_dates))
+                
+                for idx, date in enumerate(forecast_dates):
+                    with cols[idx]:
+                        day = days[date]
+                        day_name = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"][
+                            datetime.datetime.strptime(date, "%Y-%m-%d").weekday()
+                        ]
+                        
+                        st.markdown(f"""
+                        <div style="background: linear-gradient(135deg, #D4AF37, #B8860B); border-radius: 15px; padding: 15px; text-align: center; color: white;">
+                            <div style="font-weight: 600;">{day_name}</div>
+                            <div style="font-size: 2rem;">{get_weather_icon(day['weather'][0]['icon'])}</div>
+                            <div style="font-size: 1.2rem; font-weight: 600;">{round(day['main']['temp'])}°C</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    st.markdown("### 🇧🇾 Города Беларуси")
+    
+    cities = ["Минск", "Гомель", "Витебск", "Могилёв", "Брест", "Гродно"]
+    cols = st.columns(3)
+    for idx, city in enumerate(cities):
+        with cols[idx % 3]:
+            if st.button(city, use_container_width=True):
+                st.session_state.user_city = city
+                st.rerun()
+
+# ================= ПРОФИЛЬ =================
 elif st.session_state.page == "Профиль":
     if st.session_state.is_logged_in:
         user = st.session_state.user_data
@@ -2473,6 +2355,8 @@ elif st.session_state.page == "Профиль":
                             st.rerun()
                         else:
                             st.error(f"❌ {result['message']}")
+        
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # ================= ИНИЦИАЛИЗАЦИЯ =================
 if __name__ == "__main__":
